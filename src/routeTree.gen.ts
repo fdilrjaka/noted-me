@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as TrashRouteImport } from './routes/trash'
 import { Route as SubjectSubjectIdRouteImport } from './routes/subject.$subjectId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrashRoute = TrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubjectSubjectIdRoute = SubjectSubjectIdRouteImport.update({
   id: '/subject/$subjectId',
   path: '/subject/$subjectId',
@@ -32,30 +38,34 @@ const SubjectSubjectIdRoute = SubjectSubjectIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/subject/$subjectId'
+  fullPaths: '/' | '/auth' | '/trash' | '/subject/$subjectId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/subject/$subjectId'
-  id: '__root__' | '/' | '/auth' | '/subject/$subjectId'
+  to: '/' | '/auth' | '/trash' | '/subject/$subjectId'
+  id: '__root__' | '/' | '/auth' | '/trash' | '/subject/$subjectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  TrashRoute: typeof TrashRoute
   SubjectSubjectIdRoute: typeof SubjectSubjectIdRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trash': {
+      id: '/trash'
+      path: '/trash'
+      fullPath: '/trash'
+      preLoaderRoute: typeof TrashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subject/$subjectId': {
       id: '/subject/$subjectId'
       path: '/subject/$subjectId'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  TrashRoute: TrashRoute,
   SubjectSubjectIdRoute: SubjectSubjectIdRoute,
 }
 export const routeTree = rootRouteImport
