@@ -47,7 +47,8 @@ export const Route = createFileRoute("/subject/$subjectId")({
 
 function SubjectView() {
   const { subjectId } = Route.useParams();
-  const { page: pageParam } = Route.useSearch();
+  const searchParams = Route.useSearch();
+  const pageParam = searchParams.page;
   const navigate = useNavigate();
   const data = useData();
   const [sidebar, setSidebar] = useState(false);
@@ -167,12 +168,14 @@ function SubjectView() {
           className="glass spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
           onTouchStart={(e) => {
             const t = e.touches[0];
+            if (!t) return;
             touchStart.current = { x: t.clientX, y: t.clientY };
           }}
           onTouchEnd={(e) => {
             const start = touchStart.current;
             if (!start) return;
             const t = e.changedTouches[0];
+            if (!t) return;
             const dx = t.clientX - start.x;
             const dy = t.clientY - start.y;
             if (Math.abs(dx) > 70 && Math.abs(dy) < 50) swipe(dx < 0 ? 1 : -1);
