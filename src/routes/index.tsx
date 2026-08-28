@@ -151,7 +151,7 @@ function Dashboard() {
                   className="press glass spring-in relative overflow-hidden rounded-3xl p-4 hover:scale-[1.01]"
                 >
                   <div
-                    className={`pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-gradient-to-br ${colorGlow[subject.color] ?? colorGlow.blue} to-transparent blur-2xl`}
+                    className={`pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-gradient-to-br ${colorGlow[subject.color] ?? colorGlow["blue"]} to-transparent blur-2xl`}
                   />
                   <Link
                     to="/subject/$subjectId"
@@ -240,6 +240,10 @@ function Dashboard() {
     const id = createSubject(name);
     setName("");
     setAdding(false);
-    void navigate({ to: "/subject/$subjectId", params: { subjectId: id } });
+    void navigate({
+      to: "/subject/$subjectId",
+      params: { subjectId: id },
+      search: { page: undefined },
+    });
   }
 }

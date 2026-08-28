@@ -173,7 +173,7 @@ export function extractImages(html: string): string[] {
   const out: string[] = [];
   const re = /<img[^>]+src="([^"]+)"/gi;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) out.push(m[1]);
+  while ((m = re.exec(html))) out.push(m[1] ?? "");
   return out;
 }
 
@@ -182,7 +182,7 @@ export function extractImages(html: string): string[] {
 export function createSubject(name: string) {
   const id = uid();
   const position = (data.subjects.reduce((max, s) => Math.max(max, s.position), 0) || 0) + 1;
-  const color = SUBJECT_COLORS[data.subjects.length % SUBJECT_COLORS.length];
+  const color = SUBJECT_COLORS[data.subjects.length % SUBJECT_COLORS.length] ?? "blue";
   const subject: Subject = {
     id,
     name: name.trim() || "Mata Kuliah",

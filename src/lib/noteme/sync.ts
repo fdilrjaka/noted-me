@@ -3,6 +3,8 @@ import { getData, setData, type Data, type Page, type Subject } from "./store";
 
 type Row = Record<string, unknown>;
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 function subjectRow(s: Subject, userId: string): Row {
   return {
     id: s.id,
@@ -68,13 +70,13 @@ async function doSync(userId: string) {
   if (dirtySubjects.length) {
     const { error } = await supabase
       .from("subjects")
-      .upsert(dirtySubjects.map((s) => subjectRow(s, userId)));
+      .upsert(dirtySubjects.map((s) => subjectRow(s, userId)) as any);
     if (error) throw error;
   }
   if (dirtyPages.length) {
     const { error } = await supabase
       .from("pages")
-      .upsert(dirtyPages.map((p) => pageRow(p, userId)));
+      .upsert(dirtyPages.map((p) => pageRow(p, userId)) as any);
     if (error) throw error;
   }
 
@@ -100,24 +102,24 @@ async function doSync(userId: string) {
 
   const next: Data = {
     subjects: mergeRemote(subjects, subjectsRes.data ?? [], (row) => ({
-      id: String(row.id),
-      name: String(row.name ?? ""),
-      color: String(row.color ?? "blue"),
-      pinned: Boolean(row.pinned),
-      position: Number(row.position ?? 0),
-      deleted: Boolean(row.deleted),
-      updated_at: new Date(String(row.updated_at)).toISOString(),
+      id: String(row['id']),
+      name: String(row['name'] ?? ""),
+      color: String(row['color'] ?? "blue"),
+      pinned: Boolean(row['pinned']),
+      position: Number(row['position'] ?? 0),
+      deleted: Boolean(row['deleted']),
+      updated_at: new Date(String(row['updated_at'])).toISOString(),
       dirty: false,
     })),
     pages: mergeRemote(pages, pagesRes.data ?? [], (row) => ({
-      id: String(row.id),
-      subject_id: String(row.subject_id),
-      title: String(row.title ?? ""),
-      content: String(row.content ?? ""),
-      pinned: Boolean(row.pinned),
-      position: Number(row.position ?? 0),
-      deleted: Boolean(row.deleted),
-      updated_at: new Date(String(row.updated_at)).toISOString(),
+      id: String(row['id']),
+      subject_id: String(row['subject_id']),
+      title: String(row['title'] ?? ""),
+      content: String(row['content'] ?? ""),
+      pinned: Boolean(row['pinned']),
+      position: Number(row['position'] ?? 0),
+      deleted: Boolean(row['deleted']),
+      updated_at: new Date(String(row['updated_at'])).toISOString(),
       dirty: false,
     })),
     lastPull: new Date(Date.now() - 5000).toISOString(),
