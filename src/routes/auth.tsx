@@ -22,7 +22,7 @@ export const Route = createFileRoute("/auth")({
       },
     ],
   }),
-  component: AuthPage;
+  component: AuthPage,
 });
 
 function AuthPage() {
