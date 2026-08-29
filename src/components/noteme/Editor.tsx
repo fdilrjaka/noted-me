@@ -5,13 +5,16 @@ import {
   CheckSquare,
   Heading1,
   Heading2,
+  Highlighter,
   Image as ImageIcon,
   Italic,
   List,
   ListOrdered,
+  Palette,
   Quote,
   Table,
   Underline,
+  X,
 } from "lucide-react";
 
 type Props = {
@@ -51,16 +54,110 @@ async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+const HIGHLIGHT_COLORS = [
+  { label: "Kuning", value: "#fde047" },
+  { label: "Hijau", value: "#86efac" },
+  { label: "Biru", value: "#93c5fd" },
+  { label: "Pink", value: "#f9a8d4" },
+  { label: "Ungu", value: "#d8b4fe" },
+  { label: "Oranye", value: "#fdba74" },
+];
+
+const BG_OPTIONS = [
+  { label: "Bawaan", value: "default" },
+  { label: "Putih", value: "white" },
+] as const;
+
+/** Bikin HTML tabel baru sesuai jumlah baris & kolom yang dipilih user. */
+function buildTableHtml(rows: number, cols: number) {
+  const headerCells = Array.from({ length: cols }, (_, i) => `<th>Kolom ${i + 1}</th>`).join("");
+  const bodyRows = Array.from(
+    { length: Math.max(rows - 1, 1) },
+    () => `<tr>${Array.from({ length: cols }, () => "<td><br></td>").join("")}</tr>`,
+  ).join("");
+  return `<table><colgroup>${Array.from({ length: cols }, () => "<col />").join("")}</colgroup><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p><br></p>`;
+}
+
+/** Pastikan setiap tabel di dalam note (baik baru disisipkan, di-paste, atau lama) punya
+ * colgroup dengan lebar eksplisit + handle drag di tiap kolom biar bisa di-resize manual. */
+function enhanceTables(root: HTMLElement) {
+  root.querySelectorAll("table").forEach((table) => {
+    const el = table as HTMLTableElement;
+    const firstRow = el.querySelector("tr");
+    if (!firstRow) return;
+    const cells = Array.from(firstRow.children) as HTMLElement[];
+    if (cells.length === 0) return;
+
+    let colgroup = el.querySelector("colgroup");
+    if (!colgroup || colgroup.children.length !== cells.length) {
+      colgroup?.remove();
+      colgroup = document.createElement("colgroup");
+      const total = el.getBoundingClientRect().width || cells.length * 120;
+      cells.forEach((cell) => {
+        const col = document.createElement("col");
+        const width = cell.getBoundingClientRect().width || total / cells.length;
+        col.style.width = `${Math.max(48, Math.round(width))}px`;
+        colgroup!.appendChild(col);
+      });
+      el.prepend(colgroup);
+    }
+
+    cells.forEach((cell, i) => {
+      if (i === cells.length - 1) return;
+      if (cell.querySelector(":scope > .col-resize-handle")) return;
+      const handle = document.createElement("span");
+      handle.className = "col-resize-handle";
+      handle.contentEditable = "false";
+      handle.dataset["colIndex"] = String(i);
+      cell.appendChild(handle);
+    });
+  });
+}
+
+/** Bersihin tabel hasil copy-paste dari luar (Excel/Sheets/Word): buang style & tag
+ * bawaan mereka, sisain struktur tabelnya aja biar konsisten sama tabel bikinan sendiri. */
+function sanitizeTableHtml(html: string): string | null {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const table = doc.querySelector("table");
+  if (!table) return null;
+  table.querySelectorAll("colgroup, col").forEach((n) => n.remove());
+  table.querySelectorAll("*").forEach((node) => {
+    node.removeAttribute("style");
+    node.removeAttribute("class");
+    node.removeAttribute("width");
+    node.removeAttribute("height");
+    node.removeAttribute("bgcolor");
+  });
+  table.removeAttribute("style");
+  table.removeAttribute("class");
+  return `${table.outerHTML}<p><br></p>`;
+}
+
 export function Editor({ pageId, initialContent, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
+  const [bg, setBg] = useState<"default" | "white">("default");
+  const resizing = useRef<{ col: HTMLTableColElement; startX: number; startWidth: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialContent || "";
     setSaved(true);
+    setPanel("none");
+    try {
+      const savedBg = window.localStorage.getItem(`noteme.bg.${pageId}`);
+      setBg(savedBg === "white" ? "white" : "default");
+    } catch {
+      setBg("default");
+    }
+    if (ref.current) enhanceTables(ref.current);
     // Load content only when switching pages, not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
@@ -86,6 +183,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const insertHtml = (html: string) => {
     ref.current?.focus();
     exec("insertHTML", html);
+    if (ref.current) enhanceTables(ref.current);
     handleInput();
   };
 
@@ -93,6 +191,83 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     if (!file) return;
     const url = await fileToDataUrl(file);
     insertHtml(`<img src="${url}" alt="Gambar catatan" />`);
+  };
+
+  const changeBg = (next: "default" | "white") => {
+    setBg(next);
+    try {
+      window.localStorage.setItem(`noteme.bg.${pageId}`, next);
+    } catch {
+      /* storage full or blocked, opsi warna tetap jalan untuk sesi ini */
+    }
+    setPanel("none");
+  };
+
+  const applyHighlight = (color: string | null) => {
+    ref.current?.focus();
+    exec("hiliteColor", color ?? "transparent");
+    handleInput();
+    setPanel("none");
+  };
+
+  const insertTable = () => {
+    const rows = Math.min(Math.max(tableRows, 1), 12);
+    const cols = Math.min(Math.max(tableCols, 1), 8);
+    insertHtml(buildTableHtml(rows, cols));
+    setPanel("none");
+  };
+
+  // Drag-resize kolom tabel: mousedown di handle -> update lebar <col> pas mouse gerak.
+  useEffect(() => {
+    const container = ref.current;
+    if (!container) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.classList.contains("col-resize-handle")) return;
+      const cell = target.closest("td, th") as HTMLTableCellElement | null;
+      const table = target.closest("table");
+      const colIndex = Number(target.dataset["colIndex"] ?? -1);
+      if (!cell || !table || colIndex < 0) return;
+      const col = table.querySelectorAll("colgroup col")[colIndex] as
+        HTMLTableColElement | undefined;
+      if (!col) return;
+      e.preventDefault();
+      target.classList.add("is-resizing");
+      resizing.current = { col, startX: e.clientX, startWidth: cell.getBoundingClientRect().width };
+
+      const onMove = (ev: PointerEvent) => {
+        if (!resizing.current) return;
+        const delta = ev.clientX - resizing.current.startX;
+        const next = Math.max(48, Math.round(resizing.current.startWidth + delta));
+        resizing.current.col.style.width = `${next}px`;
+      };
+      const onUp = () => {
+        target.classList.remove("is-resizing");
+        resizing.current = null;
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        handleInput();
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    };
+
+    container.addEventListener("pointerdown", onPointerDown);
+    return () => container.removeEventListener("pointerdown", onPointerDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageId]);
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const html = e.clipboardData.getData("text/html");
+    if (html && /<table/i.test(html)) {
+      const cleaned = sanitizeTableHtml(html);
+      if (cleaned) {
+        e.preventDefault();
+        insertHtml(cleaned);
+      }
+    }
+    // Selain tabel, biarkan perilaku paste bawaan browser (teks/format lain tetap normal).
   };
 
   const tools = [
@@ -112,16 +287,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         ),
     },
     { icon: Quote, label: "Kutipan", run: () => exec("formatBlock", "blockquote") },
-    {
-      icon: Table,
-      label: "Tabel",
-      run: () =>
-        insertHtml(
-          '<table><thead><tr><th>Kolom 1</th><th>Kolom 2</th></tr></thead><tbody><tr><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td></tr></tbody></table><p><br></p>',
-        ),
-    },
-    { icon: ImageIcon, label: "Gambar", run: () => fileRef.current?.click() },
-    { icon: Camera, label: "Kamera", run: () => cameraRef.current?.click() },
   ];
 
   return (
@@ -144,6 +309,158 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
             <Icon className="size-4" />
           </button>
         ))}
+
+        <div className="relative flex-none">
+          <button
+            type="button"
+            title="Highlight"
+            aria-label="Highlight"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setPanel((p) => (p === "highlight" ? "none" : "highlight"))}
+            className="press-sm flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+          >
+            <Highlighter className="size-4" />
+          </button>
+          {panel === "highlight" && (
+            <div className="glass absolute left-0 top-full z-20 mt-2 flex w-48 flex-wrap gap-2 rounded-2xl border p-3 shadow-lg">
+              {HIGHLIGHT_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  aria-label={c.label}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applyHighlight(c.value)}
+                  className="size-7 flex-none rounded-full border border-black/10 active:scale-90"
+                  style={{ background: c.value }}
+                />
+              ))}
+              <button
+                type="button"
+                title="Hapus highlight"
+                aria-label="Hapus highlight"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyHighlight(null)}
+                className="press-sm flex size-7 flex-none items-center justify-center rounded-full bg-input active:scale-90"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="relative flex-none">
+          <button
+            type="button"
+            title="Warna latar catatan"
+            aria-label="Warna latar catatan"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setPanel((p) => (p === "bg" ? "none" : "bg"))}
+            className="press-sm flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+          >
+            <Palette className="size-4" />
+          </button>
+          {panel === "bg" && (
+            <div className="glass absolute left-0 top-full z-20 mt-2 flex w-40 flex-col gap-1 rounded-2xl border p-2 shadow-lg">
+              {BG_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => changeBg(opt.value)}
+                  className={`press-sm flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm ${
+                    bg === opt.value ? "bg-input text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <span
+                    className="size-4 flex-none rounded-full border border-white/15"
+                    style={{ background: opt.value === "white" ? "#ffffff" : "var(--card)" }}
+                  />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="relative flex-none">
+          <button
+            type="button"
+            title="Tabel"
+            aria-label="Tabel"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setPanel((p) => (p === "table" ? "none" : "table"))}
+            className="press-sm flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+          >
+            <Table className="size-4" />
+          </button>
+          {panel === "table" && (
+            <div className="glass absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border p-3 shadow-lg">
+              <p className="mb-2 text-[11px] text-muted-foreground">Ukuran tabel</p>
+              <div className="flex items-center gap-2">
+                <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
+                  Baris
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={tableRows}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => setTableRows(Number(e.target.value) || 1)}
+                    className="w-14 rounded-lg bg-input px-2 py-1 text-foreground"
+                  />
+                </label>
+                <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
+                  Kolom
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={tableCols}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => setTableCols(Number(e.target.value) || 1)}
+                    className="w-14 rounded-lg bg-input px-2 py-1 text-foreground"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={insertTable}
+                className="press-sm mt-3 w-full rounded-xl bg-primary py-1.5 text-sm font-medium text-primary-foreground active:scale-[0.98]"
+              >
+                Sisipkan {tableRows}x{tableCols}
+              </button>
+              <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+                Setelah disisipkan, tarik garis tipis di sisi kanan tiap kolom untuk atur lebarnya
+                manual. Tabel yang di-copy dari luar (mis. Excel/Sheets) juga bisa langsung
+                di-paste.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          title="Gambar"
+          aria-label="Gambar"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => fileRef.current?.click()}
+          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+        >
+          <ImageIcon className="size-4" />
+        </button>
+        <button
+          type="button"
+          title="Kamera"
+          aria-label="Kamera"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => cameraRef.current?.click()}
+          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+        >
+          <Camera className="size-4" />
+        </button>
+
         <span className="ml-auto flex-none pr-1 text-[11px] text-muted-foreground">
           {saved ? "Tersimpan" : "Menyimpan…"}
         </span>
@@ -153,8 +470,11 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        data-bg={bg}
         onInput={handleInput}
         onBlur={flush}
+        onPaste={handlePaste}
+        onFocus={() => setPanel("none")}
         data-placeholder="Mulai menulis catatan…"
         className="note-content min-h-[60vh] flex-1 px-1 py-5"
       />
