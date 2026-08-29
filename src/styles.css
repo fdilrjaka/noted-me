@@ -81,6 +81,10 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  #lovable-badge {
+    display: none !important;
+  }
+
   html {
     color-scheme: dark;
   }
