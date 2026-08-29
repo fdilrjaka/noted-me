@@ -161,14 +161,16 @@
 
 @utility press {
   transition:
-    transform 0.32s var(--ease-spring),
-    background-color 0.2s ease,
-    box-shadow 0.3s var(--ease-ios),
-    opacity 0.2s ease;
+    transform 0.42s var(--ease-spring),
+    background-color 0.25s var(--ease-ios),
+    box-shadow 0.35s var(--ease-ios),
+    opacity 0.25s var(--ease-ios);
+  will-change: transform;
 }
 
 @utility press-sm {
-  transition: transform 0.28s var(--ease-spring);
+  transition: transform 0.34s var(--ease-spring);
+  will-change: transform;
 }
 
 @utility glow-ring {
@@ -176,42 +178,88 @@
 }
 
 @utility safe-bottom {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+}
+
+@utility safe-bottom-lg {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 6rem);
 }
 
 @utility safe-top {
-  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-top: calc(env(safe-area-inset-top) + 0.75rem);
 }
 
 @utility spring-in {
-  animation: spring-in 0.42s var(--ease-spring) both;
+  animation: spring-in 0.52s var(--ease-spring) both;
 }
 
 @keyframes spring-in {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.97);
+    transform: translate3d(0, 12px, 0) scale(0.965);
+  }
+  60% {
+    opacity: 1;
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@utility fade-in-ios {
+  animation: fade-in-ios 0.35s var(--ease-ios) both;
+}
+
+@keyframes fade-in-ios {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 @utility sheet-up {
-  animation: sheet-up 0.4s var(--ease-ios) both;
+  animation: sheet-up 0.46s var(--ease-ios) both;
 }
 
 @keyframes sheet-up {
   from {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translate3d(0, 100%, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
+
+@utility slide-in-left {
+  animation: slide-in-left 0.4s var(--ease-ios) both;
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 
 /* ---------- Rich text editor content ---------- */
 
