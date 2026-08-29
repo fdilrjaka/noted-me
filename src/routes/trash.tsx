@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { BottomNav } from "@/components/noteme/BottomNav";
 import {
   emptyTrash,
   purgePage,
@@ -113,6 +114,8 @@ function TrashPage() {
           </div>
         ))}
       </div>
+
+      <BottomNav />
     </main>
   );
 }
