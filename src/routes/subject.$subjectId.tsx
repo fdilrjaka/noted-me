@@ -105,7 +105,7 @@ function SubjectView() {
   const images = active ? extractImages(active.content) : [];
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 pb-10 safe-top md:px-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 safe-top safe-bottom md:px-6">
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
