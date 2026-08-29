@@ -25,7 +25,7 @@ import {
 
 export const Route = createFileRoute("/subject/$subjectId")({
   validateSearch: (search: Record<string, unknown>) => ({
-    page: typeof search.page === "string" ? search.page : undefined,
+    page: typeof search["page"] === "string" ? (search["page"] as string) : undefined,
   }),
   head: () => ({
     meta: [
