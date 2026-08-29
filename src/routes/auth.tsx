@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { BottomNav } from "@/components/noteme/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, usernameToEmail } from "@/hooks/useSession";
 import { dirtyCount, useData } from "@/lib/noteme/store";
@@ -101,7 +102,7 @@ function AuthPage() {
 
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg">
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
@@ -185,6 +186,8 @@ function AuthPage() {
           </Link>
         </div>
       )}
+
+      <BottomNav />
     </main>
   );
 }
