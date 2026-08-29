@@ -323,16 +323,50 @@
     border-collapse: collapse;
     margin: 0.8em 0;
     font-size: 0.95rem;
+    table-layout: fixed;
   }
   & td,
   & th {
+    position: relative;
     border: 1px solid var(--border);
     padding: 0.5em 0.65em;
-    min-width: 3rem;
+    min-width: 2.5rem;
+    overflow: hidden;
   }
   & th {
     background: oklch(1 0 0 / 0.06);
     font-weight: 600;
+  }
+  & .col-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1;
+    touch-action: none;
+  }
+  & .col-resize-handle:hover,
+  & .col-resize-handle.is-resizing {
+    background: var(--primary);
+    opacity: 0.5;
+  }
+  &[data-bg="white"] {
+    background: #ffffff;
+    color: #17171a;
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  &[data-bg="white"] th {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  &[data-bg="white"] td,
+  &[data-bg="white"] th {
+    border-color: rgba(0, 0, 0, 0.12);
+  }
+  &[data-bg="white"] blockquote {
+    color: rgba(23, 23, 26, 0.65);
   }
   & ul[data-checklist] {
     list-style: none;
