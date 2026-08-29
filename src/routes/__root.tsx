@@ -16,7 +16,7 @@ import { ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="glass max-w-md rounded-3xl p-8 text-center">
         <h1 className="text-6xl font-bold">404</h1>
         <h2 className="mt-3 text-lg font-semibold">Halaman tidak ditemukan</h2>
@@ -41,7 +41,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="glass max-w-md rounded-3xl p-8 text-center">
         <h1 className="text-xl font-semibold tracking-tight">Halaman gagal dimuat</h1>
         <p className="mt-2 text-sm text-muted-foreground">

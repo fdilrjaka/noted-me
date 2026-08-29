@@ -101,7 +101,7 @@ function AuthPage() {
 
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 safe-top">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top">
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
