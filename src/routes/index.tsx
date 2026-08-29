@@ -199,7 +199,7 @@ function Dashboard() {
       )}
 
       {adding && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
+        <div className="fade-in-ios fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
           <div className="glass sheet-up w-full max-w-md rounded-3xl p-5 safe-bottom">
             <h3 className="text-lg font-semibold">Mata Kuliah baru</h3>
             <input
