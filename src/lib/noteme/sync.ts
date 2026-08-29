@@ -54,15 +54,15 @@ function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean 
 
 let running: Promise<void> | null = null;
 
-export function syncNow(userId: string): Promise<void> {
+export function syncNow(userId: string, opts?: { full?: boolean }): Promise<void> {
   if (running) return running;
-  running = doSync(userId).finally(() => {
+  running = doSync(userId, opts?.full ?? false).finally(() => {
     running = null;
   });
   return running;
 }
 
-async function doSync(userId: string) {
+async function doSync(userId: string, full: boolean) {
   const before = getData();
   const dirtySubjects = before.subjects.filter((s) => s.dirty);
   const dirtyPages = before.pages.filter((p) => p.dirty);
@@ -83,7 +83,8 @@ async function doSync(userId: string) {
   const pushedSubjects = new Map(dirtySubjects.map((s) => [s.id, s.updated_at]));
   const pushedPages = new Map(dirtyPages.map((p) => [p.id, p.updated_at]));
 
-  const since = before.lastPull ?? "1970-01-01T00:00:00.000Z";
+  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
+
   const [subjectsRes, pagesRes] = await Promise.all([
     supabase.from("subjects").select("*").gt("updated_at", since),
     supabase.from("pages").select("*").gt("updated_at", since),

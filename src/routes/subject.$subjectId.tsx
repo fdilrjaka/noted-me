@@ -75,7 +75,7 @@ function SubjectView() {
 
   if (!subject) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4">
+      <main className="flex min-h-dvh items-center justify-center px-4">
         <div className="glass rounded-3xl p-8 text-center">
           <p className="font-semibold">Mata kuliah tidak ditemukan</p>
           <Link to="/" className="mt-4 inline-block text-sm text-primary underline">
@@ -105,7 +105,7 @@ function SubjectView() {
   const images = active ? extractImages(active.content) : [];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 pb-10 safe-top md:px-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 safe-top safe-bottom md:px-6">
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
@@ -253,12 +253,11 @@ function SubjectView() {
       {/* iPhone: sidebar sheet */}
       {sidebar && (
         <div
-          className="fixed inset-0 z-40 flex bg-background/60 backdrop-blur-sm md:hidden"
+          className="fade-in-ios fixed inset-0 z-40 flex bg-background/60 backdrop-blur-sm md:hidden"
           onClick={() => setSidebar(false)}
         >
           <aside
-            className="glass-bar h-full w-[78%] max-w-xs border-r p-4 safe-top"
-            style={{ animation: "spring-in .34s var(--ease-ios) both" }}
+            className="glass-bar slide-in-left h-full w-[78%] max-w-xs overflow-y-auto border-r p-4 safe-top safe-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -292,8 +291,8 @@ function SubjectView() {
       )}
 
       {gallery && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-background/70 p-3 backdrop-blur-sm sm:items-center">
-          <div className="glass sheet-up max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">
+        <div className="fade-in-ios fixed inset-0 z-40 flex items-end justify-center bg-background/70 p-3 backdrop-blur-sm sm:items-center">
+          <div className="glass sheet-up max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Galeri gambar</h3>
               <button onClick={() => setGallery(false)} aria-label="Tutup" className="press-sm">

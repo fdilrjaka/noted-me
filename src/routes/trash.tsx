@@ -35,7 +35,7 @@ function TrashPage() {
   const empty = subjects.length === 0 && pages.length === 0;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-4 pb-16 safe-top">
+    <main className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg">
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"

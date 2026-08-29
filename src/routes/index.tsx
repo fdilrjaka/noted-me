@@ -52,7 +52,7 @@ function Dashboard() {
   const hits = useMemo(() => search(data, query), [data, query]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-4 pb-24 safe-top">
+    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg">
       <header className="flex items-center justify-between gap-3 py-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
@@ -199,7 +199,7 @@ function Dashboard() {
       )}
 
       {adding && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
+        <div className="fade-in-ios fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
           <div className="glass sheet-up w-full max-w-md rounded-3xl p-5 safe-bottom">
             <h3 className="text-lg font-semibold">Mata Kuliah baru</h3>
             <input
