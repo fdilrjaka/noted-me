@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Pin, PinOff, Plus, Search, Trash2, User, X } from "lucide-react";
+import { BottomNav } from "@/components/noteme/BottomNav";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { useSession } from "@/hooks/useSession";
 import {
@@ -60,7 +61,7 @@ function Dashboard() {
             <SyncStatus />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 md:flex">
           <Link
             to="/trash"
             aria-label="Trash"
@@ -199,8 +200,8 @@ function Dashboard() {
       )}
 
       {adding && (
-        <div className="fade-in-ios fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
-          <div className="glass sheet-up w-full max-w-md rounded-3xl p-5 safe-bottom">
+        <div className="fade-in-ios fixed inset-0 z-30 flex items-center justify-center bg-background/60 p-3 backdrop-blur-sm">
+          <div className="glass spring-in w-full max-w-md rounded-3xl p-5">
             <h3 className="text-lg font-semibold">Mata Kuliah baru</h3>
             <input
               autoFocus
@@ -232,6 +233,8 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      <BottomNav />
     </main>
   );
 
