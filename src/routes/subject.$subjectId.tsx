@@ -200,34 +200,37 @@ function SubjectView() {
             ) : (
               <h2 className="flex-1 text-xl font-bold tracking-tight">{active.title}</h2>
             )}
-            <button
-              aria-label="Ganti nama"
-              onClick={() => {
-                setDraftTitle(active.title);
-                setRenaming(active.id);
-              }}
-              className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
-            >
-              <Pencil className="size-3.5" />
-            </button>
-            <button
-              aria-label={active.pinned ? "Lepas sematan" : "Sematkan"}
-              onClick={() => patchPage(active.id, { pinned: !active.pinned })}
-              className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
-            >
-              {active.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-            </button>
-            <button
-              aria-label="Pindahkan ke trash"
-              onClick={() => {
-                deletePage(active.id);
-                const rest = pages.filter((p) => p.id !== active.id);
-                if (rest[0]) goto(rest[0].id);
-              }}
-              className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
-            >
-              <Trash2 className="size-3.5" />
-            </button>
+            <div className="flex flex-none items-center gap-2.5">
+              <button
+                aria-label="Ganti nama"
+                onClick={() => {
+                  setDraftTitle(active.title);
+                  setRenaming(active.id);
+                }}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+              <button
+                aria-label={active.pinned ? "Lepas sematan" : "Sematkan"}
+                onClick={() => patchPage(active.id, { pinned: !active.pinned })}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+              >
+                {active.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+              </button>
+              <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+              <button
+                aria-label="Pindahkan ke trash"
+                onClick={() => {
+                  deletePage(active.id);
+                  const rest = pages.filter((p) => p.id !== active.id);
+                  if (rest[0]) goto(rest[0].id);
+                }}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input text-destructive active:scale-90"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
           </div>
 
           <Editor
