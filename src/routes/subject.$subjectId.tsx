@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  Images,
-  Menu,
-  Pencil,
-  Pin,
-  PinOff,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronLeft, Images, Menu, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
 import { Editor } from "@/components/noteme/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import {
@@ -76,7 +66,7 @@ function SubjectView() {
   if (!subject) {
     return (
       <main className="flex min-h-dvh items-center justify-center px-4">
-        <div className="glass rounded-3xl p-8 text-center">
+        <div className="glass-card rounded-3xl p-8 text-center">
           <p className="font-semibold">Mata kuliah tidak ditemukan</p>
           <Link to="/" className="mt-4 inline-block text-sm text-primary underline">
             Kembali ke dashboard
@@ -110,14 +100,14 @@ function SubjectView() {
         <Link
           to="/"
           aria-label="Kembali"
-          className="press glass flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
         >
           <ChevronLeft className="size-5" />
         </Link>
         <button
           onClick={() => setSidebar(true)}
           aria-label="Daftar pertemuan"
-          className="press glass flex size-10 flex-none items-center justify-center rounded-full active:scale-90 md:hidden"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90 md:hidden"
         >
           <Menu className="size-4" />
         </button>
@@ -132,7 +122,7 @@ function SubjectView() {
         <button
           onClick={() => setGallery(true)}
           aria-label="Galeri gambar"
-          className="press glass flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
         >
           <Images className="size-4" />
         </button>
@@ -165,7 +155,8 @@ function SubjectView() {
 
       {active && (
         <section
-          className="glass spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
+          style={{ viewTransitionName: `subject-card-${subject.id}` } as never}
+          className="glass-card spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
           onTouchStart={(e) => {
             const t = e.touches[0];
             if (!t) return;
@@ -242,7 +233,7 @@ function SubjectView() {
       )}
 
       {!active && (
-        <div className="glass mt-4 rounded-3xl p-10 text-center">
+        <div className="glass-card mt-4 rounded-3xl p-10 text-center">
           <p className="font-semibold">Belum ada pertemuan</p>
           <button
             onClick={() => goto(createPage(subjectId))}
@@ -260,7 +251,7 @@ function SubjectView() {
           onClick={() => setSidebar(false)}
         >
           <aside
-            className="glass-bar slide-in-left h-full w-[78%] max-w-xs overflow-y-auto border-r p-4 safe-top safe-bottom"
+            className="glass-sheet slide-in-left h-full w-[78%] max-w-xs overflow-y-auto border-r p-4 safe-top safe-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -295,7 +286,7 @@ function SubjectView() {
 
       {gallery && (
         <div className="fade-in-ios fixed inset-0 z-40 flex items-end justify-center bg-background/70 p-3 backdrop-blur-sm sm:items-center">
-          <div className="glass sheet-up max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">
+          <div className="glass-sheet sheet-up max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Galeri gambar</h3>
               <button onClick={() => setGallery(false)} aria-label="Tutup" className="press-sm">
