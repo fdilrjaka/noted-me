@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, usernameToEmail } from "@/hooks/useSession";
+import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import { dirtyCount, useData } from "@/lib/noteme/store";
 import { syncNow } from "@/lib/noteme/sync";
 
@@ -14,7 +15,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Masuk — NoteMe" },
       {
         name: "description",
-        content: "Masuk ke NoteMe dengan username dan password untuk menyinkronkan catatan kuliahmu.",
+        content:
+          "Masuk ke NoteMe dengan username dan password untuk menyinkronkan catatan kuliahmu.",
       },
       { property: "og:title", content: "Masuk — NoteMe" },
       {
@@ -100,14 +102,16 @@ function AuthPage() {
     }
   };
 
-
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg">
+    <main
+      ref={registerNavDragTarget}
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg"
+    >
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
           aria-label="Kembali"
-          className="press glass flex size-10 items-center justify-center rounded-full active:scale-90"
+          className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
         >
           <ChevronLeft className="size-5" />
         </Link>
@@ -115,7 +119,7 @@ function AuthPage() {
       </header>
 
       {user ? (
-        <div className="glass spring-in mt-6 rounded-3xl p-6">
+        <div className="glass-card spring-in mt-6 rounded-3xl p-6">
           <p className="text-sm text-muted-foreground">Masuk sebagai</p>
           <p className="text-lg font-semibold">{user.email?.replace("@noteme.app", "")}</p>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -139,7 +143,7 @@ function AuthPage() {
           </p>
         </div>
       ) : (
-        <div className="glass spring-in mt-6 rounded-3xl p-6">
+        <div className="glass-card spring-in mt-6 rounded-3xl p-6">
           <h2 className="text-xl font-bold tracking-tight">
             {mode === "in" ? "Masuk" : "Buat akun"}
           </h2>
@@ -152,7 +156,7 @@ function AuthPage() {
             placeholder="Username"
             autoCapitalize="none"
             autoComplete="username"
-            className="mt-5 w-full rounded-2xl bg-input px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+            className="glass-input mt-5 w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           />
           <input
             value={password}
@@ -163,7 +167,7 @@ function AuthPage() {
             type="password"
             placeholder="Password"
             autoComplete={mode === "in" ? "current-password" : "new-password"}
-            className="mt-2 w-full rounded-2xl bg-input px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+            className="glass-input mt-2 w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           />
           <button
             disabled={busy}
@@ -178,10 +182,7 @@ function AuthPage() {
           >
             {mode === "in" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
           </button>
-          <Link
-            to="/"
-            className="press-sm mt-3 block text-center text-sm text-primary underline"
-          >
+          <Link to="/" className="press-sm mt-3 block text-center text-sm text-primary underline">
             Lanjut tanpa akun
           </Link>
         </div>
