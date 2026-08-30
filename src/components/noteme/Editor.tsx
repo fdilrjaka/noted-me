@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Bold,
@@ -11,6 +11,7 @@ import {
   Italic,
   List,
   ListOrdered,
+  MoreHorizontal,
   Palette,
   Quote,
   Table,
@@ -146,14 +147,63 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
   const [bg, setBg] = useState<"default" | "white">("default");
+  const [selectionToolbar, setSelectionToolbar] = useState<{ top: number; left: number } | null>(
+    null,
+  );
   const resizing = useRef<{ col: HTMLTableColElement; startX: number; startWidth: number } | null>(
     null,
   );
+
+  // Floating contextual toolbar: shows near the current text selection,
+  // spring-in/out, and follows scroll/resize while a selection is active.
+  const updateSelectionToolbar = useCallback(() => {
+    const root = ref.current;
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    if (!root || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      setSelectionToolbar(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) {
+      setSelectionToolbar(null);
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setSelectionToolbar(null);
+      return;
+    }
+    const toolbarWidth = 236;
+    const top = Math.max(8, rect.top - 54);
+    const left = Math.min(
+      Math.max(8, rect.left + rect.width / 2 - toolbarWidth / 2),
+      window.innerWidth - toolbarWidth - 8,
+    );
+    setSelectionToolbar({ top, left });
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("selectionchange", updateSelectionToolbar);
+    return () => document.removeEventListener("selectionchange", updateSelectionToolbar);
+  }, [updateSelectionToolbar]);
+
+  const toolbarVisible = Boolean(selectionToolbar);
+  useEffect(() => {
+    if (!toolbarVisible) return;
+    const onReposition = () => updateSelectionToolbar();
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [toolbarVisible, updateSelectionToolbar]);
 
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialContent || "";
     setSaved(true);
     setPanel("none");
+    setSelectionToolbar(null);
     try {
       const savedBg = window.localStorage.getItem(`noteme.bg.${pageId}`);
       setBg(savedBg === "white" ? "white" : "default");
@@ -170,6 +220,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     onChange(ref.current.innerHTML);
     setSaved(true);
   };
+
+  const hideSelectionToolbar = () => setSelectionToolbar(null);
 
   const handleInput = () => {
     setSaved(false);
@@ -297,7 +349,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="glass-bar sticky top-0 z-10 -mx-1 flex items-center gap-1 overflow-x-auto rounded-2xl border px-2 py-1.5">
+      <div className="glass-toolbar sticky top-0 z-10 -mx-1 flex items-center gap-1 overflow-x-auto rounded-2xl px-2 py-1.5">
         <button
           type="button"
           title="Format"
@@ -361,7 +413,10 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         suppressContentEditableWarning
         data-bg={bg}
         onInput={handleInput}
-        onBlur={flush}
+        onBlur={() => {
+          flush();
+          hideSelectionToolbar();
+        }}
         onPaste={handlePaste}
         onFocus={() => {
           setPanel("none");
@@ -370,6 +425,51 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         data-placeholder="Mulai menulis catatan…"
         className="note-content min-h-[60vh] flex-1 px-1 py-5"
       />
+
+      {selectionToolbar &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="toolbar"
+            aria-label="Format teks terpilih"
+            style={{ top: selectionToolbar.top, left: selectionToolbar.left }}
+            className="glass-toolbar spring-in fixed z-50 flex items-center gap-0.5 rounded-2xl px-1.5 py-1.5"
+          >
+            {primaryTools.map(({ icon: Icon, label, run }) => (
+              <button
+                key={label}
+                type="button"
+                title={label}
+                aria-label={label}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  ref.current?.focus();
+                  run();
+                  handleInput();
+                  updateSelectionToolbar();
+                }}
+                className="press-sm flex size-8 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+              >
+                <Icon className="size-4" />
+              </button>
+            ))}
+            <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+            <button
+              type="button"
+              title="Lainnya"
+              aria-label="Opsi format lainnya"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                hideSelectionToolbar();
+                setFormatSheetOpen(true);
+              }}
+              className="press-sm flex size-8 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </div>,
+          document.body,
+        )}
 
       {formatSheetOpen &&
         typeof document !== "undefined" &&
@@ -381,7 +481,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           >
             <div
               onMouseDown={(e) => e.stopPropagation()}
-              className="glass sheet-up safe-bottom w-full max-w-md rounded-t-3xl border-t p-4"
+              className="glass-sheet sheet-up safe-bottom w-full max-w-md rounded-t-3xl p-4"
             >
               <div className="mx-auto mb-3 h-1 w-10 flex-none rounded-full bg-input" />
               <p className="mb-2 text-sm font-medium">Format</p>
@@ -459,7 +559,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           >
             <div
               onMouseDown={(e) => e.stopPropagation()}
-              className="glass spring-in w-full max-w-xs rounded-3xl border p-4 shadow-lg"
+              className="glass-sheet spring-in w-full max-w-xs rounded-3xl p-4"
             >
               {panel === "highlight" && (
                 <>
@@ -583,3 +683,4 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     </div>
   );
 }
+ 
