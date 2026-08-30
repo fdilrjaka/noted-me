@@ -227,7 +227,7 @@
 }
 
 @utility route-push {
-  animation: route-push 0.42s var(--ease-ios) both;
+  animation: route-push 0.42s var(--ease-ios) backwards;
 }
 
 @keyframes route-push {
@@ -245,7 +245,7 @@
 }
 
 @utility route-pop {
-  animation: route-pop 0.42s var(--ease-ios) both;
+  animation: route-pop 0.42s var(--ease-ios) backwards;
 }
 
 @keyframes route-pop {
