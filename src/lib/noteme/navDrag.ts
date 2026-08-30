@@ -5,7 +5,7 @@
  *
  * Kept outside React state on purpose: pointermove fires far more often
  * than a render should, so this writes directly to the DOM node's style
- * (transform/opacity/filter — GPU-friendly, no layout thrashing).
+ * (transform/opacity — GPU-friendly, no layout thrashing).
  *
  * Usage on any page that renders <BottomNav />:
  *   <main ref={registerNavDragTarget} ...>
@@ -28,8 +28,7 @@ export function setNavDragProgress(value: number) {
   const shift = clamped * -16;
   const magnitude = clamped * clamped;
   target.style.transform = `translate3d(${shift}px, 0, 0)`;
-  target.style.opacity = String(1 - Math.min(0.28, magnitude * 0.28));
-  target.style.filter = magnitude > 0.02 ? `blur(${Math.min(2.2, magnitude * 2.2)}px)` : "";
+  target.style.opacity = String(1 - Math.min(0.18, magnitude * 0.18));
 }
 
 export function resetNavDragProgress(immediate = false) {
@@ -39,14 +38,11 @@ export function resetNavDragProgress(immediate = false) {
     node.style.transition = "none";
     node.style.transform = "translate3d(0, 0, 0)";
     node.style.opacity = "1";
-    node.style.filter = "";
     void node.offsetHeight; // flush before re-enabling transitions
     node.style.transition = "";
     return;
   }
-  node.style.transition =
-    "transform 0.4s cubic-bezier(0.22,1.12,0.36,1), opacity 0.32s ease, filter 0.32s ease";
+  node.style.transition = "transform 0.4s cubic-bezier(0.22,1.12,0.36,1), opacity 0.32s ease";
   node.style.transform = "translate3d(0, 0, 0)";
   node.style.opacity = "1";
-  node.style.filter = "";
 }
