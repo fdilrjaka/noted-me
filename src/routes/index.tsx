@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Pin, PinOff, Plus, Search, Trash2, User, X } from "lucide-react";
+import { ArrowRight, BookOpen, Pin, PinOff, Plus, Search, Trash2, User, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { useSession } from "@/hooks/useSession";
+import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import {
   activeSubjects,
   createSubject,
@@ -13,6 +14,36 @@ import {
   subjectPages,
   useData,
 } from "@/lib/noteme/store";
+
+/** Navigates with the View Transitions API when the browser supports it, so
+ * the tapped subject card visually expands into the detail page instead of
+ * one page just replacing another. Falls back to a plain navigation
+ * (the existing route-push CSS animation still applies) everywhere else. */
+function navigateWithTransition(run: () => void) {
+  const canTransition =
+    typeof document !== "undefined" &&
+    "startViewTransition" in document &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (canTransition) {
+    (document as Document & { startViewTransition: (cb: () => void) => void }).startViewTransition(
+      run,
+    );
+  } else {
+    run();
+  }
+}
+
+function relativeTime(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.round(diffMs / 60000);
+  if (min < 1) return "Baru saja";
+  if (min < 60) return `${min} menit lalu`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} jam lalu`;
+  const day = Math.round(hr / 24);
+  if (day < 7) return `${day} hari lalu`;
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,19 +57,24 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "NoteMe — Catatan Mata Kuliah" },
       {
         property: "og:description",
-        content: "Catatan kuliah offline-first dengan halaman pertemuan, pencarian, pin, dan trash.",
+        content:
+          "Catatan kuliah offline-first dengan halaman pertemuan, pencarian, pin, dan trash.",
       },
     ],
   }),
   component: Dashboard,
 });
 
-const colorGlow: Record<string, string> = {
-  blue: "from-glow-blue/40",
-  purple: "from-glow-purple/40",
-  pink: "from-glow-pink/40",
-  teal: "from-glow-blue/30",
-  amber: "from-glow-pink/30",
+// Restrained per-subject accent — lives on the icon dot, a small corner
+// glow, and the active state, never as a solid card fill (see spec §3).
+// Classes are written out in full (not built with string concatenation) so
+// Tailwind's static scanner can find every variant used here.
+const accent: Record<string, { glow: string; iconBg: string; dot: string }> = {
+  blue: { glow: "from-glow-blue/35", iconBg: "bg-glow-blue/20", dot: "bg-glow-blue" },
+  purple: { glow: "from-glow-purple/35", iconBg: "bg-glow-purple/20", dot: "bg-glow-purple" },
+  pink: { glow: "from-glow-pink/35", iconBg: "bg-glow-pink/20", dot: "bg-glow-pink" },
+  teal: { glow: "from-glow-blue/28", iconBg: "bg-glow-blue/20", dot: "bg-glow-blue" },
+  amber: { glow: "from-glow-pink/28", iconBg: "bg-glow-pink/20", dot: "bg-glow-pink" },
 };
 
 function Dashboard() {
@@ -48,12 +84,29 @@ function Dashboard() {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const subjects = useMemo(() => activeSubjects(data), [data]);
   const hits = useMemo(() => search(data, query), [data, query]);
 
+  const openSubject = (subjectId: string, pageId: string | undefined) => {
+    navigateWithTransition(() => {
+      void navigate({
+        to: "/subject/$subjectId",
+        params: { subjectId },
+        search: { page: pageId },
+      });
+    });
+  };
+
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg">
+    <main
+      ref={(el) => {
+        mainRef.current = el;
+        registerNavDragTarget(el);
+      }}
+      className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg"
+    >
       <header className="flex items-center justify-between gap-3 py-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
@@ -65,21 +118,21 @@ function Dashboard() {
           <Link
             to="/trash"
             aria-label="Trash"
-            className="press glass flex size-10 items-center justify-center rounded-full active:scale-90"
+            className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
           >
             <Trash2 className="size-4" />
           </Link>
           <Link
             to="/auth"
             aria-label="Akun"
-            className="press glass flex size-10 items-center justify-center rounded-full active:scale-90"
+            className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
           >
             <User className="size-4" />
           </Link>
         </div>
       </header>
 
-      <div className="glass flex items-center gap-2 rounded-2xl px-4 py-3">
+      <div className="glass-input flex items-center gap-2 rounded-2xl px-4 py-3">
         <Search className="size-4 flex-none text-muted-foreground" />
         <input
           value={query}
@@ -104,14 +157,8 @@ function Dashboard() {
           {hits.map((hit) => (
             <button
               key={hit.page.id}
-              onClick={() =>
-                navigate({
-                  to: "/subject/$subjectId",
-                  params: { subjectId: hit.page.subject_id },
-                  search: { page: hit.page.id },
-                })
-              }
-              className="press glass spring-in block w-full rounded-2xl px-4 py-3 text-left active:scale-[0.98]"
+              onClick={() => openSubject(hit.page.subject_id, hit.page.id)}
+              className="press glass-card glass-card-press spring-in block w-full rounded-2xl px-4 py-3 text-left"
             >
               <p className="text-xs text-muted-foreground">{hit.subject?.name}</p>
               <p className="font-semibold">{hit.page.title}</p>
@@ -134,7 +181,7 @@ function Dashboard() {
           </div>
 
           {subjects.length === 0 && !adding && (
-            <div className="glass spring-in mt-6 rounded-3xl p-10 text-center">
+            <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
               <BookOpen className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-3 font-semibold">Belum ada mata kuliah</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -146,41 +193,90 @@ function Dashboard() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {subjects.map((subject) => {
               const pages = subjectPages(data, subject.id);
+              const tone = accent[subject.color] ?? accent["blue"]!;
               return (
                 <div
                   key={subject.id}
-                  className="press glass spring-in relative overflow-hidden rounded-3xl p-4 hover:scale-[1.01]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openSubject(subject.id, pages[0]?.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openSubject(subject.id, pages[0]?.id);
+                    }
+                  }}
+                  onPointerMove={(e) => {
+                    if (e.pointerType !== "mouse") return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    e.currentTarget.style.setProperty(
+                      "--px",
+                      `${((e.clientX - rect.left) / rect.width) * 100}%`,
+                    );
+                    e.currentTarget.style.setProperty(
+                      "--py",
+                      `${((e.clientY - rect.top) / rect.height) * 100}%`,
+                    );
+                  }}
+                  onPointerLeave={(e) => {
+                    e.currentTarget.style.removeProperty("--px");
+                    e.currentTarget.style.removeProperty("--py");
+                  }}
+                  style={{ viewTransitionName: `subject-card-${subject.id}` } as never}
+                  className="press glass-card glass-card-press spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4"
                 >
                   <div
-                    className={`pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-gradient-to-br ${colorGlow[subject.color] ?? colorGlow["blue"]} to-transparent blur-2xl`}
+                    className={`pointer-events-none absolute -top-14 -right-10 size-36 rounded-full bg-gradient-to-br ${tone.glow} to-transparent blur-2xl`}
                   />
-                  <Link
-                    to="/subject/$subjectId"
-                    params={{ subjectId: subject.id }}
-                    search={{ page: pages[0]?.id }}
-                    className="relative block"
-                  >
-                    <p className="pr-16 text-lg leading-tight font-semibold">{subject.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {pages.length} pertemuan
-                      {subject.pinned ? " · disematkan" : ""}
-                    </p>
-                  </Link>
-                  <div className="absolute top-3 right-3 flex gap-1">
-                    <button
-                      aria-label={subject.pinned ? "Lepas sematan" : "Sematkan"}
-                      onClick={() => patchSubject(subject.id, { pinned: !subject.pinned })}
-                      className="press-sm flex size-8 items-center justify-center rounded-full bg-input active:scale-90"
+
+                  <div className="relative flex items-start justify-between gap-2">
+                    <span
+                      className={`flex size-9 flex-none items-center justify-center rounded-2xl ${tone.iconBg}`}
                     >
-                      {subject.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-                    </button>
-                    <button
-                      aria-label="Pindahkan ke trash"
-                      onClick={() => deleteSubject(subject.id)}
-                      className="press-sm flex size-8 items-center justify-center rounded-full bg-input active:scale-90"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      <span className={`size-2.5 rounded-full ${tone.dot}`} />
+                    </span>
+                    <div className="flex flex-none items-center gap-1">
+                      <button
+                        aria-label={subject.pinned ? "Lepas sematan" : "Sematkan"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          patchSubject(subject.id, { pinned: !subject.pinned });
+                        }}
+                        className="press-sm flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+                      >
+                        {subject.pinned ? (
+                          <PinOff className="size-3.5" />
+                        ) : (
+                          <Pin className="size-3.5" />
+                        )}
+                      </button>
+                      <button
+                        aria-label="Pindahkan ke trash"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSubject(subject.id);
+                        }}
+                        className="press-sm flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="relative mt-3 text-lg leading-tight font-semibold">
+                    {subject.name}
+                  </p>
+                  <p className="relative mt-1 text-sm text-muted-foreground">
+                    {pages.length} pertemuan{subject.pinned ? " · disematkan" : ""}
+                  </p>
+                  <p className="relative mt-0.5 text-xs text-muted-foreground/70">
+                    Diubah {relativeTime(subject.updated_at)}
+                  </p>
+
+                  <div className="relative mt-4 flex flex-1 items-end justify-end">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-input text-muted-foreground transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-foreground">
+                      <ArrowRight className="size-4" />
+                    </span>
                   </div>
                 </div>
               );
@@ -200,8 +296,9 @@ function Dashboard() {
       )}
 
       {adding && (
-        <div className="fade-in-ios fixed inset-0 z-30 flex items-center justify-center bg-background/60 p-3 backdrop-blur-sm">
-          <div className="glass spring-in w-full max-w-md rounded-3xl p-5">
+        <div className="fade-in-ios fixed inset-0 z-30 flex items-end justify-center bg-background/60 p-3 backdrop-blur-sm sm:items-center">
+          <div className="glass-sheet sheet-up safe-bottom w-full max-w-md rounded-3xl p-5">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-input sm:hidden" />
             <h3 className="text-lg font-semibold">Mata Kuliah baru</h3>
             <input
               autoFocus
@@ -211,7 +308,7 @@ function Dashboard() {
                 if (e.key === "Enter") submit();
               }}
               placeholder="Contoh: Basis Data"
-              className="mt-4 w-full rounded-2xl bg-input px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+              className="glass-input mt-4 w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
             />
             <div className="mt-4 flex gap-2">
               <button
