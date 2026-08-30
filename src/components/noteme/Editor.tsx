@@ -495,8 +495,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
               </>
             )}
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       <input
         ref={fileRef}
