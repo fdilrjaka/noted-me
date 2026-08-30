@@ -4,10 +4,11 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -123,9 +124,38 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ServiceWorkerRegistrar />
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <RouteTransition />
       <Toaster theme="dark" position="top-center" />
     </QueryClientProvider>
+  );
+}
+
+// iOS-style push/pop transitions: track the visited pathname stack so
+// "back" navigations slide in from the left and deeper navigations push
+// in from the right with a subtle fade-scale.
+function RouteTransition() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const stackRef = useRef<string[]>([]);
+  const [direction, setDirection] = useState<"push" | "pop" | null>(null);
+
+  useEffect(() => {
+    const stack = stackRef.current;
+    const last = stack[stack.length - 1];
+    if (last === pathname) return;
+    if (stack.length >= 2 && stack[stack.length - 2] === pathname) {
+      stack.pop();
+      setDirection("pop");
+    } else {
+      stack.push(pathname);
+      if (stack.length > 30) stack.splice(0, stack.length - 30);
+      setDirection(stack.length > 1 ? "push" : null);
+    }
+  }, [pathname]);
+
+  return (
+    <div key={pathname} className={direction ? `route-${direction}` : undefined}>
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      <Outlet />
+    </div>
   );
 }
