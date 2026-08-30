@@ -155,7 +155,6 @@ function SubjectView() {
 
       {active && (
         <section
-          style={{ viewTransitionName: `subject-card-${subject.id}` } as never}
           className="glass-card spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
           onTouchStart={(e) => {
             const t = e.touches[0];
