@@ -226,6 +226,42 @@
   }
 }
 
+@utility route-push {
+  animation: route-push 0.42s var(--ease-ios) both;
+}
+
+@keyframes route-push {
+  from {
+    opacity: 0.6;
+    transform: translate3d(38%, 0, 0) scale(0.98);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@utility route-pop {
+  animation: route-pop 0.42s var(--ease-ios) both;
+}
+
+@keyframes route-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(-22%, 0, 0) scale(0.985);
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 @utility sheet-up {
   animation: sheet-up 0.46s var(--ease-ios) both;
 }
