@@ -14,6 +14,7 @@ import {
   Palette,
   Quote,
   Table,
+  Type,
   Underline,
   X,
 } from "lucide-react";
@@ -141,6 +142,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const [saved, setSaved] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
+  const [formatSheetOpen, setFormatSheetOpen] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
   const [bg, setBg] = useState<"default" | "white">("default");
@@ -271,14 +273,11 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     // Selain tabel, biarkan perilaku paste bawaan browser (teks/format lain tetap normal).
   };
 
-  const tools = [
-    { icon: Heading1, label: "Judul", run: () => exec("formatBlock", "h1") },
-    { icon: Heading2, label: "Subjudul", run: () => exec("formatBlock", "h2") },
+  const primaryTools = [
     { icon: Bold, label: "Tebal", run: () => exec("bold") },
     { icon: Italic, label: "Miring", run: () => exec("italic") },
     { icon: Underline, label: "Garis bawah", run: () => exec("underline") },
     { icon: List, label: "Daftar", run: () => exec("insertUnorderedList") },
-    { icon: ListOrdered, label: "Daftar angka", run: () => exec("insertOrderedList") },
     {
       icon: CheckSquare,
       label: "Checklist",
@@ -287,13 +286,32 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           '<ul data-checklist="1"><li><input type="checkbox" /><span>Tugas baru</span></li></ul>',
         ),
     },
+  ];
+
+  const secondaryTools = [
+    { icon: Heading1, label: "Judul", run: () => exec("formatBlock", "h1") },
+    { icon: Heading2, label: "Subjudul", run: () => exec("formatBlock", "h2") },
+    { icon: ListOrdered, label: "Daftar angka", run: () => exec("insertOrderedList") },
     { icon: Quote, label: "Kutipan", run: () => exec("formatBlock", "blockquote") },
   ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="glass-bar sticky top-0 z-10 -mx-1 flex items-center gap-1 overflow-x-auto rounded-2xl border px-2 py-1.5">
-        {tools.map(({ icon: Icon, label, run }) => (
+        <button
+          type="button"
+          title="Format"
+          aria-label="Format"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setFormatSheetOpen(true)}
+          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+        >
+          <Type className="size-4" />
+        </button>
+
+        <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+
+        {primaryTools.map(({ icon: Icon, label, run }) => (
           <button
             key={label}
             type="button"
@@ -310,39 +328,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
             <Icon className="size-4" />
           </button>
         ))}
-
-        <button
-          type="button"
-          title="Highlight"
-          aria-label="Highlight"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setPanel((p) => (p === "highlight" ? "none" : "highlight"))}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <Highlighter className="size-4" />
-        </button>
-
-        <button
-          type="button"
-          title="Warna latar catatan"
-          aria-label="Warna latar catatan"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setPanel((p) => (p === "bg" ? "none" : "bg"))}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <Palette className="size-4" />
-        </button>
-
-        <button
-          type="button"
-          title="Tabel"
-          aria-label="Tabel"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setPanel((p) => (p === "table" ? "none" : "table"))}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <Table className="size-4" />
-        </button>
 
         <button
           type="button"
@@ -378,10 +363,91 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         onInput={handleInput}
         onBlur={flush}
         onPaste={handlePaste}
-        onFocus={() => setPanel("none")}
+        onFocus={() => {
+          setPanel("none");
+          setFormatSheetOpen(false);
+        }}
         data-placeholder="Mulai menulis catatan…"
         className="note-content min-h-[60vh] flex-1 px-1 py-5"
       />
+
+      {formatSheetOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fade-in-ios fixed inset-0 z-40 flex items-end justify-center bg-background/60 backdrop-blur-sm"
+            style={{ height: "100dvh" }}
+            onMouseDown={() => setFormatSheetOpen(false)}
+          >
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              className="glass sheet-up safe-bottom w-full max-w-md rounded-t-3xl border-t p-4"
+            >
+              <div className="mx-auto mb-3 h-1 w-10 flex-none rounded-full bg-input" />
+              <p className="mb-2 text-sm font-medium">Format</p>
+
+              <div className="grid grid-cols-4 gap-2">
+                {secondaryTools.map(({ icon: Icon, label, run }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      ref.current?.focus();
+                      run();
+                      handleInput();
+                      setFormatSheetOpen(false);
+                    }}
+                    className="press-sm flex flex-col items-center gap-1.5 rounded-2xl bg-input py-3 text-[11px] text-muted-foreground active:scale-95"
+                  >
+                    <Icon className="size-5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-2 flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setFormatSheetOpen(false);
+                    setPanel("highlight");
+                  }}
+                  className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
+                >
+                  <Highlighter className="size-4" />
+                  Highlight
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setFormatSheetOpen(false);
+                    setPanel("bg");
+                  }}
+                  className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
+                >
+                  <Palette className="size-4" />
+                  Warna latar catatan
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setFormatSheetOpen(false);
+                    setPanel("table");
+                  }}
+                  className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
+                >
+                  <Table className="size-4" />
+                  Tabel
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {panel !== "none" &&
         typeof document !== "undefined" &&
@@ -391,110 +457,110 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
             style={{ height: "100dvh" }}
             onMouseDown={() => setPanel("none")}
           >
-          <div
-            onMouseDown={(e) => e.stopPropagation()}
-            className="glass spring-in w-full max-w-xs rounded-3xl border p-4 shadow-lg"
-          >
-            {panel === "highlight" && (
-              <>
-                <p className="mb-3 text-sm font-medium">Highlight</p>
-                <div className="flex flex-wrap gap-2.5">
-                  {HIGHLIGHT_COLORS.map((c) => (
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              className="glass spring-in w-full max-w-xs rounded-3xl border p-4 shadow-lg"
+            >
+              {panel === "highlight" && (
+                <>
+                  <p className="mb-3 text-sm font-medium">Highlight</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {HIGHLIGHT_COLORS.map((c) => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        title={c.label}
+                        aria-label={c.label}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyHighlight(c.value)}
+                        className="size-9 flex-none rounded-full border border-black/10 active:scale-90"
+                        style={{ background: c.value }}
+                      />
+                    ))}
                     <button
-                      key={c.value}
                       type="button"
-                      title={c.label}
-                      aria-label={c.label}
+                      title="Hapus highlight"
+                      aria-label="Hapus highlight"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => applyHighlight(c.value)}
-                      className="size-9 flex-none rounded-full border border-black/10 active:scale-90"
-                      style={{ background: c.value }}
-                    />
-                  ))}
+                      onClick={() => applyHighlight(null)}
+                      className="press-sm flex size-9 flex-none items-center justify-center rounded-full bg-input active:scale-90"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {panel === "bg" && (
+                <>
+                  <p className="mb-3 text-sm font-medium">Warna latar catatan</p>
+                  <div className="flex flex-col gap-1.5">
+                    {BG_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => changeBg(opt.value)}
+                        className={`press-sm flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm ${
+                          bg === opt.value ? "bg-input text-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        <span
+                          className="size-5 flex-none rounded-full border border-white/15"
+                          style={{ background: opt.value === "white" ? "#ffffff" : "var(--card)" }}
+                        />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {panel === "table" && (
+                <>
+                  <p className="mb-3 text-sm font-medium">Sisipkan tabel</p>
+                  <div className="flex items-center gap-3">
+                    <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
+                      Baris
+                      <input
+                        type="number"
+                        min={1}
+                        max={12}
+                        value={tableRows}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onChange={(e) => setTableRows(Number(e.target.value) || 1)}
+                        className="w-16 rounded-lg bg-input px-2 py-1.5 text-foreground"
+                      />
+                    </label>
+                    <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
+                      Kolom
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={tableCols}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onChange={(e) => setTableCols(Number(e.target.value) || 1)}
+                        className="w-16 rounded-lg bg-input px-2 py-1.5 text-foreground"
+                      />
+                    </label>
+                  </div>
                   <button
                     type="button"
-                    title="Hapus highlight"
-                    aria-label="Hapus highlight"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => applyHighlight(null)}
-                    className="press-sm flex size-9 flex-none items-center justify-center rounded-full bg-input active:scale-90"
+                    onClick={insertTable}
+                    className="press-sm mt-3 w-full rounded-xl bg-primary py-2 text-sm font-medium text-primary-foreground active:scale-[0.98]"
                   >
-                    <X className="size-4" />
+                    Sisipkan {tableRows}x{tableCols}
                   </button>
-                </div>
-              </>
-            )}
-
-            {panel === "bg" && (
-              <>
-                <p className="mb-3 text-sm font-medium">Warna latar catatan</p>
-                <div className="flex flex-col gap-1.5">
-                  {BG_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => changeBg(opt.value)}
-                      className={`press-sm flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm ${
-                        bg === opt.value ? "bg-input text-foreground" : "text-muted-foreground"
-                      }`}
-                    >
-                      <span
-                        className="size-5 flex-none rounded-full border border-white/15"
-                        style={{ background: opt.value === "white" ? "#ffffff" : "var(--card)" }}
-                      />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {panel === "table" && (
-              <>
-                <p className="mb-3 text-sm font-medium">Sisipkan tabel</p>
-                <div className="flex items-center gap-3">
-                  <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
-                    Baris
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={tableRows}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onChange={(e) => setTableRows(Number(e.target.value) || 1)}
-                      className="w-16 rounded-lg bg-input px-2 py-1.5 text-foreground"
-                    />
-                  </label>
-                  <label className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
-                    Kolom
-                    <input
-                      type="number"
-                      min={1}
-                      max={8}
-                      value={tableCols}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onChange={(e) => setTableCols(Number(e.target.value) || 1)}
-                      className="w-16 rounded-lg bg-input px-2 py-1.5 text-foreground"
-                    />
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={insertTable}
-                  className="press-sm mt-3 w-full rounded-xl bg-primary py-2 text-sm font-medium text-primary-foreground active:scale-[0.98]"
-                >
-                  Sisipkan {tableRows}x{tableCols}
-                </button>
-                <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                  Setelah disisipkan, tarik garis tipis di sisi kanan tiap kolom untuk atur lebarnya
-                  manual. Tabel yang di-copy dari luar (mis. Excel/Sheets) juga bisa langsung
-                  di-paste.
-                </p>
-              </>
-            )}
-          </div>
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                    Setelah disisipkan, tarik garis tipis di sisi kanan tiap kolom untuk atur
+                    lebarnya manual. Tabel yang di-copy dari luar (mis. Excel/Sheets) juga bisa
+                    langsung di-paste.
+                  </p>
+                </>
+              )}
+            </div>
           </div>,
           document.body,
         )}
