@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import {
   emptyTrash,
   purgePage,
@@ -36,12 +37,15 @@ function TrashPage() {
   const empty = subjects.length === 0 && pages.length === 0;
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg">
+    <main
+      ref={registerNavDragTarget}
+      className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg"
+    >
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
           aria-label="Kembali"
-          className="press glass flex size-10 items-center justify-center rounded-full active:scale-90"
+          className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
         >
           <ChevronLeft className="size-5" />
         </Link>
@@ -60,7 +64,7 @@ function TrashPage() {
       </header>
 
       {empty && (
-        <div className="glass spring-in mt-6 rounded-3xl p-10 text-center">
+        <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
           <Trash2 className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 font-semibold">Trash kosong</p>
         </div>
@@ -68,7 +72,10 @@ function TrashPage() {
 
       <div className="space-y-2">
         {subjects.map((s) => (
-          <div key={s.id} className="glass spring-in flex items-center gap-3 rounded-2xl px-4 py-3">
+          <div
+            key={s.id}
+            className="glass-card glass-card-press spring-in flex items-center gap-3 rounded-2xl px-4 py-3"
+          >
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{s.name}</p>
               <p className="text-xs text-muted-foreground">Mata Kuliah</p>
@@ -90,7 +97,10 @@ function TrashPage() {
           </div>
         ))}
         {pages.map((p) => (
-          <div key={p.id} className="glass spring-in flex items-center gap-3 rounded-2xl px-4 py-3">
+          <div
+            key={p.id}
+            className="glass-card glass-card-press spring-in flex items-center gap-3 rounded-2xl px-4 py-3"
+          >
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{p.title}</p>
               <p className="text-xs text-muted-foreground">
