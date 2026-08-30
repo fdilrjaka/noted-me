@@ -5,7 +5,7 @@
  *
  * Kept outside React state on purpose: pointermove fires far more often
  * than a render should, so this writes directly to the DOM node's style
- * (transform/opacity — GPU-friendly, no layout thrashing).
+ * (transform/opacity/filter — GPU-friendly, no layout thrashing).
  *
  * Usage on any page that renders <BottomNav />:
  *   <main ref={registerNavDragTarget} ...>
