@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bold,
   Camera,
@@ -382,11 +383,14 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         className="note-content min-h-[60vh] flex-1 px-1 py-5"
       />
 
-      {panel !== "none" && (
-        <div
-          className="fade-in-ios fixed inset-0 z-40 flex items-center justify-center bg-background/60 p-4 backdrop-blur-sm"
-          onMouseDown={() => setPanel("none")}
-        >
+      {panel !== "none" &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fade-in-ios fixed inset-0 z-40 flex items-center justify-center bg-background/60 p-4 backdrop-blur-sm"
+            style={{ height: "100dvh" }}
+            onMouseDown={() => setPanel("none")}
+          >
           <div
             onMouseDown={(e) => e.stopPropagation()}
             className="glass spring-in w-full max-w-xs rounded-3xl border p-4 shadow-lg"
@@ -491,8 +495,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
               </>
             )}
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       <input
         ref={fileRef}
