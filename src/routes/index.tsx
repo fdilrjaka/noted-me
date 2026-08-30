@@ -15,24 +15,6 @@ import {
   useData,
 } from "@/lib/noteme/store";
 
-/** Navigates with the View Transitions API when the browser supports it, so
- * the tapped subject card visually expands into the detail page instead of
- * one page just replacing another. Falls back to a plain navigation
- * (the existing route-push CSS animation still applies) everywhere else. */
-function navigateWithTransition(run: () => void) {
-  const canTransition =
-    typeof document !== "undefined" &&
-    "startViewTransition" in document &&
-    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (canTransition) {
-    (document as Document & { startViewTransition: (cb: () => void) => void }).startViewTransition(
-      run,
-    );
-  } else {
-    run();
-  }
-}
-
 function relativeTime(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const min = Math.round(diffMs / 60000);
@@ -90,12 +72,10 @@ function Dashboard() {
   const hits = useMemo(() => search(data, query), [data, query]);
 
   const openSubject = (subjectId: string, pageId: string | undefined) => {
-    navigateWithTransition(() => {
-      void navigate({
-        to: "/subject/$subjectId",
-        params: { subjectId },
-        search: { page: pageId },
-      });
+    void navigate({
+      to: "/subject/$subjectId",
+      params: { subjectId },
+      search: { page: pageId },
     });
   };
 
@@ -222,7 +202,6 @@ function Dashboard() {
                     e.currentTarget.style.removeProperty("--px");
                     e.currentTarget.style.removeProperty("--py");
                   }}
-                  style={{ viewTransitionName: `subject-card-${subject.id}` } as never}
                   className="press glass-card glass-card-press spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4"
                 >
                   <div
