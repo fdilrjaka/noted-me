@@ -87,6 +87,7 @@
 
   html {
     color-scheme: dark;
+    overflow-x: hidden;
   }
 
   body {
@@ -95,6 +96,7 @@
     font-family: var(--font-sans);
     min-height: 100vh;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
 
   /* Ambient liquid-glass aurora backdrop */
