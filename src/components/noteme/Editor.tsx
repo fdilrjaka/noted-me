@@ -410,14 +410,15 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   // bukan ke elemen leluhur mana pun yang mungkin punya transform/animasi —
   // sehingga toolbar jadi layer paling depan yang selalu ikut nempel saat discroll,
   // persis seperti navbar, bukan malah "nempel" ke posisi konten yang lewat.
+  // Bentuknya pill mengambang + glass (pakai utility glass-navigation yang sama
+  // dipakai BottomNav), biar konsisten ala iOS.
   const mobileToolbar =
     isMobile && typeof document !== "undefined"
       ? createPortal(
-          <div
-            className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-1 overflow-x-auto border-t border-border/50 bg-background/80 px-3 py-2 shadow-2xl backdrop-blur-xl safe-bottom"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
-          >
-            {toolbarButtons}
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)]">
+            <div className="glass-navigation pointer-events-auto flex w-[95%] max-w-[420px] items-center justify-between gap-1 overflow-x-auto rounded-full px-3 py-2 shadow-2xl">
+              {toolbarButtons}
+            </div>
           </div>,
           document.body,
         )
