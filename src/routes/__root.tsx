@@ -15,6 +15,24 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
 
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { useBackgroundHue } from "@/hooks/use-background-hue"; // 1. Tambahkan import ini
+
+export const Route = createRootRoute({
+  component: Root,
+});
+
+function Root() {
+  // 2. Panggil hook di sini agar CSS variable warna selalu dikunci di seluruh halaman
+  useBackgroundHue();
+
+  return (
+    <>
+      <Outlet />
+    </>
+  );
+}
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-dvh items-center justify-center px-4">
