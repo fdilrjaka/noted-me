@@ -605,4 +605,9 @@
     content: attr(data-placeholder);
     color: var(--muted-foreground);
   }
+
+  .backdrop-blur-xl {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
 }
