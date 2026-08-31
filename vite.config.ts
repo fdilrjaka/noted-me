@@ -11,6 +11,15 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    router: {
+      codeSplittingOptions: {
+        // Keep the auth screen in the initial route graph. Vite can otherwise
+        // refresh its optimized React graph when this hook-heavy chunk first
+        // loads, which causes React's dispatcher to be null until a reload.
+        splitBehavior: ({ routeId }: { routeId: string }) =>
+          routeId === "/auth" ? [] : undefined,
+      },
+    },
   },
   vite: {
     // Pre-bundle the router before a split route (such as /auth) is requested.
