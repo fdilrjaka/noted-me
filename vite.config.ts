@@ -17,7 +17,15 @@ export default defineConfig({
     // Otherwise Vite can invalidate its dependency cache mid-navigation and mix
     // two React module generations, leaving the hook dispatcher null.
     optimizeDeps: {
-      include: ["@tanstack/react-router"],
+      include: ["@tanstack/react-router", "@tanstack/react-query"],
+    },
+    resolve: {
+      dedupe: ["@tanstack/react-router"],
+    },
+    server: {
+      warmup: {
+        clientFiles: ["./src/routes/*.tsx"],
+      },
     },
     // Keep the SSR renderer in the same optimized React graph as the app.
     environments: {
