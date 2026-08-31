@@ -104,7 +104,10 @@
 
   html {
     color-scheme: dark;
-    overflow-x: hidden;
+    /* `clip` (bukan `hidden`) supaya body tidak berubah jadi scroll container
+       terpisah — `hidden` di sini bisa memutus wheel/trackpad scroll chaining
+       ke halaman dan merusak position: sticky di beberapa browser. */
+    overflow-x: clip;
   }
 
   body {
@@ -112,8 +115,7 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     min-height: 100vh;
-    overscroll-behavior-y: none;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* Ambient liquid-glass aurora backdrop — the "environment" the glass sits
