@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, Trash2, User } from "lucide-react";
+import { Home, Trash2, User, ChevronLeft, Paintbrush, Table, Type, Camera } from "lucide-react";
 import { resetNavDragProgress, setNavDragProgress } from "@/lib/noteme/navDrag";
 
 const tabs = [
@@ -9,11 +9,9 @@ const tabs = [
   { to: "/auth", label: "Profile", icon: User },
 ] as const;
 
-// Gesture tuning — kept in one place so the feel can be adjusted without
-// hunting through the handlers below.
-const DRAG_START_PX = 6; // movement before a tap becomes a drag
-const SWITCH_DISTANCE_FRACTION = 0.35; // 30–40% of a tab's width, per spec
-const SWITCH_VELOCITY_PX_MS = 0.55; // fast flick overrides distance
+const DRAG_START_PX = 6;
+const SWITCH_DISTANCE_FRACTION = 0.35;
+const SWITCH_VELOCITY_PX_MS = 0.55;
 const RUBBER_BAND_DAMP = 0.32;
 const VELOCITY_WINDOW_MS = 120;
 
@@ -23,8 +21,6 @@ function rubberBand(value: number, min: number, max: number, damp: number) {
   return value;
 }
 
-// Gentle overshoot easing for the JS-driven settle animation (spring feel
-// without pulling in a physics/animation dependency).
 function easeOutBack(t: number) {
   const c1 = 1.15;
   const c3 = c1 + 1;
@@ -40,9 +36,23 @@ type DragState = {
   samples: { x: number; t: number }[];
 };
 
-export function BottomNav() {
+interface BottomNavProps {
+  onToggleHueSlider?: () => void;
+  onInsertTable?: () => void;
+  onFormatText?: () => void;
+  onAddMedia?: () => void;
+}
+
+export function BottomNav({
+  onToggleHueSlider,
+  onInsertTable,
+  onFormatText,
+  onAddMedia,
+}: BottomNavProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+
+  const isSubjectPage = pathname.startsWith("/subject");
 
   const trackRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
@@ -78,9 +88,8 @@ export function BottomNav() {
     [measure],
   );
 
-  // Keep the pill (and any in-flight rAF settle loop) aligned whenever the
-  // active tab changes from outside a drag (tap, back/forward, resize).
   useEffect(() => {
+    if (isSubjectPage) return;
     measure();
     if (!dragRef.current) placePill(activeIndex, 0, true);
     const onResize = () => {
@@ -89,7 +98,7 @@ export function BottomNav() {
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [activeIndex, measure, placePill]);
+  }, [activeIndex, isSubjectPage, measure, placePill]);
 
   useEffect(() => {
     return () => {
@@ -162,7 +171,7 @@ export function BottomNav() {
         }
 
         const w = tabWidthRef.current || measure();
-        const rawProgress = dx / w; // in "tabs" units
+        const rawProgress = dx / w;
         const rawTarget = drag.startIndex + rawProgress;
         const clampedTarget = rubberBand(rawTarget, 0, tabs.length - 1, RUBBER_BAND_DAMP);
         const offsetTabs = clampedTarget - drag.startIndex;
@@ -179,7 +188,7 @@ export function BottomNav() {
         window.removeEventListener("pointercancel", onUp);
         dragRef.current = null;
 
-        if (!drag.dragging) return; // plain tap — let the button's onClick handle it
+        if (!drag.dragging) return;
 
         suppressClickRef.current = true;
         setTimeout(() => {
@@ -218,6 +227,62 @@ export function BottomNav() {
     [activeIndex, measure, placePill, settleTo],
   );
 
+  // Tampilan 1: Mode Toolbar ala iOS (Muncul saat membuka Halaman Catatan / Subject)
+  if (isSubjectPage) {
+    return (
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden">
+        <nav className="glass-navigation pointer-events-auto flex items-center justify-between gap-1 rounded-full p-1.5 shadow-2xl backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={() => void navigate({ to: "/" })}
+            aria-label="Kembali ke Dashboard"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground/80 hover:bg-muted active:scale-90"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleHueSlider}
+            aria-label="Ubah Warna Latar"
+            className="press-sm flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
+          >
+            <Paintbrush className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onInsertTable}
+            aria-label="Tambah Tabel"
+            className="press-sm flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted active:scale-95"
+          >
+            <Table className="size-4 text-primary" />
+            <span>Table</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onFormatText}
+            aria-label="Format Teks"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-muted active:scale-95"
+          >
+            <Type className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onAddMedia}
+            aria-label="Tambah Foto / Media"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-muted active:scale-95"
+          >
+            <Camera className="size-4" />
+          </button>
+        </nav>
+      </div>
+    );
+  }
+
+  // Tampilan 2: Mode Main Navigation (Muncul saat di Halaman Utama / Home / Trash / Profile)
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden">
       <nav
