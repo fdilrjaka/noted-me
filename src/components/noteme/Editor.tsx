@@ -349,7 +349,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="glass-toolbar sticky top-0 z-10 -mx-1 flex items-center gap-1 overflow-x-auto rounded-2xl px-2 py-1.5">
+      <div className="fixed bottom-24 left-1/2 z-50 flex w-[92%] max-w-[400px] -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-white/20 bg-white/15 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-black/25 sm:sticky sm:top-2 sm:translate-x-0 sm:bottom-auto sm:w-full sm:max-w-full sm:rounded-xl">
         <button
           type="button"
           title="Format"
