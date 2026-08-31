@@ -58,38 +58,38 @@
 
 :root {
   --radius: 1.125rem;
-  --background: oklch(0.16 0.035 285);
+  --background: oklch(0.157 0.019 294); /* #0D0B14 deep charcoal */
   --foreground: oklch(0.97 0.006 285);
-  --card: oklch(0.24 0.04 285 / 0.55);
+  --card: oklch(0.249 0.09 300 / 0.55); /* #291345 violet */
   --card-foreground: oklch(0.97 0.006 285);
-  --popover: oklch(0.2 0.04 285 / 0.85);
+  --popover: oklch(0.136 0.018 296 / 0.9); /* #09070F */
   --popover-foreground: oklch(0.97 0.006 285);
-  --primary: oklch(0.68 0.19 275);
+  --primary: oklch(0.573 0.189 355); /* #C7387E neon rose */
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.3 0.045 285 / 0.7);
+  --secondary: oklch(0.308 0.107 301 / 0.7); /* #3A1E5C rich violet */
   --secondary-foreground: oklch(0.97 0.006 285);
-  --muted: oklch(0.28 0.035 285 / 0.6);
+  --muted: oklch(0.249 0.09 300 / 0.6); /* #291345 */
   --muted-foreground: oklch(0.72 0.03 285);
-  --accent: oklch(0.66 0.22 330);
+  --accent: oklch(0.484 0.162 352); /* #9E2A68 magenta */
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.62 0.23 20);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 0.12);
-  --input: oklch(1 0 0 / 0.08);
-  --ring: oklch(0.7 0.19 285);
-  --glow-blue: oklch(0.62 0.24 265);
-  --glow-purple: oklch(0.6 0.24 300);
-  --glow-pink: oklch(0.68 0.23 350);
+  --border: oklch(1 0 0 / 0.2);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: oklch(0.573 0.189 355);
+  --glow-blue: oklch(0.308 0.107 301); /* violet, replaces blue glow */
+  --glow-purple: oklch(0.35 0.14 301); /* rich violet glow */
+  --glow-pink: oklch(0.55 0.2 353); /* neon magenta glow */
 
   /* Liquid Glass material primitives — reused with different weights per
      material below so each surface reads as its own depth, not a copy. */
   --glass-highlight: oklch(1 0 0 / 0.14);
-  --glass-highlight-soft: oklch(1 0 0 / 0.07);
+  --glass-highlight-soft: oklch(1 0 0 / 0.08);
   --glass-specular: oklch(1 0 0 / 0.5);
   --glass-shadow-ambient: 0 1px 1px oklch(0 0 0 / 0.2), 0 18px 44px -12px oklch(0 0 0 / 0.55);
   --glass-shadow-soft: 0 1px 1px oklch(0 0 0 / 0.14), 0 10px 26px -10px oklch(0 0 0 / 0.4);
   --glass-shadow-floating: 0 10px 30px -6px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.3);
-  --glass-tint-accent: oklch(0.62 0.22 285 / 0.08);
+  --glass-tint-accent: oklch(0.484 0.162 352 / 0.1);
 }
 
 @layer base {
