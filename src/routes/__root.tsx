@@ -14,7 +14,6 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
-import { applyTheme, readTheme } from "@/lib/noteme/theme";
 
 function NotFoundComponent() {
   return (
@@ -121,10 +120,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  useEffect(() => {
-    applyTheme(readTheme());
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
