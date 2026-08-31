@@ -58,9 +58,9 @@
 
 :root {
   --radius: 1.125rem;
-  --background: oklch(0.205 0.075 300); /* #24123C deep plum (top of photo) */
+  --background: oklch(0.135 0.045 300); /* darker base for comfortable long writing */
   --foreground: oklch(0.98 0.004 300);
-  --card: oklch(0.86 0.02 320 / 0.16); /* frosted light glass note card */
+  --card: oklch(0.58 0.025 320 / 0.14); /* subdued glass note card */
   --card-foreground: oklch(0.99 0.002 300);
   --popover: oklch(0.24 0.07 305 / 0.9);
   --popover-foreground: oklch(0.98 0.004 300);
@@ -80,6 +80,8 @@
   --glow-blue: oklch(0.28 0.11 300); /* deep violet, top of gradient */
   --glow-purple: oklch(0.45 0.19 320); /* purple-magenta mid */
   --glow-pink: oklch(0.62 0.24 350); /* hot pink, bottom of gradient */
+  --user-theme-color: #7c3aed;
+  --user-theme-intensity: 38%;
 
   /* Liquid Glass material primitives — reused with different weights per
      material below so each surface reads as its own depth, not a copy. */
@@ -127,10 +129,22 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60% 40% at 50% 6%, var(--glow-blue) 0%, transparent 78%),
-      radial-gradient(70% 45% at 30% 62%, var(--glow-purple) 0%, transparent 76%),
-      radial-gradient(85% 50% at 60% 100%, var(--glow-pink) 0%, transparent 78%);
-    opacity: 0.85;
+      radial-gradient(
+        60% 42% at 50% 4%,
+        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-blue)) 0%,
+        transparent 78%
+      ),
+      radial-gradient(
+        72% 48% at 25% 62%,
+        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-purple)) 0%,
+        transparent 76%
+      ),
+      radial-gradient(
+        85% 52% at 65% 105%,
+        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-pink)) 0%,
+        transparent 78%
+      );
+    opacity: 0.68;
     filter: blur(80px) saturate(130%);
     animation: aurora 42s var(--ease-ios) infinite alternate;
   }
@@ -217,6 +231,31 @@
       box-shadow: var(--glass-shadow-ambient), inset 0 1px 0 oklch(1 0 0 / 0.08);
     }
   }
+}
+
+@utility theme-swatch {
+  color: var(--foreground);
+  background: linear-gradient(135deg, var(--swatch-color), var(--glow-purple));
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 4px 14px oklch(0 0 0 / 0.28);
+}
+
+@utility theme-picker {
+  color: var(--foreground);
+  background: conic-gradient(
+    from 45deg,
+    oklch(0.68 0.2 25),
+    oklch(0.75 0.16 90),
+    oklch(0.67 0.16 155),
+    oklch(0.65 0.18 240),
+    oklch(0.63 0.2 305),
+    oklch(0.68 0.2 25)
+  );
+  border: 1px solid var(--border);
+}
+
+@utility theme-slider {
+  accent-color: var(--user-theme-color);
 }
 
 @utility glass-card-press {
