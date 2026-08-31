@@ -81,7 +81,7 @@ function buildTableHtml(rows: number, cols: number) {
   return `<table><colgroup>${Array.from({ length: cols }, () => "<col />").join("")}</colgroup><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p><br></p>`;
 }
 
-/** Pastikan setiap tabel di dalam note (baik baru disisipkan, di-paste, atau lama) punya
+/** Pastikan setiap tabel di dalam note punya
  * colgroup dengan lebar eksplisit + handle drag di tiap kolom biar bisa di-resize manual. */
 function enhanceTables(root: HTMLElement) {
   root.querySelectorAll("table").forEach((table) => {
@@ -117,8 +117,7 @@ function enhanceTables(root: HTMLElement) {
   });
 }
 
-/** Bersihin tabel hasil copy-paste dari luar (Excel/Sheets/Word): buang style & tag
- * bawaan mereka, sisain struktur tabelnya aja biar konsisten sama tabel bikinan sendiri. */
+/** Bersihin tabel hasil copy-paste dari luar. */
 function sanitizeTableHtml(html: string): string | null {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const table = doc.querySelector("table");
@@ -154,8 +153,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     null,
   );
 
-  // Floating contextual toolbar: shows near the current text selection,
-  // spring-in/out, and follows scroll/resize while a selection is active.
   const updateSelectionToolbar = useCallback(() => {
     const root = ref.current;
     const sel = typeof window !== "undefined" ? window.getSelection() : null;
@@ -211,7 +208,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       setBg("default");
     }
     if (ref.current) enhanceTables(ref.current);
-    // Load content only when switching pages, not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
@@ -253,7 +249,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     try {
       window.localStorage.setItem(`noteme.bg.${pageId}`, next);
     } catch {
-      /* storage full or blocked, opsi warna tetap jalan untuk sesi ini */
+      //
     }
     setPanel("none");
   };
@@ -272,7 +268,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     setPanel("none");
   };
 
-  // Drag-resize kolom tabel: mousedown di handle -> update lebar <col> pas mouse gerak.
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
@@ -322,7 +317,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         insertHtml(cleaned);
       }
     }
-    // Selain tabel, biarkan perilaku paste bawaan browser (teks/format lain tetap normal).
   };
 
   const primaryTools = [
@@ -349,7 +343,14 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="fixed bottom-24 left-1/2 z-50 flex w-[92%] max-w-[400px] -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-white/20 bg-white/15 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-black/25 sm:sticky sm:top-2 sm:translate-x-0 sm:bottom-auto sm:w-full sm:max-w-full sm:rounded-xl">
+      {/* 
+        Toolbar Formatting: 
+        - sticky bottom-4 di layar HP (agar mengambang dan menempel di batas layar bawah/keyboard) 
+        - Di layar besar (sm), menggunakan top-2 sehingga kembali seperti navbar atas biasa.
+        - Warna background diubah mengikuti tema aplikasi (bg-background) dengan opacity transparan.
+      */}
+      <div className="sticky bottom-4 z-50 mx-auto flex w-[95%] max-w-[400px] items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/50 bg-background/70 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:top-2 sm:bottom-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:bg-background/80 sm:px-2 sm:shadow-sm">
+        
         <button
           type="button"
           title="Format"
@@ -391,6 +392,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         >
           <ImageIcon className="size-4" />
         </button>
+        
         <button
           type="button"
           title="Kamera"
@@ -423,8 +425,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           setFormatSheetOpen(false);
         }}
         data-placeholder="Mulai menulis catatan…"
-        className="note-content min-h-[60vh] flex-1 px-1 py-5"
+        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-20" 
       />
+      {/* Catatan: pb-20 ditambahkan pada editor agar teks tidak tertutup toolbar di bagian bawah saat di-scroll mentok */}
 
       {selectionToolbar &&
         typeof document !== "undefined" &&
@@ -683,4 +686,3 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     </div>
   );
 }
- 
