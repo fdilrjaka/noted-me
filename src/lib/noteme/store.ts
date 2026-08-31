@@ -240,6 +240,18 @@ export function restoreSubject(id: string) {
   patchSubject(id, { deleted: false });
 }
 
+export function reorderPages(subjectId: string, orderedIds: string[]) {
+  const positionOf = new Map(orderedIds.map((id, i) => [id, i]));
+  update((d) => ({
+    ...d,
+    pages: d.pages.map((p) =>
+      p.subject_id === subjectId && positionOf.has(p.id)
+        ? { ...p, position: positionOf.get(p.id)!, updated_at: now(), dirty: true }
+        : p,
+    ),
+  }));
+}
+
 export function deletePage(id: string) {
   patchPage(id, { deleted: true });
 }
