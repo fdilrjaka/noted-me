@@ -58,28 +58,28 @@
 
 :root {
   --radius: 1.125rem;
-  --background: oklch(0.157 0.019 294); /* #0D0B14 deep charcoal */
-  --foreground: oklch(0.97 0.006 285);
-  --card: oklch(0.249 0.09 300 / 0.55); /* #291345 violet */
-  --card-foreground: oklch(0.97 0.006 285);
-  --popover: oklch(0.136 0.018 296 / 0.9); /* #09070F */
-  --popover-foreground: oklch(0.97 0.006 285);
-  --primary: oklch(0.573 0.189 355); /* #C7387E neon rose */
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.308 0.107 301 / 0.7); /* #3A1E5C rich violet */
-  --secondary-foreground: oklch(0.97 0.006 285);
-  --muted: oklch(0.249 0.09 300 / 0.6); /* #291345 */
-  --muted-foreground: oklch(0.72 0.03 285);
-  --accent: oklch(0.484 0.162 352); /* #9E2A68 magenta */
+  --background: oklch(0.205 0.075 300); /* #24123C deep plum (top of photo) */
+  --foreground: oklch(0.98 0.004 300);
+  --card: oklch(0.86 0.02 320 / 0.16); /* frosted light glass note card */
+  --card-foreground: oklch(0.99 0.002 300);
+  --popover: oklch(0.24 0.07 305 / 0.9);
+  --popover-foreground: oklch(0.98 0.004 300);
+  --primary: oklch(0.72 0.16 352); /* soft neon pink (toolbar accent) */
+  --primary-foreground: oklch(0.2 0.06 320);
+  --secondary: oklch(0.9 0.02 320 / 0.18);
+  --secondary-foreground: oklch(0.98 0.004 300);
+  --muted: oklch(0.88 0.02 320 / 0.12);
+  --muted-foreground: oklch(0.86 0.02 320 / 0.72);
+  --accent: oklch(0.64 0.21 352); /* magenta */
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.62 0.23 20);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 0.2);
-  --input: oklch(1 0 0 / 0.1);
-  --ring: oklch(0.573 0.189 355);
-  --glow-blue: oklch(0.308 0.107 301); /* violet, replaces blue glow */
-  --glow-purple: oklch(0.35 0.14 301); /* rich violet glow */
-  --glow-pink: oklch(0.55 0.2 353); /* neon magenta glow */
+  --border: oklch(1 0 0 / 0.22);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(0.72 0.16 352);
+  --glow-blue: oklch(0.28 0.11 300); /* deep violet, top of gradient */
+  --glow-purple: oklch(0.45 0.19 320); /* purple-magenta mid */
+  --glow-pink: oklch(0.62 0.24 350); /* hot pink, bottom of gradient */
 
   /* Liquid Glass material primitives — reused with different weights per
      material below so each surface reads as its own depth, not a copy. */
@@ -127,10 +127,10 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(36% 30% at 16% 20%, var(--glow-blue) 0%, transparent 72%),
-      radial-gradient(40% 34% at 82% 14%, var(--glow-pink) 0%, transparent 74%),
-      radial-gradient(44% 38% at 60% 82%, var(--glow-purple) 0%, transparent 76%);
-    opacity: 0.32;
+      radial-gradient(60% 40% at 50% 6%, var(--glow-blue) 0%, transparent 78%),
+      radial-gradient(70% 45% at 30% 62%, var(--glow-purple) 0%, transparent 76%),
+      radial-gradient(85% 50% at 60% 100%, var(--glow-pink) 0%, transparent 78%);
+    opacity: 0.85;
     filter: blur(80px) saturate(130%);
     animation: aurora 42s var(--ease-ios) infinite alternate;
   }
@@ -148,7 +148,7 @@
   }
 
   ::selection {
-    background: oklch(0.68 0.19 275 / 0.4);
+    background: oklch(0.64 0.21 352 / 0.4);
   }
 
   ::-webkit-scrollbar {
@@ -175,14 +175,14 @@
 }
 
 @utility glass-soft {
-  background: oklch(0.28 0.04 285 / 0.4);
+  background: oklch(0.88 0.02 320 / 0.16);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
   border: 1px solid var(--border);
 }
 
 @utility glass-bar {
-  background: oklch(0.18 0.035 285 / 0.72);
+  background: oklch(0.86 0.02 320 / 0.2);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   border-color: var(--border);
@@ -229,7 +229,7 @@
 /* glass-navigation — bottom nav / desktop nav rail. Denser, more opaque so
    it stays legible while floating over arbitrary content. */
 @utility glass-navigation {
-  background: oklch(0.19 0.035 285 / 0.66);
+  background: oklch(0.86 0.02 320 / 0.22);
   backdrop-filter: blur(34px) saturate(190%);
   -webkit-backdrop-filter: blur(34px) saturate(190%);
   border: 1px solid oklch(1 0 0 / 0.1);
@@ -240,7 +240,7 @@
 /* glass-toolbar — editor toolbar. Thin, quiet, almost disappears into the
    writing surface; highlight lives only on the top hairline. */
 @utility glass-toolbar {
-  background: oklch(0.2 0.035 285 / 0.5);
+  background: oklch(0.88 0.02 320 / 0.18);
   backdrop-filter: blur(26px) saturate(160%);
   -webkit-backdrop-filter: blur(26px) saturate(160%);
   border: 1px solid oklch(1 0 0 / 0.08);
@@ -250,7 +250,7 @@
 /* glass-sheet — bottom sheets / modals. Strongest blur + largest shadow so
    it reads as a surface lifted well above the page beneath it. */
 @utility glass-sheet {
-  background: oklch(0.21 0.038 285 / 0.82);
+  background: oklch(0.3 0.09 315 / 0.85);
   backdrop-filter: blur(38px) saturate(190%);
   -webkit-backdrop-filter: blur(38px) saturate(190%);
   border: 1px solid oklch(1 0 0 / 0.12);
@@ -261,7 +261,7 @@
 /* glass-floating — FAB / floating controls. Small, punchy contact shadow so
    it feels like it hovers above everything else. */
 @utility glass-floating {
-  background: oklch(0.26 0.045 285 / 0.6);
+  background: oklch(0.9 0.02 320 / 0.24);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid oklch(1 0 0 / 0.14);
@@ -271,7 +271,7 @@
 /* glass-input — search / form fields. Slightly recessed feeling (inner
    shadow) rather than raised, so it reads as a place to type into. */
 @utility glass-input {
-  background: oklch(0.14 0.03 285 / 0.4);
+  background: oklch(0.85 0.02 320 / 0.12);
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid oklch(1 0 0 / 0.1);
