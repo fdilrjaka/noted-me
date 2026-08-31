@@ -1,6 +1,6 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Check, ChevronLeft, LogOut, Palette } from "lucide-react";
+import { ChevronLeft, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,13 +8,6 @@ import { useSession, usernameToEmail } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import { dirtyCount, useData } from "@/lib/noteme/store";
 import { syncNow } from "@/lib/noteme/sync";
-import {
-  DEFAULT_THEME,
-  readTheme,
-  saveTheme,
-  THEME_PRESETS,
-  type ThemePreference,
-} from "@/lib/noteme/theme";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -43,16 +36,6 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [theme, setTheme] = useState<ThemePreference>(DEFAULT_THEME);
-
-  useEffect(() => {
-    setTheme(readTheme());
-  }, []);
-
-  const updateTheme = (next: ThemePreference) => {
-    setTheme(next);
-    saveTheme(next);
-  };
 
   const submit = async () => {
     const clean = username.trim();
@@ -134,60 +117,6 @@ function AuthPage() {
         </Link>
         <h1 className="text-lg font-bold tracking-tight">Akun</h1>
       </header>
-
-      <section className="glass-card spring-in mt-4 rounded-3xl p-5" aria-labelledby="theme-title">
-        <div className="flex items-center gap-2">
-          <Palette className="size-4 text-primary" />
-          <div>
-            <h2 id="theme-title" className="text-sm font-semibold">
-              Warna tampilan
-            </h2>
-            <p className="text-xs text-muted-foreground">Gradient tetap berpadu dengan ungu.</p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          {THEME_PRESETS.map((preset) => (
-            <button
-              key={preset.value}
-              type="button"
-              title={preset.label}
-              aria-label={`Pilih warna ${preset.label}`}
-              aria-pressed={theme.color === preset.value}
-              onClick={() => updateTheme({ ...theme, color: preset.value })}
-              className="theme-swatch press-sm flex size-10 items-center justify-center rounded-full active:scale-90"
-              style={{ "--swatch-color": preset.value } as CSSProperties}
-            >
-              {theme.color === preset.value && <Check className="size-4" />}
-            </button>
-          ))}
-          <label className="theme-picker press-sm flex size-10 cursor-pointer items-center justify-center rounded-full">
-            <span className="sr-only">Pilih warna sendiri</span>
-            <input
-              type="color"
-              value={theme.color}
-              onChange={(event) => updateTheme({ ...theme, color: event.target.value })}
-              className="absolute size-px opacity-0"
-            />
-            <Palette className="size-4" />
-          </label>
-        </div>
-
-        <label className="mt-4 block text-xs text-muted-foreground">
-          Intensitas warna <span className="float-right text-foreground">{theme.intensity}%</span>
-          <input
-            type="range"
-            min="18"
-            max="70"
-            step="1"
-            value={theme.intensity}
-            onChange={(event) =>
-              updateTheme({ ...theme, intensity: Number(event.target.value) })
-            }
-            className="theme-slider mt-2 w-full"
-          />
-        </label>
-      </section>
 
       {user ? (
         <div className="glass-card spring-in mt-6 rounded-3xl p-6">
