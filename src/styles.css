@@ -2,24 +2,30 @@
 @source "../src";
 @import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
 /*
- * NoteMe design system — "Liquid Glass" (Apple-inspired, not a clone).
- * All colors are oklch semantic tokens. Never hardcode colors in components.
+ * Design system definition.
  *
- * Material philosophy: each glass-* utility is a distinct material with its
- * own blur/opacity/shadow/highlight recipe — not one class reused everywhere.
- * See glass-card / glass-navigation / glass-toolbar / glass-sheet /
- * glass-floating / glass-input below.
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values using oklch.
+ * All colors MUST use oklch format.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
-  --radius-2xl: calc(var(--radius) + 12px);
-  --radius-3xl: calc(var(--radius) + 20px);
-
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -39,575 +45,100 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-glow-blue: var(--glow-blue);
-  --color-glow-purple: var(--glow-purple);
-  --color-glow-pink: var(--glow-pink);
-
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue",
-    system-ui, sans-serif;
-
-  --shadow-glass: 0 8px 32px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.08);
-  --shadow-glow: 0 0 40px oklch(0.62 0.22 285 / 0.35);
-
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-spring-soft: cubic-bezier(0.22, 1.12, 0.36, 1);
-  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-rubber: cubic-bezier(0.16, 1, 0.3, 1);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
-  --radius: 1.125rem;
-  --background: oklch(0.135 0.045 300); /* darker base for comfortable long writing */
-  --foreground: oklch(0.98 0.004 300);
-  --card: oklch(0.58 0.025 320 / 0.14); /* subdued glass note card */
-  --card-foreground: oklch(0.99 0.002 300);
-  --popover: oklch(0.24 0.07 305 / 0.9);
-  --popover-foreground: oklch(0.98 0.004 300);
-  --primary: oklch(0.72 0.16 352); /* soft neon pink (toolbar accent) */
-  --primary-foreground: oklch(0.2 0.06 320);
-  --secondary: oklch(0.9 0.02 320 / 0.18);
-  --secondary-foreground: oklch(0.98 0.004 300);
-  --muted: oklch(0.88 0.02 320 / 0.12);
-  --muted-foreground: oklch(0.86 0.02 320 / 0.72);
-  --accent: oklch(0.64 0.21 352); /* magenta */
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.62 0.23 20);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 0.22);
-  --input: oklch(1 0 0 / 0.12);
-  --ring: oklch(0.72 0.16 352);
-  --glow-blue: oklch(0.28 0.11 300); /* deep violet, top of gradient */
-  --glow-purple: oklch(0.45 0.19 320); /* purple-magenta mid */
-  --glow-pink: oklch(0.62 0.24 350); /* hot pink, bottom of gradient */
-  --user-theme-color: #7c3aed;
-  --user-theme-intensity: 38%;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.984 0.003 247.858);
+  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.968 0.007 247.896);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-border: oklch(0.929 0.013 255.508);
+  --sidebar-ring: oklch(0.704 0.04 256.788);
+}
 
-  /* Liquid Glass material primitives — reused with different weights per
-     material below so each surface reads as its own depth, not a copy. */
-  --glass-highlight: oklch(1 0 0 / 0.14);
-  --glass-highlight-soft: oklch(1 0 0 / 0.08);
-  --glass-specular: oklch(1 0 0 / 0.5);
-  --glass-shadow-ambient: 0 1px 1px oklch(0 0 0 / 0.2), 0 18px 44px -12px oklch(0 0 0 / 0.55);
-  --glass-shadow-soft: 0 1px 1px oklch(0 0 0 / 0.14), 0 10px 26px -10px oklch(0 0 0 / 0.4);
-  --glass-shadow-floating: 0 10px 30px -6px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.3);
-  --glass-tint-accent: oklch(0.484 0.162 352 / 0.1);
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.208 0.042 265.755);
+  --sidebar-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.279 0.041 260.031);
+  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  #lovable-badge {
-    display: none !important;
-  }
-
-  html {
-    color-scheme: dark;
-    /* `clip` (bukan `hidden`) supaya body tidak berubah jadi scroll container
-       terpisah — `hidden` di sini bisa memutus wheel/trackpad scroll chaining
-       ke halaman dan merusak position: sticky di beberapa browser. */
-    overflow-x: clip;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-sans);
-    min-height: 100vh;
-    overflow-x: clip;
-  }
-
-  /* Ambient liquid-glass aurora backdrop — the "environment" the glass sits
-     in. Kept subtle and very slow so it reads as light, not as a UI effect. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: -20%;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        60% 42% at 50% 4%,
-        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-blue)) 0%,
-        transparent 78%
-      ),
-      radial-gradient(
-        72% 48% at 25% 62%,
-        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-purple)) 0%,
-        transparent 76%
-      ),
-      radial-gradient(
-        85% 52% at 65% 105%,
-        color-mix(in oklch, var(--user-theme-color) var(--user-theme-intensity), var(--glow-pink)) 0%,
-        transparent 78%
-      );
-    opacity: 0.68;
-    filter: blur(80px) saturate(130%);
-    animation: aurora 42s var(--ease-ios) infinite alternate;
-  }
-
-  @keyframes aurora {
-    0% {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    50% {
-      transform: translate3d(1.5%, -2%, 0) scale(1.05);
-    }
-    100% {
-      transform: translate3d(-2%, 1.5%, 0) scale(1.02);
-    }
-  }
-
-  ::selection {
-    background: oklch(0.64 0.21 352 / 0.4);
-  }
-
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 0.14);
-    border-radius: 999px;
-  }
-}
-
-/* ---------- Liquid Glass material system ---------- */
-/* Every material shares the same primitives (translucency, blur, subtle
-   border, inner highlight, ambient shadow) but combines them with different
-   weights so each reads as a distinct surface. */
-
-@utility glass {
-  background: var(--card);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-glass);
-}
-
-@utility glass-soft {
-  background: oklch(0.88 0.02 320 / 0.16);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid var(--border);
-}
-
-@utility glass-bar {
-  background: oklch(0.86 0.02 320 / 0.2);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-color: var(--border);
-}
-
-/* glass-card — subject cards, content cards. Medium blur, layered highlight
-   on the top edge, ambient contact shadow, and a pointer-reactive specular
-   sheen on desktop (driven by --px/--py custom props, see Dashboard.tsx). */
-@utility glass-card {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(
-      140% 100% at var(--px, 50%) var(--py, 0%),
-      var(--glass-highlight-soft),
-      transparent 60%
-    ),
-    var(--card);
-  backdrop-filter: blur(22px) saturate(170%);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  border: 1px solid var(--border);
-  border-top-color: oklch(1 0 0 / 0.16);
-  box-shadow: var(--glass-shadow-soft), inset 0 1px 0 oklch(1 0 0 / 0.06);
-  transition:
-    transform 0.5s var(--ease-spring-soft),
-    box-shadow 0.4s var(--ease-ios),
-    border-color 0.4s var(--ease-ios);
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      transform: translate3d(0, -3px, 0);
-      box-shadow: var(--glass-shadow-ambient), inset 0 1px 0 oklch(1 0 0 / 0.08);
-    }
-  }
-}
-
-@utility theme-swatch {
-  color: var(--foreground);
-  background: linear-gradient(135deg, var(--swatch-color), var(--glow-purple));
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 4px 14px oklch(0 0 0 / 0.28);
-}
-
-@utility theme-picker {
-  color: var(--foreground);
-  background: conic-gradient(
-    from 45deg,
-    oklch(0.68 0.2 25),
-    oklch(0.75 0.16 90),
-    oklch(0.67 0.16 155),
-    oklch(0.65 0.18 240),
-    oklch(0.63 0.2 305),
-    oklch(0.68 0.2 25)
-  );
-  border: 1px solid var(--border);
-}
-
-@utility theme-slider {
-  accent-color: var(--user-theme-color);
-}
-
-@utility glass-card-press {
-  transition: transform 0.4s var(--ease-spring);
-  &:active {
-    transform: scale(0.975);
-  }
-}
-
-/* glass-navigation — bottom nav / desktop nav rail. Denser, more opaque so
-   it stays legible while floating over arbitrary content. */
-@utility glass-navigation {
-  background: oklch(0.86 0.02 320 / 0.22);
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
-  border: 1px solid oklch(1 0 0 / 0.1);
-  border-top-color: oklch(1 0 0 / 0.18);
-  box-shadow: var(--glass-shadow-floating), inset 0 1px 0 oklch(1 0 0 / 0.09);
-}
-
-/* glass-toolbar — editor toolbar. Thin, quiet, almost disappears into the
-   writing surface; highlight lives only on the top hairline. */
-@utility glass-toolbar {
-  background: oklch(0.88 0.02 320 / 0.18);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
-  border: 1px solid oklch(1 0 0 / 0.08);
-  box-shadow: 0 6px 20px -10px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.08);
-}
-
-/* glass-sheet — bottom sheets / modals. Strongest blur + largest shadow so
-   it reads as a surface lifted well above the page beneath it. */
-@utility glass-sheet {
-  background: oklch(0.3 0.09 315 / 0.85);
-  backdrop-filter: blur(38px) saturate(190%);
-  -webkit-backdrop-filter: blur(38px) saturate(190%);
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-top-color: oklch(1 0 0 / 0.22);
-  box-shadow: 0 -4px 0 oklch(1 0 0 / 0.02) inset, 0 24px 60px -14px oklch(0 0 0 / 0.65);
-}
-
-/* glass-floating — FAB / floating controls. Small, punchy contact shadow so
-   it feels like it hovers above everything else. */
-@utility glass-floating {
-  background: oklch(0.9 0.02 320 / 0.24);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid oklch(1 0 0 / 0.14);
-  box-shadow: var(--glass-shadow-floating), inset 0 1px 0 oklch(1 0 0 / 0.12);
-}
-
-/* glass-input — search / form fields. Slightly recessed feeling (inner
-   shadow) rather than raised, so it reads as a place to type into. */
-@utility glass-input {
-  background: oklch(0.85 0.02 320 / 0.12);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid oklch(1 0 0 / 0.1);
-  box-shadow:
-    inset 0 1px 3px oklch(0 0 0 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.04);
-}
-
-@utility press {
-  transition:
-    transform 0.42s var(--ease-spring),
-    background-color 0.25s var(--ease-ios),
-    box-shadow 0.35s var(--ease-ios),
-    opacity 0.25s var(--ease-ios);
-  will-change: transform;
-}
-
-@utility press-sm {
-  transition: transform 0.34s var(--ease-spring);
-  will-change: transform;
-}
-
-@utility glow-ring {
-  box-shadow: var(--shadow-glow);
-}
-
-@utility safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
-}
-
-@utility safe-bottom-lg {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 6rem);
-}
-
-@utility safe-top {
-  padding-top: calc(env(safe-area-inset-top) + 0.75rem);
-}
-
-@utility spring-in {
-  animation: spring-in 0.52s var(--ease-spring) both;
-}
-
-@keyframes spring-in {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 12px, 0) scale(0.965);
-  }
-  60% {
-    opacity: 1;
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@utility fade-in-ios {
-  animation: fade-in-ios 0.35s var(--ease-ios) both;
-}
-
-@keyframes fade-in-ios {
-  from {
-    opacity: 0;
-    transform: scale(1.015);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@utility route-push {
-  animation: route-push 0.46s var(--ease-ios) backwards;
-}
-
-@keyframes route-push {
-  from {
-    opacity: 0;
-    transform: translate3d(2%, 10px, 0) scale(0.985);
-    filter: blur(6px);
-  }
-  40% {
-    opacity: 1;
-    filter: blur(0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@utility route-pop {
-  animation: route-pop 0.42s var(--ease-ios) backwards;
-}
-
-@keyframes route-pop {
-  from {
-    opacity: 0;
-    transform: translate3d(-1.5%, 0, 0) scale(0.99);
-    filter: blur(4px);
-  }
-  45% {
-    opacity: 1;
-    filter: blur(0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@utility sheet-up {
-  animation: sheet-up 0.5s var(--ease-spring-soft) both;
-}
-
-@keyframes sheet-up {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 100%, 0) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@utility slide-in-left {
-  animation: slide-in-left 0.4s var(--ease-ios) both;
-}
-
-@keyframes slide-in-left {
-  from {
-    transform: translate3d(-100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ---------- Liquid Glass bottom navigation (drag/swipe) ---------- */
-
-@utility nav-pill {
-  /* No transition: used while a gesture (drag) or a JS rAF loop (settle) is
-     already driving the transform every frame — adding a CSS transition on
-     top would double-smooth and feel laggy. */
-  transition: none;
-  will-change: transform;
-}
-
-@utility nav-pill-settling {
-  /* Used for a single, discrete reposition (tap on another tab, resize) so
-     the pill glides there instead of teleporting. */
-  transition:
-    transform 0.5s var(--ease-spring),
-    width 0.4s var(--ease-spring-soft);
-}
-
-/* ---------- Rich text editor content ---------- */
-
-@utility note-content {
-  font-size: 1.0625rem;
-  line-height: 1.7;
-  outline: none;
-
-  & h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    margin: 1.2em 0 0.4em;
-  }
-  & h2 {
-    font-size: 1.375rem;
-    font-weight: 650;
-    margin: 1.1em 0 0.35em;
-  }
-  & h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 1em 0 0.3em;
-  }
-  & p {
-    margin: 0.5em 0;
-  }
-  & ul,
-  & ol {
-    margin: 0.5em 0 0.5em 1.35em;
-  }
-  & ul {
-    list-style: disc;
-  }
-  & ol {
-    list-style: decimal;
-  }
-  & blockquote {
-    margin: 0.8em 0;
-    padding: 0.35em 0 0.35em 1em;
-    border-left: 3px solid var(--primary);
-    color: var(--muted-foreground);
-    font-style: italic;
-  }
-  & a {
-    color: var(--primary);
-    text-decoration: underline;
-  }
-  & img {
-    max-width: 100%;
-    border-radius: var(--radius);
-    margin: 0.6em 0;
-    border: 1px solid var(--border);
-  }
-  & table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0.8em 0;
-    font-size: 0.95rem;
-    table-layout: fixed;
-  }
-  & td,
-  & th {
-    position: relative;
-    border: 1px solid var(--border);
-    padding: 0.5em 0.65em;
-    min-width: 2.5rem;
-    overflow: hidden;
-  }
-  & th {
-    background: oklch(1 0 0 / 0.06);
-    font-weight: 600;
-  }
-  & .col-resize-handle {
-    position: absolute;
-    top: 0;
-    right: -3px;
-    width: 6px;
-    height: 100%;
-    cursor: col-resize;
-    z-index: 1;
-    touch-action: none;
-  }
-  & .col-resize-handle:hover,
-  & .col-resize-handle.is-resizing {
-    background: var(--primary);
-    opacity: 0.5;
-  }
-  &[data-bg="white"] {
-    background: #ffffff;
-    color: #17171a;
-    border-radius: var(--radius);
-    padding: 1rem;
-  }
-  &[data-bg="white"] th {
-    background: rgba(0, 0, 0, 0.05);
-  }
-  &[data-bg="white"] td,
-  &[data-bg="white"] th {
-    border-color: rgba(0, 0, 0, 0.12);
-  }
-  &[data-bg="white"] blockquote {
-    color: rgba(23, 23, 26, 0.65);
-  }
-  & ul[data-checklist] {
-    list-style: none;
-    margin-left: 0.15em;
-  }
-  & ul[data-checklist] li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.55em;
-  }
-  & input[type="checkbox"] {
-    margin-top: 0.45em;
-    width: 1.05em;
-    height: 1.05em;
-    accent-color: var(--primary);
-    flex: none;
-  }
-  & code {
-    background: oklch(1 0 0 / 0.08);
-    padding: 0.1em 0.35em;
-    border-radius: 6px;
-    font-size: 0.92em;
-  }
-  &:empty::before,
-  & > p:only-child:empty::before {
-    content: attr(data-placeholder);
-    color: var(--muted-foreground);
   }
 }
