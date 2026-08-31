@@ -415,7 +415,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const mobileToolbar =
     isMobile && typeof document !== "undefined"
       ? createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)]">
+          <div
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)]"
+            // Portal ini tetap ada di dalam React tree kartu halaman, jadi event
+            // sentuh di sini akan tetap bubble ke handler swipe ganti halaman
+            // meski secara DOM sudah pindah ke <body>. Stop di sini supaya geser
+            // toolbar ke kanan/kiri tidak dibaca sebagai swipe ganti halaman.
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <div className="glass-navigation pointer-events-auto flex w-[95%] max-w-[420px] items-center justify-between gap-1 overflow-x-auto rounded-full px-3 py-2 shadow-2xl">
               {toolbarButtons}
             </div>
@@ -428,9 +437,10 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     <div className="flex min-h-0 flex-1 flex-col">
       {mobileToolbar}
 
-      {/* Toolbar desktop: tetap seperti semula, sticky di dalam layout normal */}
+      {/* Toolbar desktop: sticky di dalam layout normal, dibalikin ke gaya
+          glass iOS (glass-toolbar) biar nggak keliatan flat lagi */}
       {!isMobile && (
-        <div className="hidden items-center justify-between gap-1 overflow-x-auto rounded-xl px-2 sm:sticky sm:top-2 sm:flex sm:shadow-sm">
+        <div className="glass-toolbar hidden items-center justify-between gap-1 overflow-x-auto rounded-2xl px-2 py-1 sm:sticky sm:top-2 sm:flex">
           {toolbarButtons}
         </div>
       )}
