@@ -14,24 +14,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
-
-import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { useBackgroundHue } from "@/hooks/use-background-hue"; // 1. Tambahkan import ini
-
-export const Route = createRootRoute({
-  component: Root,
-});
-
-function Root() {
-  // 2. Panggil hook di sini agar CSS variable warna selalu dikunci di seluruh halaman
-  useBackgroundHue();
-
-  return (
-    <>
-      <Outlet />
-    </>
-  );
-}
+import { useBackgroundHue } from "@/hooks/use-background-hue"; // <-- Import Hook
 
 function NotFoundComponent() {
   return (
@@ -138,6 +121,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  
+  // Panggil hook di sini agar warna latar global selalu aktif di semua route/halaman
+  useBackgroundHue();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -148,9 +134,6 @@ function RootComponent() {
   );
 }
 
-// iOS-style push/pop transitions: track the visited pathname stack so
-// "back" navigations slide in from the left and deeper navigations push
-// in from the right with a subtle fade-scale.
 function RouteTransition() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const stackRef = useRef<string[]>([]);
@@ -172,7 +155,6 @@ function RouteTransition() {
 
   return (
     <div key={pathname} className={direction ? `route-${direction}` : undefined}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </div>
   );
