@@ -535,6 +535,28 @@
     font-size: 0.95rem;
     table-layout: fixed;
   }
+  /* Mobile: tabel yang lebar kolomnya sudah "dikunci" (px) saat diresize di
+     laptop bakal kepotong di layar HP kalau tetap fixed-layout. Di layar
+     sempit, lepas lebar kolom lama & pakai auto-layout + font/padding lebih
+     kecil supaya seluruh tabel menyesuaikan dan tetap kebaca utuh. */
+  @media (max-width: 639px) {
+    & table {
+      table-layout: auto;
+      font-size: 0.8rem;
+      max-width: 100%;
+    }
+    & col {
+      width: auto !important;
+    }
+    & td,
+    & th {
+      padding: 0.4em 0.45em;
+      min-width: 0;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+  }
   & td,
   & th {
     position: relative;
