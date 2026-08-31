@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 export type Subject = {
   id: string;
@@ -48,12 +49,35 @@ function now() {
   return new Date().toISOString();
 }
 
+let lastStorageWarningAt = 0;
+
+function isQuotaExceeded(err: unknown): boolean {
+  if (!(err instanceof DOMException)) return false;
+  // Different browsers report the same "storage full" condition differently.
+  return (
+    err.name === "QuotaExceededError" ||
+    err.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    err.code === 22 ||
+    err.code === 1014
+  );
+}
+
 function persist() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(data));
-  } catch {
-    /* storage full or blocked — keep in-memory state */
+  } catch (err) {
+    // Data was NOT saved — surface this instead of silently dropping the user's changes.
+    // Throttled so a burst of edits (e.g. typing) doesn't spam toasts.
+    const now = Date.now();
+    if (now - lastStorageWarningAt > 15000) {
+      lastStorageWarningAt = now;
+      toast.error(
+        isQuotaExceeded(err)
+          ? "Penyimpanan lokal penuh — perubahan terakhir (kemungkinan termasuk gambar) belum tersimpan. Hapus beberapa gambar/catatan lama, lalu coba lagi."
+          : "Gagal menyimpan perubahan ke penyimpanan lokal perangkat ini.",
+      );
+    }
   }
 }
 
