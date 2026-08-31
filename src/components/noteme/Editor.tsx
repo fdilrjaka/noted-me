@@ -37,7 +37,6 @@ async function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-  // Downscale large photos so notes stay light and offline-friendly.
   return new Promise<string>((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -71,7 +70,6 @@ const BG_OPTIONS = [
   { label: "Putih", value: "white" },
 ] as const;
 
-/** Bikin HTML tabel baru sesuai jumlah baris & kolom yang dipilih user. */
 function buildTableHtml(rows: number, cols: number) {
   const headerCells = Array.from({ length: cols }, (_, i) => `<th>Kolom ${i + 1}</th>`).join("");
   const bodyRows = Array.from(
@@ -81,8 +79,6 @@ function buildTableHtml(rows: number, cols: number) {
   return `<table><colgroup>${Array.from({ length: cols }, () => "<col />").join("")}</colgroup><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p><br></p>`;
 }
 
-/** Pastikan setiap tabel di dalam note punya
- * colgroup dengan lebar eksplisit + handle drag di tiap kolom biar bisa di-resize manual. */
 function enhanceTables(root: HTMLElement) {
   root.querySelectorAll("table").forEach((table) => {
     const el = table as HTMLTableElement;
@@ -117,7 +113,6 @@ function enhanceTables(root: HTMLElement) {
   });
 }
 
-/** Bersihin tabel hasil copy-paste dari luar. */
 function sanitizeTableHtml(html: string): string | null {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const table = doc.querySelector("table");
@@ -208,7 +203,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       setBg("default");
     }
     if (ref.current) enhanceTables(ref.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
   const flush = () => {
@@ -305,7 +299,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
     container.addEventListener("pointerdown", onPointerDown);
     return () => container.removeEventListener("pointerdown", onPointerDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -345,11 +338,10 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     <div className="flex min-h-0 flex-1 flex-col">
       {/* 
         Toolbar Formatting: 
-        - sticky bottom-4 di layar HP (agar mengambang dan menempel di batas layar bawah/keyboard) 
-        - Di layar besar (sm), menggunakan top-2 sehingga kembali seperti navbar atas biasa.
-        - Warna background diubah mengikuti tema aplikasi (bg-background) dengan opacity transparan.
+        - fixed bottom-6 (Melayang di bawah layar HP dan tidak ikut scroll)
+        - sm:sticky sm:top-2 (Kembali ke atas normal saat dibuka di laptop)
       */}
-      <div className="sticky bottom-4 z-50 mx-auto flex w-[95%] max-w-[400px] items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/50 bg-background/70 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:top-2 sm:bottom-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:bg-background/80 sm:px-2 sm:shadow-sm">
+      <div className="fixed bottom-6 left-1/2 z-50 flex w-[95%] max-w-[400px] -translate-x-1/2 items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/50 bg-background/80 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:sticky sm:top-2 sm:bottom-auto sm:left-auto sm:translate-x-0 sm:w-full sm:max-w-full sm:rounded-xl sm:px-2 sm:shadow-sm">
         
         <button
           type="button"
@@ -425,9 +417,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           setFormatSheetOpen(false);
         }}
         data-placeholder="Mulai menulis catatan…"
-        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-20" 
+        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32" 
       />
-      {/* Catatan: pb-20 ditambahkan pada editor agar teks tidak tertutup toolbar di bagian bawah saat di-scroll mentok */}
 
       {selectionToolbar &&
         typeof document !== "undefined" &&
