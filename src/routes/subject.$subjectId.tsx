@@ -9,9 +9,11 @@ import {
   extractImages,
   patchPage,
   patchSubject,
+  reorderPages,
   subjectPages,
   useData,
 } from "@/lib/noteme/store";
+import { useDragReorder } from "@/lib/noteme/reorder";
 
 export const Route = createFileRoute("/subject/$subjectId")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -51,6 +53,23 @@ function SubjectView() {
   const pages = useMemo(() => subjectPages(data, subjectId), [data, subjectId]);
   const activeId = pageParam && pages.some((p) => p.id === pageParam) ? pageParam : pages[0]?.id;
   const active = pages.find((p) => p.id === activeId);
+
+  const tabReorder = useDragReorder({
+    items: pages,
+    axis: "x",
+    groupKey: (p) => p.pinned,
+    onCommit: (ids) => reorderPages(subjectId, ids),
+  });
+  const sidebarReorder = useDragReorder({
+    items: pages,
+    axis: "y",
+    groupKey: (p) => p.pinned,
+    onCommit: (ids) => reorderPages(subjectId, ids),
+  });
+  const draggedTabPage = tabReorder.dragId ? pages.find((p) => p.id === tabReorder.dragId) : null;
+  const draggedSidebarPage = sidebarReorder.dragId
+    ? pages.find((p) => p.id === sidebarReorder.dragId)
+    : null;
 
   useEffect(() => {
     if (activeId && activeId !== pageParam) {
@@ -128,13 +147,17 @@ function SubjectView() {
         </button>
       </header>
 
-      {/* Laptop: horizontal tabs */}
+      {/* Laptop: horizontal tabs — tahan lalu geser kanan/kiri untuk mengubah urutan */}
       <div className="hidden items-center gap-1.5 overflow-x-auto pb-2 md:flex">
-        {pages.map((p) => (
+        {tabReorder.order.map((p) => (
           <button
             key={p.id}
-            onClick={() => goto(p.id)}
-            className={`press flex flex-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
+            {...tabReorder.itemProps(p.id)}
+            onClick={tabReorder.guardClick(() => goto(p.id))}
+            title="Tahan lalu geser untuk mengubah urutan"
+            className={`press flex flex-none select-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
+              tabReorder.isGhost(p.id) ? "invisible" : ""
+            } ${
               p.id === activeId
                 ? "bg-primary font-medium text-primary-foreground glow-ring"
                 : "glass-soft text-muted-foreground hover:text-foreground"
@@ -151,6 +174,15 @@ function SubjectView() {
         >
           <Plus className="size-4" />
         </button>
+        {draggedTabPage && (
+          <div
+            style={tabReorder.overlayStyle}
+            className="glass-floating flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-2xl"
+          >
+            {draggedTabPage.pinned && <Pin className="size-3" />}
+            {draggedTabPage.title}
+          </div>
+        )}
       </div>
 
       {active && (
@@ -259,19 +291,29 @@ function SubjectView() {
                 <X className="size-4" />
               </button>
             </div>
-            <div className="mt-4 space-y-1.5">
-              {pages.map((p) => (
+            <div className="relative mt-4 space-y-1.5">
+              {sidebarReorder.order.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => goto(p.id)}
-                  className={`press flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
-                    p.id === activeId ? "bg-primary text-primary-foreground" : "bg-input"
-                  }`}
+                  {...sidebarReorder.itemProps(p.id)}
+                  onClick={sidebarReorder.guardClick(() => goto(p.id))}
+                  className={`press flex w-full select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
+                    sidebarReorder.isGhost(p.id) ? "invisible" : ""
+                  } ${p.id === activeId ? "bg-primary text-primary-foreground" : "bg-input"}`}
                 >
                   {p.pinned && <Pin className="size-3 flex-none" />}
                   <span className="truncate">{p.title}</span>
                 </button>
               ))}
+              {draggedSidebarPage && (
+                <div
+                  style={sidebarReorder.overlayStyle}
+                  className="glass-floating flex w-[calc(78vw-2rem)] max-w-[19rem] items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm shadow-2xl"
+                >
+                  {draggedSidebarPage.pinned && <Pin className="size-3 flex-none" />}
+                  <span className="truncate">{draggedSidebarPage.title}</span>
+                </div>
+              )}
             </div>
             <button
               onClick={() => goto(createPage(subjectId))}
