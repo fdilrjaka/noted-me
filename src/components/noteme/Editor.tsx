@@ -147,6 +147,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const resizing = useRef<{ col: HTMLTableColElement; startX: number; startWidth: number } | null>(
     null,
   );
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
 
   const updateSelectionToolbar = useCallback(() => {
     const root = ref.current;
@@ -334,72 +344,95 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     { icon: Quote, label: "Kutipan", run: () => exec("formatBlock", "blockquote") },
   ];
 
+  const toolbarButtons = (
+    <>
+      <button
+        type="button"
+        title="Format"
+        aria-label="Format"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setFormatSheetOpen(true)}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <Type className="size-4" />
+      </button>
+
+      <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+
+      {primaryTools.map(({ icon: Icon, label, run }) => (
+        <button
+          key={label}
+          type="button"
+          title={label}
+          aria-label={label}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            ref.current?.focus();
+            run();
+            handleInput();
+          }}
+          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+        >
+          <Icon className="size-4" />
+        </button>
+      ))}
+
+      <button
+        type="button"
+        title="Gambar"
+        aria-label="Gambar"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => fileRef.current?.click()}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <ImageIcon className="size-4" />
+      </button>
+
+      <button
+        type="button"
+        title="Kamera"
+        aria-label="Kamera"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => cameraRef.current?.click()}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <Camera className="size-4" />
+      </button>
+
+      <span className="ml-auto flex-none pr-1 text-[11px] text-muted-foreground">
+        {saved ? "Tersimpan" : "Menyimpan…"}
+      </span>
+    </>
+  );
+
+  // Toolbar khusus HP: di-portal langsung ke <body>, di luar tree layout note.
+  // Ini penting supaya `position: fixed` benar-benar terikat ke viewport (layar HP),
+  // bukan ke elemen leluhur mana pun yang mungkin punya transform/animasi —
+  // sehingga toolbar jadi layer paling depan yang selalu ikut nempel saat discroll,
+  // persis seperti navbar, bukan malah "nempel" ke posisi konten yang lewat.
+  const mobileToolbar =
+    isMobile && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-1 overflow-x-auto border-t border-border/50 bg-background/80 px-3 py-2 shadow-2xl backdrop-blur-xl safe-bottom"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
+          >
+            {toolbarButtons}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* 
-        Toolbar Formatting: 
-        - fixed bottom-6 (Melayang di bawah layar HP dan tidak ikut scroll)
-        - sm:sticky sm:top-2 (Kembali ke atas normal saat dibuka di laptop)
-      */}
-      <div className="fixed bottom-6 left-1/2 z-50 flex w-[95%] max-w-[400px] -translate-x-1/2 items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/50 bg-background/80 px-3 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:sticky sm:top-2 sm:bottom-auto sm:left-auto sm:translate-x-0 sm:w-full sm:max-w-full sm:rounded-xl sm:px-2 sm:shadow-sm">
-        
-        <button
-          type="button"
-          title="Format"
-          aria-label="Format"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setFormatSheetOpen(true)}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <Type className="size-4" />
-        </button>
+      {mobileToolbar}
 
-        <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
-
-        {primaryTools.map(({ icon: Icon, label, run }) => (
-          <button
-            key={label}
-            type="button"
-            title={label}
-            aria-label={label}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              ref.current?.focus();
-              run();
-              handleInput();
-            }}
-            className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-          >
-            <Icon className="size-4" />
-          </button>
-        ))}
-
-        <button
-          type="button"
-          title="Gambar"
-          aria-label="Gambar"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => fileRef.current?.click()}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <ImageIcon className="size-4" />
-        </button>
-        
-        <button
-          type="button"
-          title="Kamera"
-          aria-label="Kamera"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => cameraRef.current?.click()}
-          className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
-        >
-          <Camera className="size-4" />
-        </button>
-
-        <span className="ml-auto flex-none pr-1 text-[11px] text-muted-foreground">
-          {saved ? "Tersimpan" : "Menyimpan…"}
-        </span>
-      </div>
+      {/* Toolbar desktop: tetap seperti semula, sticky di dalam layout normal */}
+      {!isMobile && (
+        <div className="hidden items-center justify-between gap-1 overflow-x-auto rounded-xl px-2 sm:sticky sm:top-2 sm:flex sm:shadow-sm">
+          {toolbarButtons}
+        </div>
+      )}
 
       <div
         ref={ref}
