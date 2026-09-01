@@ -13,12 +13,14 @@ import {
   ListOrdered,
   MoreHorizontal,
   Palette,
+  PenTool,
   Quote,
   Table,
   Type,
   Underline,
   X,
 } from "lucide-react";
+import { DrawingCanvas } from "./DrawingCanvas";
 
 type Props = {
   pageId: string;
