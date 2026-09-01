@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { DrawingCanvas } from "./DrawingCanvas";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   pageId: string;
@@ -78,30 +79,59 @@ function insertHtmlAtCursor(container: HTMLElement, html: string) {
   selection?.addRange(after);
 }
 
-async function fileToDataUrl(file: File): Promise<string> {
+// Resize + compress ke JPEG, dan selalu digambar ulang lewat canvas (bukan cuma saat
+// gambarnya lebih besar dari batas) supaya ukuran filenya konsisten kecil sebelum diupload.
+async function fileToCompressedBlob(file: File): Promise<Blob> {
   const bitmapUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-  return new Promise<string>((resolve) => {
+  return new Promise<Blob>((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const max = 1400;
       const scale = Math.min(1, max / Math.max(img.width, img.height));
-      if (scale === 1) return resolve(bitmapUrl);
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) return resolve(bitmapUrl);
+      if (!ctx) return reject(new Error("canvas unsupported"));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("gagal kompres gambar"))),
+        "image/jpeg",
+        0.82,
+      );
     };
-    img.onerror = () => resolve(bitmapUrl);
+    img.onerror = () => reject(new Error("gagal membaca gambar"));
     img.src = bitmapUrl;
   });
+}
+
+// Upload ke Supabase Storage bucket "note-images", balikin public URL-nya.
+// Path: {user_id}/{page_id}/{random}.ext — dicocokkan dengan RLS policy di storage-migration.sql
+async function uploadNoteImage(blob: Blob, pageId: string): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Belum login");
+
+  const contentType = blob.type || "image/jpeg";
+  const ext = contentType === "image/png" ? "png" : "jpg";
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const path = `${user.id}/${pageId}/${filename}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("note-images")
+    .upload(path, blob, { contentType, upsert: false });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("note-images").getPublicUrl(path);
+  return publicUrl;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -197,6 +227,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     null,
   );
   const [isMobile, setIsMobile] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -294,8 +325,17 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   const insertImage = async (file: File | undefined) => {
     if (!file) return;
-    const url = await fileToDataUrl(file);
-    insertHtml(`<img src="${url}" alt="Gambar catatan" />`);
+    setUploadingImage(true);
+    try {
+      const blob = await fileToCompressedBlob(file);
+      const url = await uploadNoteImage(blob, pageId);
+      insertHtml(`<img src="${url}" alt="Gambar catatan" />`);
+    } catch (err) {
+      console.error(err);
+      window.alert("Gagal upload gambar. Coba lagi.");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const changeBg = (next: "default" | "white") => {
@@ -429,13 +469,14 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
       <button
         type="button"
-        title="Gambar"
+        title={uploadingImage ? "Mengupload…" : "Gambar"}
         aria-label="Gambar"
+        disabled={uploadingImage}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
-        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90 disabled:opacity-40"
       >
-        <ImageIcon className="size-4" />
+        <ImageIcon className={`size-4 ${uploadingImage ? "animate-pulse" : ""}`} />
       </button>
 
       <button
@@ -789,7 +830,20 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           onCancel={() => setDrawOpen(false)}
           onInsert={(dataUrl) => {
             setDrawOpen(false);
-            insertHtml(`<img src="${dataUrl}" alt="Tulisan tangan" data-handwriting="1" />`);
+            void (async () => {
+              setUploadingImage(true);
+              try {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const url = await uploadNoteImage(blob, pageId);
+                insertHtml(`<img src="${url}" alt="Tulisan tangan" data-handwriting="1" />`);
+              } catch (err) {
+                console.error(err);
+                window.alert("Gagal upload tulisan tangan. Coba lagi.");
+              } finally {
+                setUploadingImage(false);
+              }
+            })();
           }}
         />
       )}
