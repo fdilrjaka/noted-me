@@ -13,12 +13,14 @@ import {
   ListOrdered,
   MoreHorizontal,
   Palette,
+  PenTool,
   Quote,
   Table,
   Type,
   Underline,
   X,
 } from "lucide-react";
+import { DrawingCanvas } from "./DrawingCanvas";
 
 type Props = {
   pageId: string;
@@ -138,6 +140,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
   const [formatSheetOpen, setFormatSheetOpen] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
   const [bg, setBg] = useState<"default" | "white">("default");
@@ -386,6 +389,21 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
       >
         <ImageIcon className="size-4" />
+      </button>
+
+      <button
+        type="button"
+        title="Tulis tangan"
+        aria-label="Tulis tangan"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          setPanel("none");
+          setFormatSheetOpen(false);
+          setDrawOpen(true);
+        }}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <PenTool className="size-4" />
       </button>
 
       <button
@@ -718,6 +736,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         hidden
         onChange={(e) => void insertImage(e.target.files?.[0])}
       />
+
+      {drawOpen && (
+        <DrawingCanvas
+          onCancel={() => setDrawOpen(false)}
+          onInsert={(dataUrl) => {
+            setDrawOpen(false);
+            insertHtml(`<img src="${dataUrl}" alt="Tulisan tangan" data-handwriting="1" />`);
+          }}
+        />
+      )}
     </div>
   );
 }
