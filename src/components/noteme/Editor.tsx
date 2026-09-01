@@ -393,6 +393,21 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
       <button
         type="button"
+        title="Tulis tangan"
+        aria-label="Tulis tangan"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          setPanel("none");
+          setFormatSheetOpen(false);
+          setDrawOpen(true);
+        }}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <PenTool className="size-4" />
+      </button>
+
+      <button
+        type="button"
         title="Kamera"
         aria-label="Kamera"
         onMouseDown={(e) => e.preventDefault()}
