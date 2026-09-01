@@ -126,6 +126,56 @@ export function Dashboard() {
           </div>
         )}
 
+        {adding && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={() => setAdding(false)}
+          >
+            <div
+              className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-3 text-base font-semibold">Mata kuliah baru</p>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (name.trim()) createSubject(name);
+                    setName("");
+                    setAdding(false);
+                  }
+                  if (e.key === "Escape") setAdding(false);
+                }}
+                placeholder="Contoh: Manajemen Risiko"
+                className="glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setName("");
+                    setAdding(false);
+                  }}
+                  className="press rounded-full px-4 py-2 text-sm font-medium text-muted-foreground active:scale-95"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => {
+                    if (name.trim()) createSubject(name);
+                    setName("");
+                    setAdding(false);
+                  }}
+                  className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+                >
+                  Simpan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => {
             const pages = subjectPages(data, subject.id);
