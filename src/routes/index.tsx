@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  Download,
   Pin,
   PinOff,
   Plus,
@@ -19,6 +20,7 @@ import { HueSlider } from "@/components/HueSlider";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
+import { exportBackupJson, exportBackupMarkdown } from "@/lib/noteme/backup";
 import {
   activeSubjects,
   createSubject,
@@ -53,6 +55,7 @@ export function Dashboard() {
   const [name, setName] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportOpen, setExportOpen] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
 
   const subjects = useMemo(() => activeSubjects(data), [data]);
@@ -107,7 +110,46 @@ export function Dashboard() {
         <div className="flex items-center gap-3">
           {/* Hue Slider dipasang di Header Dashboard */}
           <HueSlider hue={hue} onChange={setHue} />
-          
+
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen((v) => !v)}
+              aria-label="Ekspor cadangan"
+              className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
+            >
+              <Download className="size-4" />
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
+                  <button
+                    onClick={() => {
+                      exportBackupJson();
+                      toast.success("Cadangan JSON diunduh");
+                      setExportOpen(false);
+                    }}
+                    className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                  >
+                    <p className="font-medium">Cadangan JSON</p>
+                    <p className="text-xs text-muted-foreground">Lengkap, bisa dipulihkan lagi</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportBackupMarkdown();
+                      toast.success("Cadangan Markdown diunduh");
+                      setExportOpen(false);
+                    }}
+                    className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                  >
+                    <p className="font-medium">Cadangan Markdown</p>
+                    <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="hidden items-center gap-2 md:flex">
             <Link
               to="/trash"
