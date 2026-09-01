@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Images, Menu, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, Download, Images, Menu, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { Editor } from "@/components/noteme/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
+import { exportPageJson, exportPageMarkdown } from "@/lib/noteme/backup";
 import {
   createPage,
   deletePage,
@@ -47,6 +49,7 @@ function SubjectView() {
   const [gallery, setGallery] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const subject = data.subjects.find((s) => s.id === subjectId && !s.deleted);
@@ -240,6 +243,44 @@ function SubjectView() {
               >
                 {active.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
               </button>
+              <div className="relative">
+                <button
+                  aria-label="Ekspor pertemuan ini"
+                  onClick={() => setExportOpen((v) => !v)}
+                  className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+                >
+                  <Download className="size-3.5" />
+                </button>
+                {exportOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                    <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
+                      <button
+                        onClick={() => {
+                          exportPageJson(active.id);
+                          toast.success("Pertemuan diekspor sebagai JSON");
+                          setExportOpen(false);
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor JSON</p>
+                        <p className="text-xs text-muted-foreground">Lengkap, bisa dipulihkan lagi</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportPageMarkdown(active.id);
+                          toast.success("Pertemuan diekspor sebagai Markdown");
+                          setExportOpen(false);
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor Markdown</p>
+                        <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
               <button
                 aria-label="Pindahkan ke trash"
