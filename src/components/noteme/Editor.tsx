@@ -29,7 +29,53 @@ type Props = {
 };
 
 function exec(command: string, value?: string) {
-  document.execCommand(command, false, value);
+  try {
+    // Safari never implemented hiliteColor — it needs backColor instead.
+    if (
+      command === "hiliteColor" &&
+      typeof document.queryCommandSupported === "function" &&
+      !document.queryCommandSupported("hiliteColor")
+    ) {
+      document.execCommand("backColor", false, value);
+      return;
+    }
+    document.execCommand(command, false, value);
+  } catch {
+    // execCommand is deprecated and some engines throw instead of no-op — never crash the editor for it.
+  }
+}
+
+// document.execCommand("insertHTML", ...) is notoriously unreliable on Safari/mobile Safari
+// (silently no-ops or drops formatting). Insert nodes directly via the Range API instead, which
+// works consistently across browsers and doesn't depend on a deprecated command.
+function insertHtmlAtCursor(container: HTMLElement, html: string) {
+  container.focus();
+  const selection = window.getSelection();
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const fragment = template.content;
+  const lastNode = fragment.lastChild;
+  if (!lastNode) return;
+
+  let range: Range | null = null;
+  if (selection && selection.rangeCount > 0) {
+    const existing = selection.getRangeAt(0);
+    if (container.contains(existing.commonAncestorContainer)) range = existing;
+  }
+  if (!range) {
+    range = document.createRange();
+    range.selectNodeContents(container);
+    range.collapse(false); // fall back to end of content
+  }
+
+  range.deleteContents();
+  range.insertNode(fragment);
+
+  const after = document.createRange();
+  after.setStartAfter(lastNode);
+  after.collapse(true);
+  selection?.removeAllRanges();
+  selection?.addRange(after);
 }
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -239,9 +285,10 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   }, []);
 
   const insertHtml = (html: string) => {
-    ref.current?.focus();
-    exec("insertHTML", html);
-    if (ref.current) enhanceTables(ref.current);
+    if (ref.current) {
+      insertHtmlAtCursor(ref.current, html);
+      enhanceTables(ref.current);
+    }
     handleInput();
   };
 
