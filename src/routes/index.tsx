@@ -1,6 +1,18 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, Pin, PinOff, Plus, Search, Trash2, User, X } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { HueSlider } from "@/components/HueSlider";
@@ -39,6 +51,8 @@ export function Dashboard() {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const mainRef = useRef<HTMLElement | null>(null);
 
   const subjects = useMemo(() => activeSubjects(data), [data]);
@@ -50,6 +64,29 @@ export function Dashboard() {
       params: { subjectId },
       search: { page: pageId },
     });
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
+  const deleteSelected = () => {
+    const count = selected.size;
+    selected.forEach((id) => deleteSubject(id));
+    toast.success(
+      count > 1 ? `${count} mata kuliah dipindahkan ke trash` : "Mata kuliah dipindahkan ke trash",
+    );
+    exitSelectMode();
   };
 
   return (
@@ -109,14 +146,36 @@ export function Dashboard() {
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            Mata Kuliah
+            {selectMode ? `${selected.size} dipilih` : "Mata Kuliah"}
           </h2>
-          <button
-            onClick={() => setAdding(true)}
-            className="press flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
-          >
-            <Plus className="size-4" /> Tambah
-          </button>
+          <div className="flex items-center gap-2">
+            {selectMode ? (
+              <button
+                onClick={exitSelectMode}
+                className="press flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium active:scale-95"
+              >
+                Batal
+              </button>
+            ) : (
+              subjects.length > 0 && (
+                <button
+                  onClick={() => setSelectMode(true)}
+                  aria-label="Pilih untuk dihapus"
+                  className="press glass-floating flex size-9 items-center justify-center rounded-full text-destructive active:scale-90"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              )
+            )}
+            {!selectMode && (
+              <button
+                onClick={() => setAdding(true)}
+                className="press flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+              >
+                <Plus className="size-4" /> Tambah
+              </button>
+            )}
+          </div>
         </div>
 
         {subjects.length === 0 && !adding && (
@@ -179,12 +238,28 @@ export function Dashboard() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => {
             const pages = subjectPages(data, subject.id);
+            const isSelected = selected.has(subject.id);
             return (
               <div
                 key={subject.id}
-                onClick={() => openSubject(subject.id, pages[0]?.id)}
-                className="press glass-card spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4"
+                onClick={() =>
+                  selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
+                }
+                className={`press glass-card spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4 ${
+                  isSelected ? "ring-2 ring-destructive" : ""
+                }`}
               >
+                {selectMode && (
+                  <div
+                    className={`absolute right-3 top-3 flex size-6 items-center justify-center rounded-full border-2 ${
+                      isSelected
+                        ? "border-destructive bg-destructive text-destructive-foreground"
+                        : "border-border bg-background/50"
+                    }`}
+                  >
+                    {isSelected && <Check className="size-3.5" />}
+                  </div>
+                )}
                 <p className="text-lg font-semibold">{subject.name}</p>
                 <p className="text-sm text-muted-foreground">{pages.length} pertemuan</p>
               </div>
@@ -192,6 +267,17 @@ export function Dashboard() {
           })}
         </div>
       </section>
+
+      {selectMode && selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <button
+            onClick={deleteSelected}
+            className="press glass-floating flex items-center gap-2 rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground shadow-2xl active:scale-95"
+          >
+            <Trash2 className="size-4" /> Hapus {selected.size} mata kuliah
+          </button>
+        </div>
+      )}
 
       <BottomNav />
     </main>
