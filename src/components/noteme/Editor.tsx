@@ -140,6 +140,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
   const [formatSheetOpen, setFormatSheetOpen] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
   const [bg, setBg] = useState<"default" | "white">("default");
