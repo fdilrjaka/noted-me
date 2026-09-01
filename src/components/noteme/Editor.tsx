@@ -736,6 +736,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         hidden
         onChange={(e) => void insertImage(e.target.files?.[0])}
       />
+
+      {drawOpen && (
+        <DrawingCanvas
+          onCancel={() => setDrawOpen(false)}
+          onInsert={(dataUrl) => {
+            setDrawOpen(false);
+            insertHtml(`<img src="${dataUrl}" alt="Tulisan tangan" data-handwriting="1" />`);
+          }}
+        />
+      )}
     </div>
   );
 }
