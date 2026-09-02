@@ -21,7 +21,9 @@ import {
   X,
 } from "lucide-react";
 import { DrawingCanvas } from "./DrawingCanvas";
-import { supabase } from "@/integrations/supabase/client";
+import { putImage } from "@/lib/noteme/imageStore";
+import { resolveImageSrc, revokeAllResolved } from "@/lib/noteme/imageResolver";
+import { registerLocalImage } from "@/lib/noteme/store";
 
 type Props = {
   pageId: string;
@@ -110,29 +112,10 @@ async function fileToCompressedBlob(file: File): Promise<Blob> {
   });
 }
 
-// Upload ke Supabase Storage bucket "note-images", balikin public URL-nya.
-// Path: {user_id}/{page_id}/{random}.ext — dicocokkan dengan RLS policy di storage-migration.sql
-async function uploadNoteImage(blob: Blob, pageId: string): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Belum login");
+// Upload ke Supabase Storage sekarang murni tanggung jawab sync.ts (dipicu otomatis lewat
+// dirty flag di NoteImage, bukan dipanggil manual dari sini) — lihat imageResolver.ts &
+// sync.ts untuk alurnya.
 
-  const contentType = blob.type || "image/jpeg";
-  const ext = contentType === "image/png" ? "png" : "jpg";
-  const filename = `${crypto.randomUUID()}.${ext}`;
-  const path = `${user.id}/${pageId}/${filename}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("note-images")
-    .upload(path, blob, { contentType, upsert: false });
-  if (uploadError) throw uploadError;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("note-images").getPublicUrl(path);
-  return publicUrl;
-}
 
 const HIGHLIGHT_COLORS = [
   { label: "Kuning", value: "#fde047" },
@@ -208,6 +191,41 @@ function sanitizeTableHtml(html: string): string | null {
   return `${table.outerHTML}<p><br></p>`;
 }
 
+const IDB_SRC_PREFIX = "idb:";
+const RETRY_DELAY_MS = 1500;
+
+// Scan semua <img src="idb:<id>"> di dalam container yang belum sempat di-resolve
+// (belum punya atribut data-resolving), resolve satu-satu secara async lewat
+// imageResolver — tidak memblokir render awal, gambar boleh muncul belakangan sesaat
+// dengan opacity redup sebagai placeholder. Kalau resolve gagal (race condition: row
+// note_images-nya belum sempat sync), retry sekali lagi setelah jeda singkat.
+function resolvePendingImages(container: HTMLElement, attempt = 0) {
+  const imgs = container.querySelectorAll<HTMLImageElement>(
+    `img[src^="${IDB_SRC_PREFIX}"]:not([data-resolving="1"])`,
+  );
+  imgs.forEach((img) => {
+    const id = img.getAttribute("src")?.slice(IDB_SRC_PREFIX.length);
+    if (!id) return;
+    img.dataset["resolving"] = "1";
+    img.style.opacity = "0.4";
+    void resolveImageSrc(id).then((src) => {
+      if (!img.isConnected) return;
+      if (src) {
+        img.src = src;
+        img.style.opacity = "";
+        img.dataset["resolving"] = "0";
+      } else if (attempt < 3) {
+        // Belum ketemu (kemungkinan race condition baru sync) — coba lagi sebentar lagi.
+        img.dataset["resolving"] = "0";
+        setTimeout(() => resolvePendingImages(container, attempt + 1), RETRY_DELAY_MS);
+      } else {
+        img.style.opacity = "";
+        img.alt = "Gambar tidak ditemukan";
+      }
+    });
+  });
+}
+
 export function Editor({ pageId, initialContent, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -227,7 +245,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     null,
   );
   const [isMobile, setIsMobile] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -292,8 +309,15 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     } catch {
       setBg("default");
     }
-    if (ref.current) enhanceTables(ref.current);
+    if (ref.current) {
+      enhanceTables(ref.current);
+      resolvePendingImages(ref.current);
+    }
+    // Ganti halaman (atau unmount) — object URL yang sudah dibikin resolveImageSrc buat
+    // halaman sebelumnya gak dipakai lagi, revoke biar gak numpuk di memory browser.
+    return () => revokeAllResolved();
   }, [pageId]);
+
 
   const flush = () => {
     if (!ref.current) return;
@@ -319,22 +343,22 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     if (ref.current) {
       insertHtmlAtCursor(ref.current, html);
       enhanceTables(ref.current);
+      resolvePendingImages(ref.current);
     }
     handleInput();
   };
 
   const insertImage = async (file: File | undefined) => {
     if (!file) return;
-    setUploadingImage(true);
     try {
-      const blob = await fileToCompressedBlob(file);
-      const url = await uploadNoteImage(blob, pageId);
-      insertHtml(`<img src="${url}" alt="Gambar catatan" />`);
+      const blob = await fileToCompressedBlob(file); // tetap dikompres dulu biar IndexedDB gak boros
+      const id = await putImage(blob, pageId);
+      registerLocalImage(id, pageId);
+      const src = await resolveImageSrc(id); // dari blob yg baru aja disimpan, harusnya instan
+      insertHtml(`<img src="idb:${id}" alt="Gambar catatan" data-resolved-src="${src ?? ""}" />`);
     } catch (err) {
       console.error(err);
-      window.alert("Gagal upload gambar. Coba lagi.");
-    } finally {
-      setUploadingImage(false);
+      window.alert("Gagal menyimpan gambar. Coba lagi.");
     }
   };
 
@@ -469,14 +493,13 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
       <button
         type="button"
-        title={uploadingImage ? "Mengupload…" : "Gambar"}
+        title="Gambar"
         aria-label="Gambar"
-        disabled={uploadingImage}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
-        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90 disabled:opacity-40"
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
       >
-        <ImageIcon className={`size-4 ${uploadingImage ? "animate-pulse" : ""}`} />
+        <ImageIcon className="size-4" />
       </button>
 
       <button
@@ -831,17 +854,20 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           onInsert={(dataUrl) => {
             setDrawOpen(false);
             void (async () => {
-              setUploadingImage(true);
               try {
+                // dataUrl adalah data: URL lokal — fetch di sini murni operasi lokal
+                // browser (bukan network request), jadi aman & instan walau offline.
                 const res = await fetch(dataUrl);
                 const blob = await res.blob();
-                const url = await uploadNoteImage(blob, pageId);
-                insertHtml(`<img src="${url}" alt="Tulisan tangan" data-handwriting="1" />`);
+                const id = await putImage(blob, pageId);
+                registerLocalImage(id, pageId);
+                const src = await resolveImageSrc(id);
+                insertHtml(
+                  `<img src="idb:${id}" alt="Tulisan tangan" data-handwriting="1" data-resolved-src="${src ?? ""}" />`,
+                );
               } catch (err) {
                 console.error(err);
-                window.alert("Gagal upload tulisan tangan. Coba lagi.");
-              } finally {
-                setUploadingImage(false);
+                window.alert("Gagal menyimpan tulisan tangan. Coba lagi.");
               }
             })();
           }}
