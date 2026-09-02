@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Download, Images, Menu, Pencil, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  Images,
+  Menu,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Editor } from "@/components/noteme/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { exportPageJson, exportPageMarkdown } from "@/lib/noteme/backup";
+import { resolveImageSrc } from "@/lib/noteme/imageResolver";
 import {
   createPage,
   deletePage,
-  extractImages,
+  extractLocalImageIds,
   patchPage,
   patchSubject,
   reorderPages,
@@ -74,6 +86,27 @@ function SubjectView() {
     ? pages.find((p) => p.id === sidebarReorder.dragId)
     : null;
 
+  const images = active ? extractLocalImageIds(active.content) : [];
+  const [resolvedGallery, setResolvedGallery] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!gallery || images.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      images.map(async (id) => {
+        const src = await resolveImageSrc(id);
+        return [id, src] as const;
+      }),
+    ).then((pairs) => {
+      if (cancelled) return;
+      setResolvedGallery(Object.fromEntries(pairs.filter(([, src]) => src) as [string, string][]));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gallery, active?.id]);
+
   useEffect(() => {
     if (activeId && activeId !== pageParam) {
       void navigate({
@@ -114,7 +147,6 @@ function SubjectView() {
     if (next) goto(next.id);
   };
 
-  const images = active ? extractImages(active.content) : [];
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 safe-top safe-bottom md:px-6">
@@ -257,14 +289,17 @@ function SubjectView() {
                     <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
                       <button
                         onClick={() => {
-                          exportPageJson(active.id);
-                          toast.success("Pertemuan diekspor sebagai JSON");
+                          void exportPageJson(active.id).then(() => {
+                            toast.success("Pertemuan diekspor sebagai JSON");
+                          });
                           setExportOpen(false);
                         }}
                         className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
                       >
                         <p className="font-medium">Ekspor JSON</p>
-                        <p className="text-xs text-muted-foreground">Lengkap, bisa dipulihkan lagi</p>
+                        <p className="text-xs text-muted-foreground">
+                          Lengkap, bisa dipulihkan lagi
+                        </p>
                       </button>
                       <button
                         onClick={() => {
@@ -381,15 +416,24 @@ function SubjectView() {
               </p>
             ) : (
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {images.map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt={`Gambar catatan ${i + 1}`}
-                    loading="lazy"
-                    className="aspect-square w-full rounded-2xl border border-border object-cover"
-                  />
-                ))}
+                {images.map((id) =>
+                  resolvedGallery[id] ? (
+                    <img
+                      key={id}
+                      src={resolvedGallery[id]}
+                      alt="Gambar catatan"
+                      loading="lazy"
+                      className="aspect-square w-full rounded-2xl border border-border object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={id}
+                      className="flex aspect-square w-full items-center justify-center rounded-2xl border border-border bg-input text-xs text-muted-foreground"
+                    >
+                      Memuat…
+                    </div>
+                  ),
+                )}
               </div>
             )}
           </div>
