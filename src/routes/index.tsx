@@ -125,8 +125,9 @@ export function Dashboard() {
                 <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
                   <button
                     onClick={() => {
-                      exportBackupJson();
-                      toast.success("Cadangan JSON diunduh");
+                      void exportBackupJson().then(() => {
+                        toast.success("Cadangan JSON diunduh");
+                      });
                       setExportOpen(false);
                     }}
                     className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
