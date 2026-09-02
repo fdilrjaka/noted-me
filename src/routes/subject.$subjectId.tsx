@@ -222,7 +222,7 @@ function SubjectView() {
             touchStart.current = null;
           }}
         >
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 pb-2 md:pb-4">
             {renaming === active.id ? (
               <input
                 autoFocus
