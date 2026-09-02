@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      note_images: {
+        Row: {
+          created_at: string
+          deleted: boolean
+          id: string
+          page_id: string
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted?: boolean
+          id: string
+          page_id: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted?: boolean
+          id?: string
+          page_id?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pages: {
         Row: {
           content: string
