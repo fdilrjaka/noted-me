@@ -16,11 +16,10 @@ import { toast } from "sonner";
 import { Editor } from "@/components/noteme/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { exportPageJson, exportPageMarkdown } from "@/lib/noteme/backup";
-import { resolveImageSrc } from "@/lib/noteme/imageResolver";
 import {
   createPage,
   deletePage,
-  extractLocalImageIds,
+  extractImages,
   patchPage,
   patchSubject,
   reorderPages,
@@ -86,27 +85,6 @@ function SubjectView() {
     ? pages.find((p) => p.id === sidebarReorder.dragId)
     : null;
 
-  const images = active ? extractLocalImageIds(active.content) : [];
-  const [resolvedGallery, setResolvedGallery] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!gallery || images.length === 0) return;
-    let cancelled = false;
-    void Promise.all(
-      images.map(async (id) => {
-        const src = await resolveImageSrc(id);
-        return [id, src] as const;
-      }),
-    ).then((pairs) => {
-      if (cancelled) return;
-      setResolvedGallery(Object.fromEntries(pairs.filter(([, src]) => src) as [string, string][]));
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gallery, active?.id]);
-
   useEffect(() => {
     if (activeId && activeId !== pageParam) {
       void navigate({
@@ -123,7 +101,11 @@ function SubjectView() {
       <main className="flex min-h-dvh items-center justify-center px-4">
         <div className="glass-card rounded-3xl p-8 text-center">
           <p className="font-semibold">Mata kuliah tidak ditemukan</p>
-          <Link to="/" className="mt-4 inline-block text-sm text-primary underline">
+          <Link
+            to="/"
+            className="press glass-floating spring-in mt-4 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium text-foreground active:scale-95"
+          >
+            <ChevronLeft className="size-4" />
             Kembali ke dashboard
           </Link>
         </div>
@@ -147,6 +129,7 @@ function SubjectView() {
     if (next) goto(next.id);
   };
 
+  const images = active ? extractImages(active.content) : [];
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 safe-top safe-bottom md:px-6">
@@ -416,24 +399,15 @@ function SubjectView() {
               </p>
             ) : (
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {images.map((id) =>
-                  resolvedGallery[id] ? (
-                    <img
-                      key={id}
-                      src={resolvedGallery[id]}
-                      alt="Gambar catatan"
-                      loading="lazy"
-                      className="aspect-square w-full rounded-2xl border border-border object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={id}
-                      className="flex aspect-square w-full items-center justify-center rounded-2xl border border-border bg-input text-xs text-muted-foreground"
-                    >
-                      Memuat…
-                    </div>
-                  ),
-                )}
+                {images.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`Gambar catatan ${i + 1}`}
+                    loading="lazy"
+                    className="aspect-square w-full rounded-2xl border border-border object-cover"
+                  />
+                ))}
               </div>
             )}
           </div>
