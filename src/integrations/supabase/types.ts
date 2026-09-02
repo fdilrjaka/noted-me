@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       note_images: {
         Row: {
+          created_at: string
           deleted: boolean
           id: string
           page_id: string
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          created_at?: string
           deleted?: boolean
           id: string
           page_id: string
@@ -32,6 +34,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          created_at?: string
           deleted?: boolean
           id?: string
           page_id?: string
