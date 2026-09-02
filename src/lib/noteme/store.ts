@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { deleteImage as deleteLocalImage } from "./imageStore";
 
 export type Subject = {
   id: string;
@@ -24,9 +25,22 @@ export type Page = {
   dirty: boolean;
 };
 
+// Metadata gambar/tulisan tangan — bukan blob-nya (blob ada di IndexedDB via imageStore.ts).
+// Dipakai buat nyinkronin status "sudah ke-backup ke Supabase Storage atau belum" dengan
+// device lain, pakai pola dirty-flag yang sama kayak Subject/Page.
+export type NoteImage = {
+  id: string;
+  page_id: string;
+  storage_path: string | null;
+  deleted: boolean;
+  updated_at: string;
+  dirty: boolean;
+};
+
 export type Data = {
   subjects: Subject[];
   pages: Page[];
+  images: NoteImage[];
   lastPull: string | null;
 };
 
@@ -34,7 +48,7 @@ const KEY = "noteme.data.v1";
 
 export const SUBJECT_COLORS = ["blue", "purple", "pink", "teal", "amber"] as const;
 
-const EMPTY: Data = { subjects: [], pages: [], lastPull: null };
+const EMPTY: Data = { subjects: [], pages: [], images: [], lastPull: null };
 
 let data: Data = EMPTY;
 let loaded = false;
@@ -95,6 +109,7 @@ export function loadLocal() {
       data = {
         subjects: parsed.subjects ?? [],
         pages: parsed.pages ?? [],
+        images: parsed.images ?? [],
         lastPull: parsed.lastPull ?? null,
       };
     }
@@ -181,9 +196,7 @@ export function search(d: Data, query: string): SearchHit[] {
     if (!inTitle && idx < 0) continue;
     const start = Math.max(0, idx - 40);
     const snippet =
-      idx < 0
-        ? text.slice(0, 90)
-        : (start > 0 ? "…" : "") + text.slice(start, idx + q.length + 60);
+      idx < 0 ? text.slice(0, 90) : (start > 0 ? "…" : "") + text.slice(start, idx + q.length + 60);
     hits.push({
       page,
       subject: d.subjects.find((s) => s.id === page.subject_id),
@@ -199,6 +212,15 @@ export function extractImages(html: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) out.push(m[1] ?? "");
   return out;
+}
+
+const IDB_SRC_PREFIX = "idb:";
+
+/** Ambil cuma id gambar lokal (skema `idb:<id>`) dari sebuah `content` HTML. */
+export function extractLocalImageIds(html: string): string[] {
+  return extractImages(html)
+    .filter((src) => src.startsWith(IDB_SRC_PREFIX))
+    .map((src) => src.slice(IDB_SRC_PREFIX.length));
 }
 
 /* ---------------- mutations ---------------- */
@@ -252,8 +274,50 @@ export function createPage(subjectId: string, title?: string) {
 export function patchPage(id: string, patch: Partial<Page>) {
   update((d) => ({
     ...d,
-    pages: d.pages.map((p) => (p.id === id ? { ...p, ...patch, updated_at: now(), dirty: true } : p)),
+    pages: d.pages.map((p) =>
+      p.id === id ? { ...p, ...patch, updated_at: now(), dirty: true } : p,
+    ),
   }));
+}
+
+/**
+ * Dipanggil setelah `imageStore.putImage` berhasil nyimpen blob baru secara lokal —
+ * bikin row metadata `NoteImage` yang dirty, biar `sync.ts` tahu ada gambar baru yang
+ * perlu diupload ke Supabase Storage begitu online.
+ */
+export function registerLocalImage(id: string, pageId: string) {
+  const image: NoteImage = {
+    id,
+    page_id: pageId,
+    storage_path: null,
+    deleted: false,
+    updated_at: now(),
+    dirty: true,
+  };
+  update((d) => ({ ...d, images: [...d.images, image] }));
+}
+
+/** Dipanggil sync.ts setelah blob sukses keupload ke Storage. */
+export function markImageUploaded(id: string, storagePath: string) {
+  update((d) => ({
+    ...d,
+    images: d.images.map((img) =>
+      img.id === id ? { ...img, storage_path: storagePath, updated_at: now(), dirty: true } : img,
+    ),
+  }));
+}
+
+/** Catat row metadata gambar yang datang dari sync (device lain) tapi belum pernah tercatat lokal — dipakai imageResolver saat lazy-download. */
+export function upsertImageMeta(image: NoteImage) {
+  update((d) => {
+    const exists = d.images.some((img) => img.id === image.id);
+    return {
+      ...d,
+      images: exists
+        ? d.images.map((img) => (img.id === image.id ? image : img))
+        : [...d.images, image],
+    };
+  });
 }
 
 export function deleteSubject(id: string) {
@@ -284,35 +348,64 @@ export function restorePage(id: string) {
   patchPage(id, { deleted: false });
 }
 
+// Hapus blob lokal (IndexedDB) buat tiap gambar `idb:` di halaman-halaman yang beneran
+// dihapus permanen, dan tandai row NoteImage terkait `deleted: true, dirty: true` biar
+// object-nya ikut kehapus dari Supabase Storage lewat sync.ts. Best-effort & async —
+// tidak memblokir/menunggu penghapusan lokal selesai (purge/emptyTrash tetap sinkron
+// dari sudut pandang caller).
+function purgeImagesForPages(pages: Page[]) {
+  const imageIds = new Set<string>();
+  for (const page of pages) {
+    for (const id of extractLocalImageIds(page.content)) imageIds.add(id);
+  }
+  if (imageIds.size === 0) return;
+  for (const id of imageIds) void deleteLocalImage(id);
+  update((d) => ({
+    ...d,
+    images: d.images.map((img) =>
+      imageIds.has(img.id) ? { ...img, deleted: true, updated_at: now(), dirty: true } : img,
+    ),
+  }));
+}
+
 export function purgeSubject(id: string) {
+  const removedPages = data.pages.filter((p) => p.subject_id === id);
   update((d) => ({
     ...d,
     subjects: d.subjects.filter((s) => s.id !== id),
     pages: d.pages.filter((p) => p.subject_id !== id),
   }));
+  purgeImagesForPages(removedPages);
 }
 
 export function purgePage(id: string) {
+  const removedPage = data.pages.find((p) => p.id === id);
   update((d) => ({ ...d, pages: d.pages.filter((p) => p.id !== id) }));
+  if (removedPage) purgeImagesForPages([removedPage]);
 }
 
 export function emptyTrash() {
+  const goneSubjects = data.subjects.filter((s) => s.deleted).map((s) => s.id);
+  const removedPages = data.pages.filter((p) => p.deleted || goneSubjects.includes(p.subject_id));
   update((d) => {
-    const goneSubjects = d.subjects.filter((s) => s.deleted).map((s) => s.id);
+    const goneSubjectIds = d.subjects.filter((s) => s.deleted).map((s) => s.id);
     return {
       ...d,
       subjects: d.subjects.filter((s) => !s.deleted),
-      pages: d.pages.filter((p) => !p.deleted && !goneSubjects.includes(p.subject_id)),
+      pages: d.pages.filter((p) => !p.deleted && !goneSubjectIds.includes(p.subject_id)),
     };
   });
+  purgeImagesForPages(removedPages);
 }
 
 export function dirtyCount() {
   return (
-    data.subjects.filter((s) => s.dirty).length + data.pages.filter((p) => p.dirty).length
+    data.subjects.filter((s) => s.dirty).length +
+    data.pages.filter((p) => p.dirty).length +
+    data.images.filter((i) => i.dirty).length
   );
 }
 
 export function clearLocal() {
-  setData({ subjects: [], pages: [], lastPull: null });
+  setData({ subjects: [], pages: [], images: [], lastPull: null });
 }
