@@ -3,7 +3,7 @@ import { Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/hooks/useSession";
 import { dirtyCount, loadLocal, useData } from "@/lib/noteme/store";
-import { resolveConflict, syncNow, useConflicts } from "@/lib/noteme/sync";
+import { resolveConflict, syncNow, useConflicts, diffPageContent } from "@/lib/noteme/sync";
 
 // Backoff steps for auto-retry after a failed sync (ms). Caps at the last value.
 const RETRY_DELAYS = [3000, 8000, 20000, 45000, 60000];
@@ -166,6 +166,8 @@ export function ConflictDialog() {
   if (!conflict) return null;
 
   const title = conflict.local.title || "Catatan tanpa judul";
+  const titleDiffers = conflict.local.title.trim() !== conflict.remote.title.trim();
+  const { removed, added, truncated } = diffPageContent(conflict.local, conflict.remote);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
@@ -175,6 +177,58 @@ export function ConflictDialog() {
           "{title}" juga diedit di perangkat lain. Mau timpa dengan versi lain itu, atau gabung
           jadi satu (dua-duanya disimpan)?
         </p>
+
+        {titleDiffers && (
+          <div className="mt-3 space-y-1 text-xs">
+            <p className="text-muted-foreground">Judul beda:</p>
+            <p className="rounded-lg bg-destructive/10 px-2 py-1 text-destructive line-through">
+              {conflict.local.title || "(tanpa judul)"}
+            </p>
+            <p className="rounded-lg bg-primary/10 px-2 py-1 text-primary">
+              {conflict.remote.title || "(tanpa judul)"}
+            </p>
+          </div>
+        )}
+
+        {truncated ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Catatannya kepanjangan buat ditunjukin bagian yang beda satu-satu — tapi isinya
+            memang beda.
+          </p>
+        ) : (
+          (removed.length > 0 || added.length > 0) && (
+            <div className="mt-3 max-h-40 space-y-1.5 overflow-y-auto text-xs">
+              {removed.length > 0 && (
+                <div>
+                  <p className="mb-1 text-muted-foreground">Cuma ada di catatan ini (hilang kalau timpa):</p>
+                  <div className="space-y-1">
+                    {removed.map((phrase, idx) => (
+                      <p
+                        key={`removed-${idx}`}
+                        className="rounded-lg bg-destructive/10 px-2 py-1 text-destructive line-through"
+                      >
+                        {phrase}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {added.length > 0 && (
+                <div>
+                  <p className="mb-1 text-muted-foreground">Cuma ada di versi perangkat lain:</p>
+                  <div className="space-y-1">
+                    {added.map((phrase, idx) => (
+                      <p key={`added-${idx}`} className="rounded-lg bg-primary/10 px-2 py-1 text-primary">
+                        {phrase}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        )}
+
         {conflicts.length > 1 && (
           <p className="mt-2 text-xs text-muted-foreground">
             +{conflicts.length - 1} catatan lain juga menunggu.
