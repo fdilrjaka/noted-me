@@ -174,6 +174,77 @@ export async function exportPageJson(pageId: string) {
   );
 }
 
+/**
+ * Export satu pertemuan/page sebagai PDF, lewat dialog print bawaan browser
+ * ("Simpan sebagai PDF") — gak butuh library tambahan. Gambar `idb:<id>` di
+ * content diubah dulu jadi data URL base64 (pakai collectImagesForPages) supaya
+ * ikut tampil di window print, yang jalan di browsing context terpisah dan gak
+ * selalu bisa akses blob: URL dari halaman utama.
+ */
+export async function exportPagePdf(pageId: string) {
+  const data = getData();
+  const page = data.pages.find((p) => p.id === pageId && !p.deleted);
+  if (!page) return;
+  const subject = data.subjects.find((s) => s.id === page.subject_id);
+  const images = await collectImagesForPages([page]);
+
+  let content = page.content || "";
+  for (const [id, img] of Object.entries(images)) {
+    content = content.split(`idb:${id}`).join(`data:${img.contentType};base64,${img.base64}`);
+  }
+
+  const title = page.title || "Catatan";
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  win.document.write(`<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>${escapeHtml(title)}</title>
+<style>
+  @page { margin: 20mm 16mm; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111;
+    line-height: 1.55;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 8px;
+  }
+  h1.doc-title { font-size: 22px; margin: 0 0 4px; }
+  p.doc-meta { color: #666; font-size: 12px; margin: 0 0 24px; }
+  .doc-content img { max-width: 100%; border-radius: 8px; }
+  .doc-content table { border-collapse: collapse; width: 100%; }
+  .doc-content td, .doc-content th { border: 1px solid #ccc; padding: 6px 8px; }
+  .doc-content ul[data-checklist] { list-style: none; padding-left: 0; }
+  @media print {
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <h1 class="doc-title">${escapeHtml(title)}</h1>
+  <p class="doc-meta">${subject ? `${escapeHtml(subject.name)} · ` : ""}Diekspor ${escapeHtml(new Date().toLocaleString("id-ID"))}</p>
+  <div class="doc-content">${content || "<p><em>(kosong)</em></p>"}</div>
+</body>
+</html>`);
+  win.document.close();
+
+  win.onload = () => {
+    win.focus();
+    win.print();
+  };
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function exportPageMarkdown(pageId: string) {
   const data = getData();
   const page = data.pages.find((p) => p.id === pageId && !p.deleted);
