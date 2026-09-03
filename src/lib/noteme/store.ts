@@ -31,14 +31,14 @@ export interface SectionItem {
   isDirty?: boolean;
 }
 
-// Alias tipe pendukung kompatibilitas
+// Aliases untuk kompatibilitas file bawaan proyek
 export type Note = SectionItem;
 export type NoteSubject = Subject;
 
 export interface NoteMeState {
   subjects: Subject[];
   items: SectionItem[];
-  notes: SectionItem[]; // Alias kompatibilitas untuk versi lama
+  notes: SectionItem[];
   trash: SectionItem[];
   activeSubjectId: string | null;
   activeNoteId: string | null;
@@ -58,7 +58,7 @@ export interface NoteMeState {
   deleteItem: (id: string) => void;
   toggleItemComplete: (id: string) => void;
 
-  // Action Kompatibilitas Versi Lama (Auth, Sync, Editor, Trash)
+  // Legacy Actions (Trash, Sync, Auth, Editor)
   addNote: (note: Partial<SectionItem>) => void;
   updateNote: (id: string, data: Partial<SectionItem>) => void;
   deleteNote: (id: string) => void;
@@ -287,7 +287,6 @@ export const useNoteMeStore = create<NoteMeState>()(
         });
       },
 
-      // Action Kompatibilitas Versi Lama
       addNote: (noteData) => {
         const newItem: SectionItem = {
           id: noteData.id || `item-${Date.now()}`,
@@ -351,10 +350,11 @@ export const useNoteMeStore = create<NoteMeState>()(
   )
 );
 
-// Export Hook Alias useData
+// Alias Hook Exports
 export const useData = useNoteMeStore;
+export default useNoteMeStore;
 
-// Export Helper Selector dirtyCount
+// Standalone Helper Function Exports (Diimpor langsung oleh trash.tsx, auth.tsx, sync.ts, dll.)
 export const dirtyCount = (state?: Partial<NoteMeState>) => {
   if (!state) {
     try {
@@ -366,3 +366,24 @@ export const dirtyCount = (state?: Partial<NoteMeState>) => {
   const itemsList = state?.items || state?.notes || [];
   return itemsList.filter((item) => item.isDirty).length;
 };
+
+export const emptyTrash = () => useNoteMeStore.getState().emptyTrash();
+export const restoreNote = (id: string) => useNoteMeStore.getState().restoreNote(id);
+export const purgeNote = (id: string) => useNoteMeStore.getState().purgeNote(id);
+export const addNote = (note: Partial<SectionItem>) => useNoteMeStore.getState().addNote(note);
+export const updateNote = (id: string, data: Partial<SectionItem>) => useNoteMeStore.getState().updateNote(id, data);
+export const deleteNote = (id: string) => useNoteMeStore.getState().deleteNote(id);
+export const addSubject = (data: { name: string; day: string; startTime: string; endTime: string; room?: string }) => useNoteMeStore.getState().addSubject(data);
+export const updateSubject = (id: string, data: Partial<Omit<Subject, 'id' | 'createdAt'>>) => useNoteMeStore.getState().updateSubject(id, data);
+export const deleteSubject = (id: string) => useNoteMeStore.getState().deleteSubject(id);
+export const addSection = (subjectId: string, sectionName: string) => useNoteMeStore.getState().addSection(subjectId, sectionName);
+export const deleteSection = (subjectId: string, sectionId: string) => useNoteMeStore.getState().deleteSection(subjectId, sectionId);
+export const addItem = (data: { subjectId: string; sectionId: string; title: string; content?: string; dueDate?: string }) => useNoteMeStore.getState().addItem(data);
+export const updateItem = (id: string, data: Partial<Omit<SectionItem, 'id' | 'subjectId' | 'sectionId' | 'createdAt'>>) => useNoteMeStore.getState().updateItem(id, data);
+export const deleteItem = (id: string) => useNoteMeStore.getState().deleteItem(id);
+export const toggleItemComplete = (id: string) => useNoteMeStore.getState().toggleItemComplete(id);
+export const setActiveNoteId = (id: string | null) => useNoteMeStore.getState().setActiveNoteId(id);
+export const setActiveSubjectId = (id: string | null) => useNoteMeStore.getState().setActiveSubjectId(id);
+export const setItems = (items: SectionItem[]) => useNoteMeStore.getState().setItems(items);
+export const setNotes = (notes: SectionItem[]) => useNoteMeStore.getState().setNotes(notes);
+export const setSubjects = (subjects: Subject[]) => useNoteMeStore.getState().setSubjects(subjects);
