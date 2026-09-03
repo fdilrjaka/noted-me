@@ -180,7 +180,21 @@ function AuthPage() {
             onClick={() => setMode(mode === "in" ? "up" : "in")}
             className="press-sm mt-4 w-full text-center text-sm text-muted-foreground"
           >
-            {mode === "in" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
+            {mode === "in" ? (
+              <>
+                Belum punya akun?{" "}
+                <span className="font-semibold text-primary underline underline-offset-2">
+                  Daftar
+                </span>
+              </>
+            ) : (
+              <>
+                Sudah punya akun?{" "}
+                <span className="font-semibold text-primary underline underline-offset-2">
+                  Masuk
+                </span>
+              </>
+            )}
           </button>
           <Link to="/" className="press-sm mt-3 block text-center text-sm text-primary underline">
             Lanjut tanpa akun
