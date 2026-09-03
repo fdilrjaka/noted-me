@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getData, setData, type Data, type NoteImage, type Page, type Subject } from "./store";
+import { getData, setData, stripHtml, type Data, type NoteImage, type Page, type Subject } from "./store";
 import { getImageBlob } from "./imageStore";
 
 type Row = Record<string, unknown>;
@@ -68,6 +68,48 @@ function buildPage(row: Row): Page {
   };
 }
 
+/**
+ * Baseline: `updated_at` terakhir yang KITA tahu sudah sama antara lokal & server buat
+ * tiap page. Dipakai buat bedain "remote beneran berubah dari device lain" vs "remote
+ * cuma gaung dari push kita sendiri" — soalnya `since` sengaja mundur 5 detik (lihat
+ * doSync) biar gak ada race yang kelewat, dan itu bikin push kita sendiri ikut kepull
+ * lagi di sync berikutnya. Tanpa baseline ini, gaung itu keliatan kayak "device lain
+ * baru aja ngedit", padahal itu ya kita sendiri — makanya dialog konflik muncul padahal
+ * cuma satu device yang ngetik.
+ * Disimpan ke localStorage juga supaya tetap kepakai walau tab di-refresh.
+ */
+const SYNCED_VERSIONS_KEY = "noteme.syncedAt.v1";
+
+function loadSyncedVersions(): Map<string, string> {
+  if (typeof window === "undefined") return new Map();
+  try {
+    const raw = window.localStorage.getItem(SYNCED_VERSIONS_KEY);
+    if (!raw) return new Map();
+    return new Map(Object.entries(JSON.parse(raw) as Record<string, string>));
+  } catch {
+    return new Map();
+  }
+}
+
+const syncedPageVersions = loadSyncedVersions();
+
+function persistSyncedVersions() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      SYNCED_VERSIONS_KEY,
+      JSON.stringify(Object.fromEntries(syncedPageVersions)),
+    );
+  } catch {
+    // Best-effort — kalau gagal simpan, paling banter deteksi konflik agak kurang
+    // presisi setelah reload, gak sampai kehilangan data.
+  }
+}
+
+function markPageSynced(id: string, updatedAt: string) {
+  syncedPageVersions.set(id, updatedAt);
+}
+
 function mergePageContent(local: Page, remote: Page): string {
   if (local.content.trim() === remote.content.trim()) return local.content;
   return (
@@ -76,6 +118,85 @@ function mergePageContent(local: Page, remote: Page): string {
     `<p><strong>— Versi dari perangkat ini —</strong></p>` +
     local.content
   );
+}
+
+const DIFF_WORD_LIMIT = 4000; // batas kata per sisi biar DP diff-nya gak berat di note yang kepanjangan
+const DIFF_PHRASE_LIMIT = 4; // maksimal berapa potongan beda yang ditampilin per sisi
+const DIFF_PHRASE_MAX_CHARS = 90; // potong tampilannya kalau kepanjangan
+
+/**
+ * Diff kata sederhana (berbasis LCS) buat nunjukin bagian mana yang bener-bener beda
+ * di dua versi note, biar dialog konflik gak cuma bilang "beda" doang tapi nunjukin
+ * kata/kalimatnya. "removed" = potongan yang cuma ada di versi lokal, "added" = yang
+ * cuma ada di versi lain.
+ */
+export function diffPageContent(
+  local: Page,
+  remote: Page,
+): { removed: string[]; added: string[]; truncated: boolean } {
+  const a = stripHtml(local.content).split(" ").filter(Boolean);
+  const b = stripHtml(remote.content).split(" ").filter(Boolean);
+
+  if (a.length > DIFF_WORD_LIMIT || b.length > DIFF_WORD_LIMIT) {
+    return { removed: [], added: [], truncated: true };
+  }
+
+  const n = a.length;
+  const m = b.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+
+  const removed: string[] = [];
+  const added: string[] = [];
+  let removedRun: string[] = [];
+  let addedRun: string[] = [];
+  const flush = () => {
+    if (removedRun.length) {
+      removed.push(removedRun.join(" "));
+      removedRun = [];
+    }
+    if (addedRun.length) {
+      added.push(addedRun.join(" "));
+      addedRun = [];
+    }
+  };
+
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      flush();
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      removedRun.push(a[i]);
+      i++;
+    } else {
+      addedRun.push(b[j]);
+      j++;
+    }
+  }
+  while (i < n) {
+    removedRun.push(a[i]);
+    i++;
+  }
+  while (j < m) {
+    addedRun.push(b[j]);
+    j++;
+  }
+  flush();
+
+  const truncatePhrase = (s: string) => (s.length > DIFF_PHRASE_MAX_CHARS ? `${s.slice(0, DIFF_PHRASE_MAX_CHARS)}…` : s);
+
+  return {
+    removed: removed.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
+    added: added.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
+    truncated: false,
+  };
 }
 
 /**
@@ -92,6 +213,7 @@ export function resolveConflict(id: string, choice: "overwrite" | "merge") {
   const pages = current.pages.map((p) => {
     if (p.id !== id) return p;
     if (choice === "overwrite") {
+      markPageSynced(id, conflict.remote.updated_at);
       return { ...conflict.remote, dirty: false };
     }
     return {
@@ -101,6 +223,7 @@ export function resolveConflict(id: string, choice: "overwrite" | "merge") {
       dirty: true,
     };
   });
+  persistSyncedVersions();
   setData({ ...current, pages });
 }
 
@@ -219,6 +342,9 @@ async function doSync(userId: string, full: boolean) {
     if (!row) continue;
     const remote = buildPage(row);
     if (remote.updated_at === local.updated_at) continue;
+    // Remote persis sama dengan versi yang KITA sendiri terakhir push berhasil →
+    // itu cuma gaung dari overlap window `since`, bukan edit dari device lain.
+    if (remote.updated_at === syncedPageVersions.get(local.id)) continue;
     conflictIds.add(local.id);
     newConflicts.push({ id: local.id, local, remote });
   }
@@ -336,6 +462,15 @@ async function doSync(userId: string, full: boolean) {
     })),
     lastPull: new Date(Date.now() - 5000).toISOString(),
   };
+
+  // Perbarui baseline "udah sama antara lokal & server" buat tiap page yang gak lagi
+  // dirty (baik karena baru sukses ke-push, atau baru kepull dari device lain) —
+  // ini yang dipakai sync berikutnya buat gak salah kira gaung push sendiri sebagai
+  // konflik. Page yang lagi konflik sengaja dilewatin, baseline-nya tetap yang lama.
+  for (const p of next.pages) {
+    if (!p.dirty) markPageSynced(p.id, p.updated_at);
+  }
+  persistSyncedVersions();
 
   setData(next);
 }
