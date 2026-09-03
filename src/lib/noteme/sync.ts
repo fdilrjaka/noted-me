@@ -181,11 +181,11 @@ export function diffPageContent(
     }
   }
   while (i < n) {
-    removedRun.push(a[i]);
+    removedRun.push(a[i]!);
     i++;
   }
   while (j < m) {
-    addedRun.push(b[j]);
+    addedRun.push(b[j]!);
     j++;
   }
   flush();
