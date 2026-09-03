@@ -20,7 +20,7 @@ import { HueSlider } from "@/components/HueSlider";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { exportBackupJson, exportBackupMarkdown } from "@/lib/noteme/backup";
+import { exportBackupJson, exportBackupMarkdown, importBackupJson } from "@/lib/noteme/backup";
 import {
   activeSubjects,
   createSubject,
@@ -56,6 +56,8 @@ export function Dashboard() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
 
   const subjects = useMemo(() => activeSubjects(data), [data]);
@@ -90,6 +92,24 @@ export function Dashboard() {
       count > 1 ? `${count} mata kuliah dipindahkan ke trash` : "Mata kuliah dipindahkan ke trash",
     );
     exitSelectMode();
+  };
+
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    setImportBusy(true);
+    try {
+      const result = await importBackupJson(file);
+      toast.success(
+        `Dipulihkan: ${result.subjects} mata kuliah, ${result.pages} catatan${
+          result.images ? `, ${result.images} gambar` : ""
+        }`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memulihkan cadangan");
+    } finally {
+      setImportBusy(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
   };
 
   return (
@@ -146,9 +166,32 @@ export function Dashboard() {
                     <p className="font-medium">Cadangan Markdown</p>
                     <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
                   </button>
+                  <div className="my-1 border-t border-border" />
+                  <button
+                    disabled={importBusy}
+                    onClick={() => {
+                      setExportOpen(false);
+                      importInputRef.current?.click();
+                    }}
+                    className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input disabled:opacity-60"
+                  >
+                    <p className="font-medium">
+                      {importBusy ? "Memulihkan…" : "Impor cadangan JSON"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Pulihkan dari file cadangan JSON sebagai mata kuliah baru
+                    </p>
+                  </button>
                 </div>
               </>
             )}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => void handleImportFile(e.target.files?.[0])}
+            />
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
