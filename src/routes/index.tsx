@@ -153,7 +153,6 @@ export function Dashboard() {
                     className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
                   >
                     <p className="font-medium">Cadangan JSON</p>
-                    <p className="text-xs text-muted-foreground">Lengkap, bisa dipulihkan lagi</p>
                   </button>
                   <button
                     onClick={() => {
@@ -164,7 +163,6 @@ export function Dashboard() {
                     className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
                   >
                     <p className="font-medium">Cadangan Markdown</p>
-                    <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
                   </button>
                   <div className="my-1 border-t border-border" />
                   <button
@@ -177,9 +175,6 @@ export function Dashboard() {
                   >
                     <p className="font-medium">
                       {importBusy ? "Memulihkan…" : "Impor cadangan JSON"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Pulihkan dari file cadangan JSON sebagai mata kuliah baru
                     </p>
                   </button>
                 </div>
