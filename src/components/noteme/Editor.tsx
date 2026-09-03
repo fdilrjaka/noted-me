@@ -369,8 +369,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     });
   }, []);
 
+  // Konten terakhir yang KITA sendiri kirim lewat onChange (echo dari flush lokal, atau
+  // dari sinkron ulang efek ini sendiri). Dipakai buat bedain "initialContent berubah
+  // karena editor lain / sync / resolve konflik" vs "initialContent berubah cuma gaung
+  // dari flush kita sendiri" — biar gak salah nyimpulkan ada update lokal yang perlu
+  // ditulis ulang ke DOM padahal itu ya kita sendiri.
+  const lastKnownContent = useRef(initialContent);
+
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialContent || "";
+    lastKnownContent.current = initialContent;
     setSaved(true);
     setPanel("none");
     setSelectionToolbar(null);
@@ -391,10 +399,32 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     return () => revokeAllResolved();
   }, [pageId, updateCounts]);
 
+  // Halaman yang sama tetap terbuka, tapi `initialContent` berubah dari luar (device lain
+  // ngetik & sync masuk, atau dialog konflik baru saja di-resolve). Sebelumnya efek di atas
+  // gak jalan lagi karena `pageId` gak berubah, jadi DOM tetap nampilin versi basi sampai
+  // user keluar-masuk halaman — dan tiap keystroke berikutnya malah ngirim ulang versi basi
+  // itu, bikin konflik baru terus-menerus. Di sini kita follow perubahan itu, tapi cuma
+  // kalau bukan gaung dari flush kita sendiri, dan cuma kalau gak ada ketikan lokal yang
+  // masih nunggu di-flush (`timer.current`) — biar gak nimpa huruf yang lagi diketik.
+  useEffect(() => {
+    if (initialContent === lastKnownContent.current) return;
+    if (timer.current) return;
+    if (!ref.current) return;
+    lastKnownContent.current = initialContent;
+    ref.current.innerHTML = initialContent || "";
+    updateCounts();
+    enhanceTables(ref.current);
+    enhanceImages(ref.current);
+    resolvePendingImages(ref.current);
+    setSaved(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContent]);
 
   const flush = () => {
     if (!ref.current) return;
-    onChange(serializeContent(ref.current));
+    const html = serializeContent(ref.current);
+    lastKnownContent.current = html;
+    onChange(html);
     setSaved(true);
   };
 
