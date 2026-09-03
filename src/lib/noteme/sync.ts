@@ -172,11 +172,11 @@ export function diffPageContent(
       flush();
       i++;
       j++;
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      removedRun.push(a[i]);
+    } else if (dp[i + 1]![j]! >= dp[i]![j + 1]!) {
+      removedRun.push(a[i]!);
       i++;
     } else {
-      addedRun.push(b[j]);
+      addedRun.push(b[j]!);
       j++;
     }
   }
