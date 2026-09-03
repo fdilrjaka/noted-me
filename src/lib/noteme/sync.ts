@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getData, setData, type Data, type NoteImage, type Page, type Subject } from "./store";
 import { getImageBlob } from "./imageStore";
@@ -5,6 +6,103 @@ import { getImageBlob } from "./imageStore";
 type Row = Record<string, unknown>;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/**
+ * Konflik edit: page yang masih dirty (edit lokal belum ke-push) tapi versi di
+ * server sudah berubah duluan (device lain sempat sync duluan). Bukannya diam-diam
+ * milih salah satu (last-write-wins), kita nahan dulu row ini — gak di-push, gak
+ * ditimpa remote — dan taruh di sini biar UI bisa nanya user mau "timpa" atau "gabung".
+ */
+export type PageConflict = {
+  id: string;
+  local: Page;
+  remote: Page;
+};
+
+let pendingConflicts: PageConflict[] = [];
+const conflictListeners = new Set<() => void>();
+
+function emitConflicts() {
+  conflictListeners.forEach((l) => l());
+}
+
+function setConflicts(next: PageConflict[]) {
+  pendingConflicts = next;
+  emitConflicts();
+}
+
+/** Gabungin konflik baru ke daftar yang sudah ada (replace kalau id sama). */
+function upsertConflicts(newOnes: PageConflict[]) {
+  if (!newOnes.length) return;
+  const byId = new Map(pendingConflicts.map((c) => [c.id, c]));
+  for (const c of newOnes) byId.set(c.id, c);
+  setConflicts([...byId.values()]);
+}
+
+export function getConflicts(): PageConflict[] {
+  return pendingConflicts;
+}
+
+export function useConflicts(): PageConflict[] {
+  return useSyncExternalStore(
+    (cb) => {
+      conflictListeners.add(cb);
+      return () => conflictListeners.delete(cb);
+    },
+    () => pendingConflicts,
+    () => [],
+  );
+}
+
+function buildPage(row: Row): Page {
+  return {
+    id: String(row["id"]),
+    subject_id: String(row["subject_id"]),
+    title: String(row["title"] ?? ""),
+    content: String(row["content"] ?? ""),
+    pinned: Boolean(row["pinned"]),
+    position: Number(row["position"] ?? 0),
+    deleted: Boolean(row["deleted"]),
+    updated_at: new Date(String(row["updated_at"])).toISOString(),
+    dirty: false,
+  };
+}
+
+function mergePageContent(local: Page, remote: Page): string {
+  if (local.content.trim() === remote.content.trim()) return local.content;
+  return (
+    `<p><strong>— Versi dari perangkat lain —</strong></p>` +
+    remote.content +
+    `<p><strong>— Versi dari perangkat ini —</strong></p>` +
+    local.content
+  );
+}
+
+/**
+ * Dipanggil dari dialog konflik. "overwrite" = buang edit lokal, pakai versi
+ * server. "merge" = gabungin dua-duanya jadi satu note (gak ada yang hilang),
+ * ditandai dirty lagi supaya ke-push balik ke server di sync berikutnya.
+ */
+export function resolveConflict(id: string, choice: "overwrite" | "merge") {
+  const conflict = pendingConflicts.find((c) => c.id === id);
+  if (!conflict) return;
+  setConflicts(pendingConflicts.filter((c) => c.id !== id));
+
+  const current = getData();
+  const pages = current.pages.map((p) => {
+    if (p.id !== id) return p;
+    if (choice === "overwrite") {
+      return { ...conflict.remote, dirty: false };
+    }
+    return {
+      ...conflict.local,
+      content: mergePageContent(conflict.local, conflict.remote),
+      updated_at: new Date().toISOString(),
+      dirty: true,
+    };
+  });
+  setData({ ...current, pages });
+}
 
 function noteImageRow(i: NoteImage, userId: string): Row {
   return {
@@ -92,20 +190,59 @@ export function syncNow(userId: string, opts?: { full?: boolean }): Promise<void
 
 async function doSync(userId: string, full: boolean) {
   const before = getData();
+  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
+
+  // Pull duluan SEBELUM push, supaya kita bisa lihat apakah row yang mau kita push
+  // ternyata sudah diubah duluan sama device lain sejak terakhir kita sync.
+  const [subjectsRes, pagesRes, imagesRes] = await Promise.all([
+    supabase.from("subjects").select("*").gt("updated_at", since),
+    supabase.from("pages").select("*").gt("updated_at", since),
+    supabase.from("note_images").select("*").gt("updated_at", since),
+  ]);
+  if (subjectsRes.error) throw subjectsRes.error;
+  if (pagesRes.error) throw pagesRes.error;
+  if (imagesRes.error) throw imagesRes.error;
+
   const dirtySubjects = before.subjects.filter((s) => s.dirty);
   const dirtyPages = before.pages.filter((p) => p.dirty);
   const dirtyImages = before.images.filter((i) => i.dirty);
 
-  if (dirtySubjects.length) {
+  // Deteksi konflik: page masih dirty (edit lokal belum ke-push) TAPI baris yang sama
+  // di server juga sudah berubah (updated_at beda) sejak terakhir kita pull — berarti
+  // diedit di device lain. Row ini gak boleh di-push atau ditimpa diam-diam; tahan dulu
+  // dan biarin dialog konflik yang nentuin (timpa/gabung), bukan last-write-wins.
+  const remotePagesById = new Map((pagesRes.data ?? []).map((r) => [String((r as Row)["id"]), r as Row]));
+  const conflictIds = new Set<string>();
+  const newConflicts: PageConflict[] = [];
+  for (const local of dirtyPages) {
+    const row = remotePagesById.get(local.id);
+    if (!row) continue;
+    const remote = buildPage(row);
+    if (remote.updated_at === local.updated_at) continue;
+    conflictIds.add(local.id);
+    newConflicts.push({ id: local.id, local, remote });
+  }
+  upsertConflicts(newConflicts);
+  // Konflik yang sebelumnya pending tapi ternyata sudah gak dirty lagi lokal (mis. sudah
+  // diresolve dari device/tab lain) gak perlu terus nyangkut di daftar.
+  if (pendingConflicts.length) {
+    const stillDirty = new Set(dirtyPages.map((p) => p.id));
+    setConflicts(pendingConflicts.filter((c) => stillDirty.has(c.id)));
+  }
+
+  const pushableSubjects = dirtySubjects;
+  const pushablePages = dirtyPages.filter((p) => !conflictIds.has(p.id));
+
+  if (pushableSubjects.length) {
     const { error } = await supabase
       .from("subjects")
-      .upsert(dirtySubjects.map((s) => subjectRow(s, userId)) as any);
+      .upsert(pushableSubjects.map((s) => subjectRow(s, userId)) as any);
     if (error) throw error;
   }
-  if (dirtyPages.length) {
+  if (pushablePages.length) {
     const { error } = await supabase
       .from("pages")
-      .upsert(dirtyPages.map((p) => pageRow(p, userId)) as any);
+      .upsert(pushablePages.map((p) => pageRow(p, userId)) as any);
     if (error) throw error;
   }
 
@@ -152,23 +289,13 @@ async function doSync(userId: string, full: boolean) {
     if (error) throw error;
   }
 
-  const pushedSubjects = new Map(dirtySubjects.map((s) => [s.id, s.updated_at]));
-  const pushedPages = new Map(dirtyPages.map((p) => [p.id, p.updated_at]));
+  const pushedSubjects = new Map(pushableSubjects.map((s) => [s.id, s.updated_at]));
+  const pushedPages = new Map(pushablePages.map((p) => [p.id, p.updated_at]));
   const pushedImages = new Map(imagesToUpsert.map((i) => [i.id, i.storage_path]));
 
-  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
-
-  const [subjectsRes, pagesRes, imagesRes] = await Promise.all([
-    supabase.from("subjects").select("*").gt("updated_at", since),
-    supabase.from("pages").select("*").gt("updated_at", since),
-    supabase.from("note_images").select("*").gt("updated_at", since),
-  ]);
-  if (subjectsRes.error) throw subjectsRes.error;
-  if (pagesRes.error) throw pagesRes.error;
-  if (imagesRes.error) throw imagesRes.error;
-
   const current = getData();
-  // Clear dirty flags only for rows unchanged since we pushed them.
+  // Clear dirty flags only for rows unchanged since we pushed them. Page-page yang lagi
+  // konflik (conflictIds) sengaja gak masuk pushedPages di atas, jadi tetap dirty di sini.
   const subjects = current.subjects.map((s) =>
     pushedSubjects.get(s.id) === s.updated_at ? { ...s, dirty: false } : s,
   );
@@ -192,17 +319,13 @@ async function doSync(userId: string, full: boolean) {
       updated_at: new Date(String(row["updated_at"])).toISOString(),
       dirty: false,
     })),
-    pages: mergeRemote(pages, pagesRes.data ?? [], (row) => ({
-      id: String(row["id"]),
-      subject_id: String(row["subject_id"]),
-      title: String(row["title"] ?? ""),
-      content: String(row["content"] ?? ""),
-      pinned: Boolean(row["pinned"]),
-      position: Number(row["position"] ?? 0),
-      deleted: Boolean(row["deleted"]),
-      updated_at: new Date(String(row["updated_at"])).toISOString(),
-      dirty: false,
-    })),
+    // Baris yang lagi konflik sengaja dibuang dari batch remote di sini, supaya
+    // gak diam-diam nimpa versi lokal yang lagi nunggu keputusan user.
+    pages: mergeRemote(
+      pages,
+      (pagesRes.data ?? []).filter((row) => !conflictIds.has(String((row as Row)["id"]))),
+      buildPage,
+    ),
     images: mergeRemote(images, imagesRes.data ?? [], (row) => ({
       id: String(row["id"]),
       page_id: String(row["page_id"]),
