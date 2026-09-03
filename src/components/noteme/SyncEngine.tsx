@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { dirtyCount, loadLocal, useData } from "@/lib/noteme/store";
 import { resolveConflict, syncNow, useConflicts, diffPageContent } from "@/lib/noteme/sync";
+
+// Debounce realtime-triggered sync sedikit — kalau device lain nyimpen beberapa
+// baris sekaligus (mis. subject + beberapa page), event postgres_changes bisa
+// nyampe beruntun; gak perlu langsung sync di tiap event, cukup sekali abis diam.
+const REALTIME_DEBOUNCE_MS = 400;
 
 // Backoff steps for auto-retry after a failed sync (ms). Caps at the last value.
 const RETRY_DELAYS = [3000, 8000, 20000, 45000, 60000];
@@ -25,7 +31,9 @@ function describeSyncError(error: unknown): string {
       : typeof error === "object" && error && "message" in error
         ? String((error as { message: unknown }).message)
         : null;
-  return msg ? `Sync gagal: ${msg} — akan dicoba lagi otomatis.` : "Sync gagal — akan dicoba lagi otomatis.";
+  return msg
+    ? `Sync gagal: ${msg} — akan dicoba lagi otomatis.`
+    : "Sync gagal — akan dicoba lagi otomatis.";
 }
 
 export function SyncStatus() {
@@ -35,6 +43,7 @@ export function SyncStatus() {
   const [state, setState] = useState<"idle" | "syncing" | "error">("idle");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryAttempt = useRef(0);
   const hasWarnedThisFailure = useRef(false);
 
@@ -112,6 +121,49 @@ export function SyncStatus() {
 
   useEffect(() => clearRetry, []);
 
+  // Live sync: dengerin perubahan lewat Supabase Realtime supaya edit dari device lain
+  // langsung nongol di sini tanpa nunggu user ngedit sesuatu lokal dulu (yang sebelumnya
+  // jadi satu-satunya pemicu sync). Row punya user lain gak akan pernah lolos sini karena
+  // RLS: koneksi realtime tetap dibatasi policy yang sama kayak query biasa.
+  useEffect(() => {
+    if (!user) return;
+
+    const scheduleRealtimeSync = () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = setTimeout(() => {
+        if (navigator.onLine) attemptSync(user.id);
+      }, REALTIME_DEBOUNCE_MS);
+    };
+
+    const channel = supabase
+      .channel(`noteme-live-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subjects", filter: `user_id=eq.${user.id}` },
+        scheduleRealtimeSync,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pages", filter: `user_id=eq.${user.id}` },
+        scheduleRealtimeSync,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "note_images", filter: `user_id=eq.${user.id}` },
+        scheduleRealtimeSync,
+      )
+      .subscribe();
+
+    return () => {
+      if (realtimeTimer.current) {
+        clearTimeout(realtimeTimer.current);
+        realtimeTimer.current = null;
+      }
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   if (!user) {
     return (
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -174,8 +226,8 @@ export function ConflictDialog() {
       <div className="glass-card spring-in w-full max-w-sm rounded-3xl p-5">
         <p className="mb-1 text-base font-semibold">Konflik sinkronisasi</p>
         <p className="text-sm text-muted-foreground">
-          "{title}" juga diedit di perangkat lain. Mau timpa dengan versi lain itu, atau gabung
-          jadi satu (dua-duanya disimpan)?
+          "{title}" juga diedit di perangkat lain. Mau timpa dengan versi lain itu, atau gabung jadi
+          satu (dua-duanya disimpan)?
         </p>
 
         {titleDiffers && (
@@ -192,15 +244,17 @@ export function ConflictDialog() {
 
         {truncated ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Catatannya kepanjangan buat ditunjukin bagian yang beda satu-satu — tapi isinya
-            memang beda.
+            Catatannya kepanjangan buat ditunjukin bagian yang beda satu-satu — tapi isinya memang
+            beda.
           </p>
         ) : (
           (removed.length > 0 || added.length > 0) && (
             <div className="mt-3 max-h-40 space-y-1.5 overflow-y-auto text-xs">
               {removed.length > 0 && (
                 <div>
-                  <p className="mb-1 text-muted-foreground">Cuma ada di catatan ini (hilang kalau timpa):</p>
+                  <p className="mb-1 text-muted-foreground">
+                    Cuma ada di catatan ini (hilang kalau timpa):
+                  </p>
                   <div className="space-y-1">
                     {removed.map((phrase, idx) => (
                       <p
@@ -218,7 +272,10 @@ export function ConflictDialog() {
                   <p className="mb-1 text-muted-foreground">Cuma ada di versi perangkat lain:</p>
                   <div className="space-y-1">
                     {added.map((phrase, idx) => (
-                      <p key={`added-${idx}`} className="rounded-lg bg-primary/10 px-2 py-1 text-primary">
+                      <p
+                        key={`added-${idx}`}
+                        className="rounded-lg bg-primary/10 px-2 py-1 text-primary"
+                      >
                         {phrase}
                       </p>
                     ))}
