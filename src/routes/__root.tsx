@@ -13,7 +13,7 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
+import { ConflictDialog, ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
 import { useBackgroundHue } from "@/hooks/use-background-hue"; // <-- Import Hook
 
 function NotFoundComponent() {
@@ -129,6 +129,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ServiceWorkerRegistrar />
       <RouteTransition />
+      <ConflictDialog />
       <Toaster theme="dark" position="top-center" />
     </QueryClientProvider>
   );
