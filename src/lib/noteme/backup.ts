@@ -72,16 +72,38 @@ async function collectImagesForPages(pages: Page[]): Promise<Record<string, Back
   return out;
 }
 
-function download(filename: string, content: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
+/**
+ * Trigger download sebuah Blob. Dibuat setahan mungkin karena app ini juga jalan
+ * di dalam iframe preview & di Safari iOS:
+ *  - `URL.revokeObjectURL` TIDAK langsung dipanggil (Safari/iOS membatalkan download
+ *    kalau URL-nya dicabut sebelum browser selesai membacanya).
+ *  - kalau `<a download>` gagal / diblokir (iframe tanpa allow-downloads), fallback ke
+ *    membuka blob di tab baru supaya user tetap bisa simpan manual.
+ */
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  let clicked = false;
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    clicked = "download" in a;
+  } catch {
+    clicked = false;
+  }
+  if (!clicked) {
+    window.open(url, "_blank", "noopener");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function download(filename: string, content: string, mime: string) {
+  downloadBlob(filename, new Blob([content], { type: mime }));
 }
 
 function stamp() {
