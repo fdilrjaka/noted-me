@@ -3,7 +3,7 @@ import { Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/hooks/useSession";
 import { dirtyCount, loadLocal, useData } from "@/lib/noteme/store";
-import { syncNow } from "@/lib/noteme/sync";
+import { resolveConflict, syncNow, useConflicts } from "@/lib/noteme/sync";
 
 // Backoff steps for auto-retry after a failed sync (ms). Caps at the last value.
 const RETRY_DELAYS = [3000, 8000, 20000, 45000, 60000];
@@ -151,6 +151,57 @@ export function SyncStatus() {
         </>
       )}
     </button>
+  );
+}
+
+/**
+ * Muncul kalau ada note yang lagi diedit lokal TAPI ternyata udah diubah duluan di
+ * device lain (lihat doSync di lib/noteme/sync.ts). Nunjukin satu konflik pertama di
+ * antrean; sengaja gak diam-diam milih salah satu — user yang mutusin timpa atau gabung.
+ */
+export function ConflictDialog() {
+  const conflicts = useConflicts();
+  const conflict = conflicts[0];
+
+  if (!conflict) return null;
+
+  const title = conflict.local.title || "Catatan tanpa judul";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+      <div className="glass-card spring-in w-full max-w-sm rounded-3xl p-5">
+        <p className="mb-1 text-base font-semibold">Konflik sinkronisasi</p>
+        <p className="text-sm text-muted-foreground">
+          "{title}" juga diedit di perangkat lain. Mau timpa dengan versi lain itu, atau gabung
+          jadi satu (dua-duanya disimpan)?
+        </p>
+        {conflicts.length > 1 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            +{conflicts.length - 1} catatan lain juga menunggu.
+          </p>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => {
+              resolveConflict(conflict.id, "overwrite");
+              toast("Ditimpa dengan versi dari perangkat lain");
+            }}
+            className="press rounded-full px-4 py-2 text-sm font-medium text-muted-foreground active:scale-95"
+          >
+            Timpa
+          </button>
+          <button
+            onClick={() => {
+              resolveConflict(conflict.id, "merge");
+              toast.success("Kedua versi digabung");
+            }}
+            className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+          >
+            Gabung
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
