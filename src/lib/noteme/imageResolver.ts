@@ -27,18 +27,22 @@ async function resolveUncached(id: string): Promise<string | null> {
   // 2. Gak ada lokal — cek metadata note_images, kalau sudah pernah keupload dari
   //    device manapun, download dari Supabase Storage lalu cache-in ke IndexedDB
   //    pakai id yang sama (supaya kali berikutnya sudah lokal).
+  //    Bucket "note-images" bersifat PRIVAT (RLS: folder harus = auth.uid()), jadi
+  //    HARUS didownload lewat client Supabase yang authenticated (.download()) —
+  //    getPublicUrl() + fetch() biasa gak bawa token & bakal selalu gagal/ditolak RLS.
   const meta = getData().images.find((img) => img.id === id && !img.deleted);
   if (meta?.storage_path) {
     try {
-      const { data: publicUrl } = supabase.storage.from("note-images").getPublicUrl(meta.storage_path);
-      const res = await fetch(publicUrl.publicUrl);
-      if (res.ok) {
-        const blob = await res.blob();
+      const { data: blob, error } = await supabase.storage
+        .from("note-images")
+        .download(meta.storage_path);
+      if (!error && blob) {
         await putImage(blob, meta.page_id, { id });
         const url = URL.createObjectURL(blob);
         resolvedCache.set(id, url);
         return url;
       }
+      if (error) console.error("gagal download gambar dari storage", error);
     } catch (err) {
       console.error("gagal download gambar dari storage", err);
     }
