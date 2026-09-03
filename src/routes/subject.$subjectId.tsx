@@ -1,338 +1,436 @@
-import { useState } from 'react';
-import { createFileRoute, useParams, Link } from '@tanstack/react-router';
-import { useNoteMeStore } from '@/lib/noteme/store';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft,
+  ChevronLeft,
+  Download,
+  Images,
+  Menu,
+  Pencil,
+  Pin,
+  PinOff,
   Plus,
-  Clock,
-  MapPin,
   Trash2,
-  CheckCircle2,
-  Circle,
-  FileText,
-  Calendar as CalendarIcon,
   X,
-  FolderPlus
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+} from "lucide-react";
+import { toast } from "sonner";
+import { Editor } from "@/components/noteme/Editor";
+import { SyncStatus } from "@/components/noteme/SyncEngine";
+import { exportPageJson, exportPageMarkdown, exportPagePdf } from "@/lib/noteme/backup";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  createPage,
+  deletePage,
+  extractImages,
+  patchPage,
+  patchSubject,
+  reorderPages,
+  subjectPages,
+  useData,
+} from "@/lib/noteme/store";
+import { useDragReorder } from "@/lib/noteme/reorder";
 
-export const Route = createFileRoute('/subject/$subjectId')({
-  component: RouteComponent,
+export const Route = createFileRoute("/subject/$subjectId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    page: typeof search["page"] === "string" ? (search["page"] as string) : undefined,
+  }),
+  head: () => ({
+    meta: [
+      { title: "Catatan Mata Kuliah — NoteMe" },
+      {
+        name: "description",
+        content:
+          "Tulis catatan per pertemuan dengan editor teks kaya, foto, tabel, dan checklist di NoteMe.",
+      },
+      { property: "og:title", content: "Catatan Mata Kuliah — NoteMe" },
+      {
+        property: "og:description",
+        content: "Halaman pertemuan dengan editor teks kaya, gambar, dan auto-save.",
+      },
+    ],
+  }),
+  component: SubjectView,
 });
 
-function RouteComponent() {
-  const { subjectId } = useParams({ from: '/subject/$subjectId' });
-  const {
-    subjects,
-    items,
-    addSection,
-    deleteSection,
-    addItem,
-    deleteItem,
-    toggleItemComplete,
-  } = useNoteMeStore();
+function SubjectView() {
+  const { subjectId } = Route.useParams();
+  const searchParams = Route.useSearch();
+  const pageParam = searchParams.page;
+  const navigate = useNavigate();
+  const data = useData();
+  const [sidebar, setSidebar] = useState(false);
+  const [gallery, setGallery] = useState(false);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  const subject = subjects.find((s) => s.id === subjectId);
+  const subject = data.subjects.find((s) => s.id === subjectId && !s.deleted);
+  const pages = useMemo(() => subjectPages(data, subjectId), [data, subjectId]);
+  const activeId = pageParam && pages.some((p) => p.id === pageParam) ? pageParam : pages[0]?.id;
+  const active = pages.find((p) => p.id === activeId);
 
-  const [activeTab, setActiveTab] = useState<string>('catatan');
+  const tabReorder = useDragReorder({
+    items: pages,
+    axis: "x",
+    groupKey: (p) => p.pinned,
+    onCommit: (ids) => reorderPages(subjectId, ids),
+  });
+  const sidebarReorder = useDragReorder({
+    items: pages,
+    axis: "y",
+    groupKey: (p) => p.pinned,
+    onCommit: (ids) => reorderPages(subjectId, ids),
+  });
+  const draggedTabPage = tabReorder.dragId ? pages.find((p) => p.id === tabReorder.dragId) : null;
+  const draggedSidebarPage = sidebarReorder.dragId
+    ? pages.find((p) => p.id === sidebarReorder.dragId)
+    : null;
 
-  // Modal State Tambah Kategori Baru
-  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
-  const [newSectionName, setNewSectionName] = useState('');
-
-  // Modal State Tambah Item
-  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [itemTitle, setItemTitle] = useState('');
-  const [itemContent, setItemContent] = useState('');
-  const [itemDueDate, setItemDueDate] = useState('');
+  useEffect(() => {
+    if (activeId && activeId !== pageParam) {
+      void navigate({
+        to: "/subject/$subjectId",
+        params: { subjectId },
+        search: { page: activeId },
+        replace: true,
+      });
+    }
+  }, [activeId, pageParam, subjectId, navigate]);
 
   if (!subject) {
     return (
-      <div className="container max-w-4xl mx-auto p-6 text-center py-20">
-        <h2 className="text-xl font-semibold mb-2">Mata Kuliah Tidak Ditemukan</h2>
-        <p className="text-muted-foreground mb-4">
-          Mata kuliah ini mungkin telah dihapus.
-        </p>
-        <Link to="/">
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
-          </Button>
-        </Link>
-      </div>
+      <main className="flex min-h-dvh items-center justify-center px-4">
+        <div className="glass-card rounded-3xl p-8 text-center">
+          <p className="font-semibold">Mata kuliah tidak ditemukan</p>
+          <Link
+            to="/"
+            className="press glass-floating spring-in mt-4 inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium text-foreground active:scale-95"
+          >
+            <ChevronLeft className="size-4" />
+            Kembali ke dashboard
+          </Link>
+        </div>
+      </main>
     );
   }
 
-  const currentSectionItems = items.filter(
-    (item) => item.subjectId === subject.id && item.sectionId === activeTab
-  );
-
-  const handleAddSectionSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSectionName.trim()) return;
-
-    addSection(subject.id, newSectionName.trim());
-    setNewSectionName('');
-    setIsAddSectionOpen(false);
-  };
-
-  const handleAddItemSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!itemTitle.trim()) return;
-
-    addItem({
-      subjectId: subject.id,
-      sectionId: activeTab,
-      title: itemTitle.trim(),
-      content: itemContent.trim(),
-      dueDate: itemDueDate || undefined,
+  const goto = (id: string) => {
+    setSidebar(false);
+    void navigate({
+      to: "/subject/$subjectId",
+      params: { subjectId },
+      search: { page: id },
     });
-
-    setItemTitle('');
-    setItemContent('');
-    setItemDueDate('');
-    setIsAddItemOpen(false);
   };
 
-  const activeSectionObj = subject.sections.find((sec) => sec.id === activeTab);
+  const swipe = (dir: -1 | 1) => {
+    if (!activeId) return;
+    const idx = pages.findIndex((p) => p.id === activeId);
+    const next = pages[idx + dir];
+    if (next) goto(next.id);
+  };
+
+  const images = active ? extractImages(active.content) : [];
 
   return (
-    <div className="container max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Header Info */}
-      <div className="space-y-4">
-        <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
-          </Button>
+    <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-3 safe-top safe-bottom md:px-6">
+      <header className="flex items-center gap-2 py-3">
+        <Link
+          to="/"
+          aria-label="Kembali"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
+        >
+          <ChevronLeft className="size-5" />
         </Link>
+        <button
+          onClick={() => setSidebar(true)}
+          aria-label="Daftar pertemuan"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90 md:hidden"
+        >
+          <Menu className="size-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <input
+            value={subject.name}
+            onChange={(e) => patchSubject(subject.id, { name: e.target.value })}
+            className="w-full truncate bg-transparent text-lg font-bold tracking-tight outline-none"
+          />
+          <SyncStatus />
+        </div>
+        <button
+          onClick={() => setGallery(true)}
+          aria-label="Galeri gambar"
+          className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
+        >
+          <Images className="size-4" />
+        </button>
+      </header>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              {subject.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1 font-medium bg-muted px-2.5 py-1 rounded-md">
-                <Clock className="w-4 h-4 text-primary" />
-                {subject.day}, {subject.startTime} – {subject.endTime}
-              </span>
+      {/* Laptop: horizontal tabs — tahan lalu geser kanan/kiri untuk mengubah urutan */}
+      <div className="hidden items-center gap-1.5 overflow-x-auto pb-2 md:flex">
+        {tabReorder.order.map((p) => (
+          <button
+            key={p.id}
+            {...tabReorder.itemProps(p.id)}
+            onClick={tabReorder.guardClick(() => goto(p.id))}
+            title="Tahan lalu geser untuk mengubah urutan"
+            className={`press flex flex-none select-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
+              tabReorder.isGhost(p.id) ? "invisible" : ""
+            } ${
+              p.id === activeId
+                ? "bg-primary font-medium text-primary-foreground glow-ring"
+                : "glass-soft text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p.pinned && <Pin className="size-3" />}
+            {p.title}
+          </button>
+        ))}
+        <button
+          onClick={() => goto(createPage(subjectId))}
+          aria-label="Tambah pertemuan"
+          className="press glass-soft flex size-9 flex-none items-center justify-center rounded-full active:scale-90"
+        >
+          <Plus className="size-4" />
+        </button>
+        {draggedTabPage && (
+          <div
+            style={tabReorder.overlayStyle}
+            className="glass-floating flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-2xl"
+          >
+            {draggedTabPage.pinned && <Pin className="size-3" />}
+            {draggedTabPage.title}
+          </div>
+        )}
+      </div>
 
-              {subject.room && (
-                <span className="flex items-center gap-1 font-medium bg-muted px-2.5 py-1 rounded-md">
-                  <MapPin className="w-4 h-4 text-rose-500" />
-                  Ruang: {subject.room}
-                </span>
-              )}
+      {active && (
+        <section
+          className="glass-card spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            if (!t) return;
+            touchStart.current = { x: t.clientX, y: t.clientY };
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStart.current;
+            if (!start) return;
+            const t = e.changedTouches[0];
+            if (!t) return;
+            const dx = t.clientX - start.x;
+            const dy = t.clientY - start.y;
+            if (Math.abs(dx) > 70 && Math.abs(dy) < 50) swipe(dx < 0 ? 1 : -1);
+            touchStart.current = null;
+          }}
+        >
+          <div className="flex items-start gap-2 pb-2 md:pb-4">
+            {renaming === active.id ? (
+              <input
+                autoFocus
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onBlur={() => {
+                  patchPage(active.id, { title: draftTitle.trim() || active.title });
+                  setRenaming(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                }}
+                className="flex-1 rounded-xl bg-input px-3 py-1.5 text-xl font-bold outline-none focus:ring-2 focus:ring-ring"
+              />
+            ) : (
+              <h2 className="flex-1 text-xl font-bold tracking-tight">{active.title}</h2>
+            )}
+            <div className="flex flex-none items-center gap-2.5">
+              <button
+                aria-label="Ganti nama"
+                onClick={() => {
+                  setDraftTitle(active.title);
+                  setRenaming(active.id);
+                }}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+              <button
+                aria-label={active.pinned ? "Lepas sematan" : "Sematkan"}
+                onClick={() => patchPage(active.id, { pinned: !active.pinned })}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+              >
+                {active.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+              </button>
+              <div className="relative">
+                <button
+                  aria-label="Ekspor pertemuan ini"
+                  onClick={() => setExportOpen((v) => !v)}
+                  className="press-sm flex size-9 items-center justify-center rounded-full bg-input active:scale-90"
+                >
+                  <Download className="size-3.5" />
+                </button>
+                {exportOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                    <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
+                      <button
+                        onClick={() => {
+                          void exportPageJson(active.id).then(() => {
+                            toast.success("Pertemuan diekspor sebagai JSON");
+                          });
+                          setExportOpen(false);
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor JSON</p>
+                        <p className="text-xs text-muted-foreground">
+                          Lengkap, bisa dipulihkan lagi
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportPageMarkdown(active.id);
+                          toast.success("Pertemuan diekspor sebagai Markdown");
+                          setExportOpen(false);
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor Markdown</p>
+                        <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setExportOpen(false);
+                          const t = toast.loading("Menyiapkan PDF…");
+                          void exportPagePdf(active.id)
+                            .then(() => {
+                              toast.success("Pertemuan diekspor sebagai PDF", { id: t });
+                            })
+                            .catch((err: unknown) => {
+                              console.error(err);
+                              toast.error("Gagal membuat PDF, coba lagi", { id: t });
+                            });
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor PDF</p>
+                        <p className="text-xs text-muted-foreground">Langsung ke-download</p>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+              <button
+                aria-label="Pindahkan ke trash"
+                onClick={() => {
+                  deletePage(active.id);
+                  const rest = pages.filter((p) => p.id !== active.id);
+                  if (rest[0]) goto(rest[0].id);
+                }}
+                className="press-sm flex size-9 items-center justify-center rounded-full bg-input text-destructive active:scale-90"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
             </div>
           </div>
 
-          <Button onClick={() => setIsAddItemOpen(true)} className="gap-2 self-start md:self-auto">
-            <Plus className="w-4 h-4" />
-            Tambah {activeSectionObj?.name || 'Item'} Baru
-          </Button>
-        </div>
-      </div>
+          <Editor
+            pageId={active.id}
+            initialContent={active.content}
+            onChange={(html) => patchPage(active.id, { content: html })}
+          />
+        </section>
+      )}
 
-      {/* Tabs Menu (Catatan, Tugas, Project, + Custom) */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 border-b">
-          <TabsList className="h-auto p-1 bg-muted/60 rounded-lg flex flex-wrap gap-1">
-            {subject.sections.map((sec) => (
-              <TabsTrigger
-                key={sec.id}
-                value={sec.id}
-                className="px-4 py-2 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
-              >
-                {sec.name}
-                {!sec.isDefault && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSection(subject.id, sec.id);
-                      if (activeTab === sec.id) setActiveTab('catatan');
-                    }}
-                    className="hover:text-destructive p-0.5 rounded transition-colors"
-                    title="Hapus Kategori Ini"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </span>
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAddSectionOpen(true)}
-            className="gap-1.5 text-xs shrink-0"
+      {!active && (
+        <div className="glass-card mt-4 rounded-3xl p-10 text-center">
+          <p className="font-semibold">Belum ada pertemuan</p>
+          <button
+            onClick={() => goto(createPage(subjectId))}
+            className="press mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground active:scale-95"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-primary" />
-            + Tambah Kategori
-          </Button>
+            Tambah Pertemuan
+          </button>
         </div>
+      )}
 
-        {/* Isi Tab */}
-        <TabsContent value={activeTab} className="mt-0 space-y-4">
-          {currentSectionItems.length === 0 ? (
-            <div className="text-center py-16 border border-dashed rounded-xl p-6 bg-card">
-              <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-              <h3 className="text-base font-medium">Belum ada {activeSectionObj?.name.toLowerCase()}</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                Klik tombol "Tambah {activeSectionObj?.name || 'Item'} Baru" di atas untuk menambahkan isi di kategori ini.
-              </p>
+      {/* iPhone: sidebar sheet */}
+      {sidebar && (
+        <div
+          className="fade-in-ios fixed inset-0 z-40 flex bg-background/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebar(false)}
+        >
+          <aside
+            className="glass-sheet slide-in-left h-full w-[78%] max-w-xs overflow-y-auto border-r p-4 safe-top safe-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">Pertemuan</p>
+              <button onClick={() => setSidebar(false)} aria-label="Tutup" className="press-sm">
+                <X className="size-4" />
+              </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentSectionItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-4 rounded-xl border bg-card text-card-foreground shadow-sm space-y-3 transition-all ${
-                    item.completed ? 'opacity-60 bg-muted/30' : ''
-                  }`}
+            <div className="relative mt-4 space-y-1.5">
+              {sidebarReorder.order.map((p) => (
+                <button
+                  key={p.id}
+                  {...sidebarReorder.itemProps(p.id)}
+                  onClick={sidebarReorder.guardClick(() => goto(p.id))}
+                  className={`press flex w-full select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
+                    sidebarReorder.isGhost(p.id) ? "invisible" : ""
+                  } ${p.id === activeId ? "bg-primary text-primary-foreground" : "bg-input"}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2.5 flex-1">
-                      {(activeTab === 'tugas' || activeTab === 'project') && (
-                        <button
-                          onClick={() => toggleItemComplete(item.id)}
-                          className="mt-0.5 text-muted-foreground hover:text-primary transition-colors shrink-0"
-                        >
-                          {item.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                          ) : (
-                            <Circle className="w-5 h-5" />
-                          )}
-                        </button>
-                      )}
-
-                      <div className="space-y-1 flex-1">
-                        <h4
-                          className={`font-semibold text-base leading-tight ${
-                            item.completed ? 'line-through text-muted-foreground' : ''
-                          }`}
-                        >
-                          {item.title}
-                        </h4>
-
-                        {item.dueDate && (
-                          <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
-                            <CalendarIcon className="w-3.5 h-3.5" />
-                            <span>Tenggat: {item.dueDate}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteItem(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {item.content && (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed border-t pt-2 mt-2">
-                      {item.content}
-                    </p>
-                  )}
-                </div>
+                  {p.pinned && <Pin className="size-3 flex-none" />}
+                  <span className="truncate">{p.title}</span>
+                </button>
               ))}
+              {draggedSidebarPage && (
+                <div
+                  style={sidebarReorder.overlayStyle}
+                  className="glass-floating flex w-[calc(78vw-2rem)] max-w-[19rem] items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm shadow-2xl"
+                >
+                  {draggedSidebarPage.pinned && <Pin className="size-3 flex-none" />}
+                  <span className="truncate">{draggedSidebarPage.title}</span>
+                </div>
+              )}
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            <button
+              onClick={() => goto(createPage(subjectId))}
+              className="press mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-border py-2.5 text-sm active:scale-95"
+            >
+              <Plus className="size-4" /> Pertemuan baru
+            </button>
+          </aside>
+        </div>
+      )}
 
-      {/* Modal Tambah Kategori Custom */}
-      <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Kategori Baru</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddSectionSubmit} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="secName">Nama Kategori *</Label>
-              <Input
-                id="secName"
-                placeholder="Contoh: Bahan Ujian, Reference, Quiz"
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-                required
-              />
+      {gallery && (
+        <div className="fade-in-ios fixed inset-0 z-40 flex items-end justify-center bg-background/70 p-3 backdrop-blur-sm sm:items-center">
+          <div className="glass-sheet sheet-up max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Galeri gambar</h3>
+              <button onClick={() => setGallery(false)} aria-label="Tutup" className="press-sm">
+                <X className="size-4" />
+              </button>
             </div>
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsAddSectionOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit">Tambah Kategori</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Tambah Item */}
-      <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Tambah {activeSectionObj?.name || 'Item'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddItemSubmit} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="itemTitle">Judul / Topik *</Label>
-              <Input
-                id="itemTitle"
-                placeholder="Contoh: Pertemuan 1 - Pengenalan / Final Project Draft"
-                value={itemTitle}
-                onChange={(e) => setItemTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            {(activeTab === 'tugas' || activeTab === 'project') && (
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Tanggal Tenggat / Deadline (Opsional)</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={itemDueDate}
-                  onChange={(e) => setItemDueDate(e.target.value)}
-                />
+            {images.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Belum ada gambar di halaman ini.
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {images.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`Gambar catatan ${i + 1}`}
+                    loading="lazy"
+                    className="aspect-square w-full rounded-2xl border border-border object-cover"
+                  />
+                ))}
               </div>
             )}
-
-            <div className="space-y-2">
-              <Label htmlFor="itemContent">Isi / Deskripsi (Opsional)</Label>
-              <Textarea
-                id="itemContent"
-                placeholder="Tulis detail catatan, instruksi tugas, atau link penting..."
-                rows={4}
-                value={itemContent}
-                onChange={(e) => setItemContent(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsAddItemOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit">Simpan</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
