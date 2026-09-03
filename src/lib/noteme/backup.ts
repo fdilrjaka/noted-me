@@ -50,11 +50,12 @@ async function collectImagesForPages(pages: Page[]): Promise<Record<string, Back
         const meta = images.find((img) => img.id === id && img.storage_path);
         if (meta?.storage_path) {
           try {
-            const { data: publicUrl } = supabase.storage
+            // Bucket "note-images" privat (RLS by auth.uid()) — harus .download() lewat
+            // client Supabase yang authenticated, bukan getPublicUrl()+fetch() biasa.
+            const { data, error } = await supabase.storage
               .from("note-images")
-              .getPublicUrl(meta.storage_path);
-            const res = await fetch(publicUrl.publicUrl);
-            if (res.ok) blob = await res.blob();
+              .download(meta.storage_path);
+            if (!error && data) blob = data;
           } catch {
             // biarkan blob tetap null, gambar ini dilewati di bawah
           }
