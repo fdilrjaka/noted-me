@@ -297,15 +297,15 @@ function SubjectView() {
                       </button>
                       <button
                         onClick={() => {
-                          void exportPagePdf(active.id);
+                          void exportPagePdf(active.id).then(() => {
+                            toast.success("Pertemuan diekspor sebagai PDF");
+                          });
                           setExportOpen(false);
                         }}
                         className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
                       >
                         <p className="font-medium">Ekspor PDF</p>
-                        <p className="text-xs text-muted-foreground">
-                          Buka dialog print, simpan sebagai PDF
-                        </p>
+                        <p className="text-xs text-muted-foreground">Langsung ke-download</p>
                       </button>
                     </div>
                   </>
