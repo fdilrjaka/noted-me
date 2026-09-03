@@ -146,7 +146,7 @@ export function diffPageContent(
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      dp[i]![j] = a[i] === b[j] ? dp[i + 1]![j + 1]! + 1 : Math.max(dp[i + 1]![j]!, dp[i]![j + 1]!);
     }
   }
 
@@ -172,20 +172,20 @@ export function diffPageContent(
       flush();
       i++;
       j++;
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      removedRun.push(a[i]);
+    } else if (dp[i + 1]![j]! >= dp[i]![j + 1]!) {
+      removedRun.push(a[i]!);
       i++;
     } else {
-      addedRun.push(b[j]);
+      addedRun.push(b[j]!);
       j++;
     }
   }
   while (i < n) {
-    removedRun.push(a[i]);
+    removedRun.push(a[i]!);
     i++;
   }
   while (j < m) {
-    addedRun.push(b[j]);
+    addedRun.push(b[j]!);
     j++;
   }
   flush();
