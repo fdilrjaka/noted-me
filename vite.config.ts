@@ -26,7 +26,18 @@ export default defineConfig({
     // Otherwise Vite can invalidate its dependency cache mid-navigation and mix
     // two React module generations, leaving the hook dispatcher null.
     optimizeDeps: {
-      include: ["@tanstack/react-router", "@tanstack/react-query"],
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "@tanstack/react-router",
+        "@tanstack/react-query",
+        // Lazily imported by the PDF export path. Without pre-bundling, the
+        // first dynamic import triggers a mid-session re-optimize + reload that
+        // leaves React's hook dispatcher null (blank screen).
+        "html2canvas",
+        "jspdf",
+      ],
     },
     resolve: {
       dedupe: ["@tanstack/react-router"],
