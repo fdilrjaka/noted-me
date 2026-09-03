@@ -297,10 +297,16 @@ function SubjectView() {
                       </button>
                       <button
                         onClick={() => {
-                          void exportPagePdf(active.id).then(() => {
-                            toast.success("Pertemuan diekspor sebagai PDF");
-                          });
                           setExportOpen(false);
+                          const t = toast.loading("Menyiapkan PDF…");
+                          void exportPagePdf(active.id)
+                            .then(() => {
+                              toast.success("Pertemuan diekspor sebagai PDF", { id: t });
+                            })
+                            .catch((err: unknown) => {
+                              console.error(err);
+                              toast.error("Gagal membuat PDF, coba lagi", { id: t });
+                            });
                         }}
                         className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
                       >

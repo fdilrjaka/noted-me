@@ -72,16 +72,38 @@ async function collectImagesForPages(pages: Page[]): Promise<Record<string, Back
   return out;
 }
 
-function download(filename: string, content: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
+/**
+ * Trigger download sebuah Blob. Dibuat setahan mungkin karena app ini juga jalan
+ * di dalam iframe preview & di Safari iOS:
+ *  - `URL.revokeObjectURL` TIDAK langsung dipanggil (Safari/iOS membatalkan download
+ *    kalau URL-nya dicabut sebelum browser selesai membacanya).
+ *  - kalau `<a download>` gagal / diblokir (iframe tanpa allow-downloads), fallback ke
+ *    membuka blob di tab baru supaya user tetap bisa simpan manual.
+ */
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  let clicked = false;
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    clicked = "download" in a;
+  } catch {
+    clicked = false;
+  }
+  if (!clicked) {
+    window.open(url, "_blank", "noopener");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function download(filename: string, content: string, mime: string) {
+  downloadBlob(filename, new Blob([content], { type: mime }));
 }
 
 function stamp() {
@@ -238,58 +260,96 @@ export async function exportPagePdf(pageId: string) {
       ),
     );
 
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      useCORS: true,
-    });
-
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Kalau kontennya lebih tinggi dari satu halaman, potong canvas jadi beberapa
-    // halaman PDF berturut-turut (masing-masing setinggi satu halaman A4).
-    const pageHeightOnCanvas = (pageHeight * canvas.width) / imgWidth;
-    let renderedHeight = 0;
-    let first = true;
-
-    while (renderedHeight < canvas.height) {
-      const sliceHeight = Math.min(pageHeightOnCanvas, canvas.height - renderedHeight);
-      const sliceCanvas = document.createElement("canvas");
-      sliceCanvas.width = canvas.width;
-      sliceCanvas.height = sliceHeight;
-      const ctx = sliceCanvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(
-          canvas,
-          0,
-          renderedHeight,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight,
-        );
-      }
-      const sliceImgHeight = (sliceHeight * imgWidth) / canvas.width;
-      if (!first) pdf.addPage();
-      pdf.addImage(
-        sliceCanvas.toDataURL("image/jpeg", 0.92),
-        "JPEG",
-        0,
-        0,
-        imgWidth,
-        sliceImgHeight,
-      );
-      renderedHeight += sliceHeight;
-      first = false;
+    let canvas: HTMLCanvasElement | null = null;
+    try {
+      canvas = await html2canvas(container, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        // Jangan ikut-ikutan meng-clone stylesheet global: Tailwind v4 pakai warna
+        // oklch()/color-mix() yang bikin html2canvas throw di sebagian browser.
+        ignoreElements: (el) => el.tagName === "STYLE" || el.tagName === "LINK",
+      });
+    } catch {
+      canvas = null;
     }
 
-    pdf.save(`noteme-${slugify(page.title)}-${stamp()}.pdf`);
+    if (canvas && canvas.width > 0 && canvas.height > 0) {
+      const imgWidth = pageWidth;
+      // Kalau kontennya lebih tinggi dari satu halaman, potong canvas jadi beberapa
+      // halaman PDF berturut-turut (masing-masing setinggi satu halaman A4).
+      const pageHeightOnCanvas = (pageHeight * canvas.width) / imgWidth;
+      let renderedHeight = 0;
+      let first = true;
+
+      while (renderedHeight < canvas.height) {
+        const sliceHeight = Math.min(pageHeightOnCanvas, canvas.height - renderedHeight);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeight;
+        const ctx = sliceCanvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0,
+            renderedHeight,
+            canvas.width,
+            sliceHeight,
+            0,
+            0,
+            canvas.width,
+            sliceHeight,
+          );
+        }
+        const sliceImgHeight = (sliceHeight * imgWidth) / canvas.width;
+        if (!first) pdf.addPage();
+        pdf.addImage(
+          sliceCanvas.toDataURL("image/jpeg", 0.92),
+          "JPEG",
+          0,
+          0,
+          imgWidth,
+          sliceImgHeight,
+        );
+        renderedHeight += sliceHeight;
+        first = false;
+      }
+    } else {
+      // Fallback teks: kalau screenshot HTML gagal (browser lama / warna CSS modern),
+      // PDF tetap dibuat dari teks catatan supaya tombol ekspor tidak pernah "diam".
+      const margin = 48;
+      let y = margin;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(16);
+      pdf.text(page.title || "Catatan", margin, y);
+      y += 22;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text(
+        `${subject ? `${subject.name} · ` : ""}Diekspor ${new Date().toLocaleString("id-ID")}`,
+        margin,
+        y,
+      );
+      y += 24;
+      pdf.setFontSize(11);
+      const body = stripHtml(page.content) || "(kosong)";
+      for (const line of pdf.splitTextToSize(body, pageWidth - margin * 2) as string[]) {
+        if (y > pageHeight - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      }
+    }
+
+    downloadBlob(`noteme-${slugify(page.title)}-${stamp()}.pdf`, pdf.output("blob"));
   } finally {
     container.remove();
   }
