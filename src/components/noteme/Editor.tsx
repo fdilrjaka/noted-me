@@ -261,6 +261,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(true);
+  const [counts, setCounts] = useState({ words: 0, chars: 0 });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
   const [formatSheetOpen, setFormatSheetOpen] = useState(false);
@@ -328,11 +329,23 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     };
   }, [toolbarVisible, updateSelectionToolbar]);
 
+  // Dihitung langsung dari teks di layar (bukan dari `initialContent`/store yang baru
+  // ke-update setelah debounce 600ms) supaya angkanya selalu real-time pas user ngetik.
+  const updateCounts = useCallback(() => {
+    const text = ref.current?.innerText ?? "";
+    const trimmed = text.trim();
+    setCounts({
+      words: trimmed ? trimmed.split(/\s+/).length : 0,
+      chars: text.replace(/\n+/g, "").length,
+    });
+  }, []);
+
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialContent || "";
     setSaved(true);
     setPanel("none");
     setSelectionToolbar(null);
+    updateCounts();
     try {
       const savedBg = window.localStorage.getItem(`noteme.bg.${pageId}`);
       setBg(savedBg === "white" ? "white" : "default");
@@ -346,7 +359,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     // Ganti halaman (atau unmount) — object URL yang sudah dibikin resolveImageSrc buat
     // halaman sebelumnya gak dipakai lagi, revoke biar gak numpuk di memory browser.
     return () => revokeAllResolved();
-  }, [pageId]);
+  }, [pageId, updateCounts]);
 
 
   const flush = () => {
@@ -359,6 +372,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   const handleInput = () => {
     setSaved(false);
+    updateCounts();
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, 600);
   };
@@ -559,8 +573,12 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         <Camera className="size-4" />
       </button>
 
-      <span className="ml-auto flex-none pr-1 text-[11px] text-muted-foreground">
-        {saved ? "Tersimpan" : "Menyimpan…"}
+      <span className="ml-auto flex flex-none items-center gap-1 pr-1 text-[11px] text-muted-foreground">
+        <span>
+          {counts.words} kata · {counts.chars} karakter
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>{saved ? "Tersimpan" : "Menyimpan…"}</span>
       </span>
     </>
   );
