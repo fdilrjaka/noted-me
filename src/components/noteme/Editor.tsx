@@ -191,6 +191,30 @@ function sanitizeTableHtml(html: string): string | null {
   return `${table.outerHTML}<p><br></p>`;
 }
 
+// Bungkus tiap <img> yang belum punya wrapper dengan <span class="img-resize-wrap"> +
+// handle di pojok kanan-bawah, biar bisa diklik lalu diresize (pola yang sama kayak
+// enhanceTables di atas — wrapper & handle-nya memang ikut tersimpan ke content, bukan
+// cuma dekorasi sementara, biar lebar gambar yang sudah diatur tetap kepakai lagi
+// setelah reload/sync ke device lain).
+function enhanceImages(root: HTMLElement) {
+  root.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+    if (img.closest(".img-resize-wrap")) return;
+    const wrap = document.createElement("span");
+    wrap.className = "img-resize-wrap";
+    wrap.contentEditable = "false";
+    img.replaceWith(wrap);
+    wrap.appendChild(img);
+    const handle = document.createElement("span");
+    handle.className = "img-resize-handle";
+    handle.contentEditable = "false";
+    wrap.appendChild(handle);
+  });
+}
+
+function deselectImages(root: HTMLElement) {
+  root.querySelectorAll(".img-resize-wrap.is-selected").forEach((el) => el.classList.remove("is-selected"));
+}
+
 const IDB_SRC_PREFIX = "idb:";
 const RETRY_DELAY_MS = 1500;
 
@@ -253,6 +277,8 @@ function serializeContent(container: HTMLElement): string {
     img.removeAttribute("data-resolving");
     img.style.opacity = "";
   });
+  clone.querySelectorAll(".img-resize-wrap.is-selected").forEach((el) => el.classList.remove("is-selected"));
+  clone.querySelectorAll(".img-resize-handle.is-resizing").forEach((el) => el.classList.remove("is-resizing"));
   return clone.innerHTML;
 }
 
@@ -273,6 +299,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     null,
   );
   const resizing = useRef<{ col: HTMLTableColElement; startX: number; startWidth: number } | null>(
+    null,
+  );
+  const resizingImage = useRef<{ wrap: HTMLElement; startX: number; startWidth: number } | null>(
     null,
   );
   const [isMobile, setIsMobile] = useState(false);
@@ -354,6 +383,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     }
     if (ref.current) {
       enhanceTables(ref.current);
+      enhanceImages(ref.current);
       resolvePendingImages(ref.current);
     }
     // Ganti halaman (atau unmount) — object URL yang sudah dibikin resolveImageSrc buat
@@ -387,6 +417,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     if (ref.current) {
       insertHtmlAtCursor(ref.current, html);
       enhanceTables(ref.current);
+      enhanceImages(ref.current);
       resolvePendingImages(ref.current);
     }
     handleInput();
@@ -437,33 +468,75 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.classList.contains("col-resize-handle")) return;
-      const cell = target.closest("td, th") as HTMLTableCellElement | null;
-      const table = target.closest("table");
-      const colIndex = Number(target.dataset["colIndex"] ?? -1);
-      if (!cell || !table || colIndex < 0) return;
-      const col = table.querySelectorAll("colgroup col")[colIndex] as
-        HTMLTableColElement | undefined;
-      if (!col) return;
-      e.preventDefault();
-      target.classList.add("is-resizing");
-      resizing.current = { col, startX: e.clientX, startWidth: cell.getBoundingClientRect().width };
 
-      const onMove = (ev: PointerEvent) => {
-        if (!resizing.current) return;
-        const delta = ev.clientX - resizing.current.startX;
-        const next = Math.max(48, Math.round(resizing.current.startWidth + delta));
-        resizing.current.col.style.width = `${next}px`;
-      };
-      const onUp = () => {
-        target.classList.remove("is-resizing");
-        resizing.current = null;
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-        handleInput();
-      };
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
+      if (target.classList.contains("col-resize-handle")) {
+        const cell = target.closest("td, th") as HTMLTableCellElement | null;
+        const table = target.closest("table");
+        const colIndex = Number(target.dataset["colIndex"] ?? -1);
+        if (!cell || !table || colIndex < 0) return;
+        const col = table.querySelectorAll("colgroup col")[colIndex] as
+          HTMLTableColElement | undefined;
+        if (!col) return;
+        e.preventDefault();
+        target.classList.add("is-resizing");
+        resizing.current = { col, startX: e.clientX, startWidth: cell.getBoundingClientRect().width };
+
+        const onMove = (ev: PointerEvent) => {
+          if (!resizing.current) return;
+          const delta = ev.clientX - resizing.current.startX;
+          const next = Math.max(48, Math.round(resizing.current.startWidth + delta));
+          resizing.current.col.style.width = `${next}px`;
+        };
+        const onUp = () => {
+          target.classList.remove("is-resizing");
+          resizing.current = null;
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          handleInput();
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        return;
+      }
+
+      // Drag handle di pojok gambar yang lagi dipilih — resize proporsional (cuma lebar
+      // yang diatur, tinggi ngikut otomatis karena img di dalam wrap-nya width:100%/height:auto).
+      if (target.classList.contains("img-resize-handle")) {
+        const wrap = target.closest(".img-resize-wrap") as HTMLElement | null;
+        if (!wrap) return;
+        e.preventDefault();
+        target.classList.add("is-resizing");
+        resizingImage.current = {
+          wrap,
+          startX: e.clientX,
+          startWidth: wrap.getBoundingClientRect().width,
+        };
+
+        const onMove = (ev: PointerEvent) => {
+          if (!resizingImage.current) return;
+          const delta = ev.clientX - resizingImage.current.startX;
+          const next = Math.max(60, Math.round(resizingImage.current.startWidth + delta));
+          resizingImage.current.wrap.style.width = `${next}px`;
+        };
+        const onUp = () => {
+          target.classList.remove("is-resizing");
+          resizingImage.current = null;
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          handleInput();
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        return;
+      }
+
+      // Klik gambar → pilih (munculin handle resize di pojoknya). Klik di luar gambar
+      // manapun → lepas pilihan semua gambar.
+      const clickedWrap = target.closest(".img-resize-wrap") as HTMLElement | null;
+      deselectImages(container);
+      if (clickedWrap && container.contains(clickedWrap)) {
+        clickedWrap.classList.add("is-selected");
+      }
     };
 
     container.addEventListener("pointerdown", onPointerDown);
@@ -632,6 +705,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         onBlur={() => {
           flush();
           hideSelectionToolbar();
+          if (ref.current && !resizingImage.current) deselectImages(ref.current);
         }}
         onPaste={handlePaste}
         onFocus={() => {
