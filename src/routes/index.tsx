@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useNoteMeStore } from '@/lib/noteme/store';
 import { 
   Plus, 
@@ -39,7 +39,11 @@ import {
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
-export function RouteComponent() {
+export const Route = createFileRoute('/')({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
   const { subjects, items, addSubject, deleteSubject } = useNoteMeStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDayFilter, setSelectedDayFilter] = useState<string>('Semua');
