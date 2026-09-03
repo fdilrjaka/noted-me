@@ -47,6 +47,13 @@ function openDb(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
+// Tunggu req.onsuccess DAN tx.oncomplete sebelum resolve — req.onsuccess cuma berarti
+// operasinya sukses di dalam transaksi, BUKAN jaminan transaksinya udah ke-commit/durable
+// ke disk. Safari di mode standalone (Add to Home Screen) khususnya agresif nge-suspend
+// proses halaman begitu app diminimize/ditutup; kalau kita cuma nunggu onsuccess, ada
+// jendela waktu singkat di mana data kelihatan "tersimpan" di JS tapi transaksinya belum
+// benar-benar commit — dan hilang kalau Safari keburu suspend proses di jendela itu.
+// Nunggu tx.oncomplete menutup celah itu.
 async function withStore<T>(
   mode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => IDBRequest<T>,
@@ -56,8 +63,14 @@ async function withStore<T>(
     const tx = db.transaction(STORE_NAME, mode);
     const store = tx.objectStore(STORE_NAME);
     const req = fn(store);
-    req.onsuccess = () => resolve(req.result);
+    let result: T;
+    req.onsuccess = () => {
+      result = req.result;
+    };
     req.onerror = () => reject(req.error ?? new Error("Operasi IndexedDB gagal"));
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error ?? new Error("Transaksi IndexedDB gagal"));
+    tx.onabort = () => reject(tx.error ?? new Error("Transaksi IndexedDB dibatalkan"));
   });
 }
 
