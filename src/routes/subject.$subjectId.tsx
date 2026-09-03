@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from '@tanstack/react-router';
+import { createFileRoute, useParams, Link } from '@tanstack/react-router';
 import { useNoteMeStore } from '@/lib/noteme/store';
 import {
   ArrowLeft,
@@ -27,7 +27,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-export function RouteComponent() {
+export const Route = createFileRoute('/subject/$subjectId')({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
   const { subjectId } = useParams({ from: '/subject/$subjectId' });
   const {
     subjects,
