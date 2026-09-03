@@ -194,26 +194,39 @@ function sanitizeTableHtml(html: string): string | null {
 const IDB_SRC_PREFIX = "idb:";
 const RETRY_DELAY_MS = 1500;
 
-// Scan semua <img src="idb:<id>"> di dalam container yang belum sempat di-resolve
-// (belum punya atribut data-resolving), resolve satu-satu secara async lewat
+// PENTING: "idb:<id>" adalah satu-satunya referensi permanen ke gambar di IndexedDB —
+// ini yang WAJIB tersimpan di content (localStorage/Supabase), bukan blob URL.
+// Blob URL (dari URL.createObjectURL) cuma valid sepanjang sesi tab ini masih hidup;
+// begitu di-revoke (ganti halaman) atau browser/tab ditutup, blob URL itu langsung mati.
+//
+// Jadi kita SIMPAN id asli di attribute terpisah `data-idb-id` yang tidak pernah disentuh
+// lagi setelah resolve, dan `img.src` cuma dipakai buat tampilan sementara (blob URL).
+// Saat mau disimpan (lihat serializeContent), src selalu ditulis ulang balik ke
+// "idb:<id>" dari data-idb-id — supaya blob URL yang bersifat sementara itu TIDAK PERNAH
+// ikut ke-persist ke content yang disimpan.
+//
+// Scan semua <img> yang masih pakai src="idb:<id>" ATAU sudah punya data-idb-id (misal
+// sudah pernah di-resolve tapi container di-render ulang) yang belum sempat di-resolve
+// (belum punya atribut data-resolving="1"), resolve satu-satu secara async lewat
 // imageResolver — tidak memblokir render awal, gambar boleh muncul belakangan sesaat
 // dengan opacity redup sebagai placeholder. Kalau resolve gagal (race condition: row
 // note_images-nya belum sempat sync), retry sekali lagi setelah jeda singkat.
 function resolvePendingImages(container: HTMLElement, attempt = 0) {
   const imgs = container.querySelectorAll<HTMLImageElement>(
-    `img[src^="${IDB_SRC_PREFIX}"]:not([data-resolving="1"])`,
+    `img[src^="${IDB_SRC_PREFIX}"]:not([data-resolving="1"]), img[data-idb-id]:not([data-resolving="1"])`,
   );
   imgs.forEach((img) => {
-    const id = img.getAttribute("src")?.slice(IDB_SRC_PREFIX.length);
+    const id = img.dataset["idbId"] ?? img.getAttribute("src")?.slice(IDB_SRC_PREFIX.length);
     if (!id) return;
+    img.dataset["idbId"] = id; // pastikan id asli selalu tersimpan di attribute permanen
     img.dataset["resolving"] = "1";
     img.style.opacity = "0.4";
     void resolveImageSrc(id).then((src) => {
       if (!img.isConnected) return;
       if (src) {
-        img.src = src;
+        img.src = src; // cuma buat tampilan — id asli tetap aman di data-idb-id
         img.style.opacity = "";
-        img.dataset["resolving"] = "0";
+        img.removeAttribute("data-resolving");
       } else if (attempt < 3) {
         // Belum ketemu (kemungkinan race condition baru sync) — coba lagi sebentar lagi.
         img.dataset["resolving"] = "0";
@@ -224,6 +237,23 @@ function resolvePendingImages(container: HTMLElement, attempt = 0) {
       }
     });
   });
+}
+
+// Dipanggil sebelum content disimpan (flush). Kloning container (biar DOM asli yang lagi
+// ditampilkan ke user tidak diutak-atik), lalu untuk tiap <img data-idb-id> tulis ulang
+// src-nya balik jadi "idb:<id>" — apapun src tampilannya sekarang (blob:, atau bahkan
+// masih idb: kalau belum sempat di-resolve). Ini kunci fix-nya: blob URL sementara TIDAK
+// PERNAH ikut tersimpan ke content, jadi gambar tidak akan "hilang" referensinya lagi
+// setelah reload / ganti device.
+function serializeContent(container: HTMLElement): string {
+  const clone = container.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll<HTMLImageElement>("img[data-idb-id]").forEach((img) => {
+    const id = img.getAttribute("data-idb-id");
+    if (id) img.setAttribute("src", `${IDB_SRC_PREFIX}${id}`);
+    img.removeAttribute("data-resolving");
+    img.style.opacity = "";
+  });
+  return clone.innerHTML;
 }
 
 export function Editor({ pageId, initialContent, onChange }: Props) {
@@ -321,7 +351,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
   const flush = () => {
     if (!ref.current) return;
-    onChange(ref.current.innerHTML);
+    onChange(serializeContent(ref.current));
     setSaved(true);
   };
 
@@ -354,8 +384,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       const blob = await fileToCompressedBlob(file); // tetap dikompres dulu biar IndexedDB gak boros
       const id = await putImage(blob, pageId);
       registerLocalImage(id, pageId);
-      const src = await resolveImageSrc(id); // dari blob yg baru aja disimpan, harusnya instan
-      insertHtml(`<img src="idb:${id}" alt="Gambar catatan" data-resolved-src="${src ?? ""}" />`);
+      // src="idb:<id>" adalah referensi permanen yang disimpan; data-idb-id dipakai
+      // resolvePendingImages buat tau id aslinya walau src tampilan sudah diganti blob URL.
+      insertHtml(`<img src="idb:${id}" data-idb-id="${id}" alt="Gambar catatan" />`);
     } catch (err) {
       console.error(err);
       window.alert("Gagal menyimpan gambar. Coba lagi.");
@@ -861,9 +892,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
                 const blob = await res.blob();
                 const id = await putImage(blob, pageId);
                 registerLocalImage(id, pageId);
-                const src = await resolveImageSrc(id);
                 insertHtml(
-                  `<img src="idb:${id}" alt="Tulisan tangan" data-handwriting="1" data-resolved-src="${src ?? ""}" />`,
+                  `<img src="idb:${id}" data-idb-id="${id}" alt="Tulisan tangan" data-handwriting="1" />`,
                 );
               } catch (err) {
                 console.error(err);
