@@ -1,328 +1,315 @@
-import { useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { useNoteMeStore } from '@/lib/noteme/store';
+import { 
+  Plus, 
+  Clock, 
+  MapPin, 
+  BookOpen, 
+  Search, 
+  MoreVertical, 
+  Trash2, 
+  FileText, 
+  CheckSquare, 
+  FolderKanban 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  ArrowRight,
-  BookOpen,
-  Check,
-  Download,
-  Pin,
-  PinOff,
-  Plus,
-  Search,
-  Trash2,
-  User,
-  X,
-} from "lucide-react";
-import { toast } from "sonner";
-import { BottomNav } from "@/components/noteme/BottomNav";
-import { SyncStatus } from "@/components/noteme/SyncEngine";
-import { HueSlider } from "@/components/HueSlider";
-import { useBackgroundHue } from "@/hooks/use-background-hue";
-import { useSession } from "@/hooks/useSession";
-import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { exportBackupJson, exportBackupMarkdown } from "@/lib/noteme/backup";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
-  activeSubjects,
-  createSubject,
-  deleteSubject,
-  patchSubject,
-  search,
-  subjectPages,
-  useData,
-} from "@/lib/noteme/store";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "NoteMe — Catatan Mata Kuliah" },
-      {
-        name: "description",
-        content:
-          "Dashboard NoteMe: semua mata kuliah dan catatan per pertemuan, bisa dipakai offline dan tersinkron otomatis.",
-      },
-    ],
-  }),
-  component: Dashboard,
-});
+const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
-export function Dashboard() {
-  const data = useData();
-  const navigate = useNavigate();
-  const { user } = useSession();
-  const { hue, setHue } = useBackgroundHue(); // <-- Hook warna dari Zip 8
-  const [query, setQuery] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [exportOpen, setExportOpen] = useState(false);
-  const mainRef = useRef<HTMLElement | null>(null);
+export function RouteComponent() {
+  const { subjects, items, addSubject, deleteSubject } = useNoteMeStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDayFilter, setSelectedDayFilter] = useState<string>('Semua');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const subjects = useMemo(() => activeSubjects(data), [data]);
-  const hits = useMemo(() => search(data, query), [data, query]);
+  // Form State
+  const [name, setName] = useState('');
+  const [day, setDay] = useState('Senin');
+  const [startTime, setStartTime] = useState('10:30');
+  const [endTime, setEndTime] = useState('13:00');
+  const [room, setRoom] = useState('');
 
-  const openSubject = (subjectId: string, pageId: string | undefined) => {
-    void navigate({
-      to: "/subject/$subjectId",
-      params: { subjectId },
-      search: { page: pageId },
+  const handleAddSubject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    addSubject({
+      name: name.trim(),
+      day,
+      startTime,
+      endTime,
+      room: room.trim(),
     });
+
+    setName('');
+    setDay('Senin');
+    setStartTime('10:30');
+    setEndTime('13:00');
+    setRoom('');
+    setIsAddModalOpen(false);
   };
 
-  const toggleSelected = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const exitSelectMode = () => {
-    setSelectMode(false);
-    setSelected(new Set());
-  };
-
-  const deleteSelected = () => {
-    const count = selected.size;
-    selected.forEach((id) => deleteSubject(id));
-    toast.success(
-      count > 1 ? `${count} mata kuliah dipindahkan ke trash` : "Mata kuliah dipindahkan ke trash",
-    );
-    exitSelectMode();
-  };
+  const filteredSubjects = subjects.filter((subject) => {
+    const matchesSearch =
+      subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (subject.room && subject.room.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesDay = selectedDayFilter === 'Semua' || subject.day === selectedDayFilter;
+    return matchesSearch && matchesDay;
+  });
 
   return (
-    <main
-      ref={(el) => {
-        mainRef.current = el;
-        registerNavDragTarget(el);
-      }}
-      className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg"
-    >
-      <header className="flex items-center justify-between gap-3 py-4">
+    <div className="container max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
-          <div className="mt-0.5">
-            <SyncStatus />
-          </div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <BookOpen className="w-7 h-7 text-primary" />
+            Mata Kuliah
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pilih mata kuliah untuk membuka catatan, tugas, dan project perkuliahan kamu.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Hue Slider dipasang di Header Dashboard */}
-          <HueSlider hue={hue} onChange={setHue} />
 
-          <div className="relative">
-            <button
-              onClick={() => setExportOpen((v) => !v)}
-              aria-label="Ekspor cadangan"
-              className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-            >
-              <Download className="size-4" />
-            </button>
-            {exportOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
-                  <button
-                    onClick={() => {
-                      void exportBackupJson().then(() => {
-                        toast.success("Cadangan JSON diunduh");
-                      });
-                      setExportOpen(false);
-                    }}
-                    className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
-                  >
-                    <p className="font-medium">Cadangan JSON</p>
-                    <p className="text-xs text-muted-foreground">Lengkap, bisa dipulihkan lagi</p>
-                  </button>
-                  <button
-                    onClick={() => {
-                      exportBackupMarkdown();
-                      toast.success("Cadangan Markdown diunduh");
-                      setExportOpen(false);
-                    }}
-                    className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
-                  >
-                    <p className="font-medium">Cadangan Markdown</p>
-                    <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="hidden items-center gap-2 md:flex">
-            <Link
-              to="/trash"
-              aria-label="Trash"
-              className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-            >
-              <Trash2 className="size-4" />
-            </Link>
-            <Link
-              to="/auth"
-              aria-label="Akun"
-              className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-            >
-              <User className="size-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Sisa UI Dashboard Zip 6 (Search, Grid Mata Kuliah, Modal) tetap utuh */}
-      <div className="glass-input flex items-center gap-2 rounded-2xl px-4 py-3">
-        <Search className="size-4 flex-none text-muted-foreground" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari di semua catatan…"
-          className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
-        />
-        {query && (
-          <button onClick={() => setQuery("")} aria-label="Hapus pencarian" className="press-sm">
-            <X className="size-4 text-muted-foreground" />
-          </button>
-        )}
+        <Button onClick={() => setIsAddModalOpen(true)} className="gap-2 self-start md:self-auto">
+          <Plus className="w-4 h-4" />
+          Tambah Mata Kuliah
+        </Button>
       </div>
 
-      <section className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            {selectMode ? `${selected.size} dipilih` : "Mata Kuliah"}
-          </h2>
-          <div className="flex items-center gap-2">
-            {selectMode ? (
-              <button
-                onClick={exitSelectMode}
-                className="press flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium active:scale-95"
-              >
-                Batal
-              </button>
-            ) : (
-              subjects.length > 0 && (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  aria-label="Pilih untuk dihapus"
-                  className="press glass-floating flex size-9 items-center justify-center rounded-full text-destructive active:scale-90"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              )
-            )}
-            {!selectMode && (
-              <button
-                onClick={() => setAdding(true)}
-                className="press flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
-              >
-                <Plus className="size-4" /> Tambah
-              </button>
-            )}
-          </div>
+      {/* Control Search & Filter Hari */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari mata kuliah atau ruangan..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
-        {subjects.length === 0 && !adding && (
-          <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
-            <BookOpen className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-3 font-semibold">Belum ada mata kuliah</p>
-          </div>
-        )}
-
-        {adding && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            onClick={() => setAdding(false)}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <Button
+            variant={selectedDayFilter === 'Semua' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedDayFilter('Semua')}
           >
-            <div
-              className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
-              onClick={(e) => e.stopPropagation()}
+            Semua Hari
+          </Button>
+          {DAYS.map((d) => (
+            <Button
+              key={d}
+              variant={selectedDayFilter === d ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedDayFilter(d)}
             >
-              <p className="mb-3 text-base font-semibold">Mata kuliah baru</p>
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    if (name.trim()) createSubject(name);
-                    setName("");
-                    setAdding(false);
-                  }
-                  if (e.key === "Escape") setAdding(false);
-                }}
-                placeholder="Contoh: Manajemen Risiko"
-                className="glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground"
-              />
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setName("");
-                    setAdding(false);
-                  }}
-                  className="press rounded-full px-4 py-2 text-sm font-medium text-muted-foreground active:scale-95"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={() => {
-                    if (name.trim()) createSubject(name);
-                    setName("");
-                    setAdding(false);
-                  }}
-                  className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
-                >
-                  Simpan
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              {d}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {subjects.map((subject) => {
-            const pages = subjectPages(data, subject.id);
-            const isSelected = selected.has(subject.id);
+      {/* Grid Mata Kuliah */}
+      {filteredSubjects.length === 0 ? (
+        <div className="text-center py-12 border rounded-xl bg-card text-card-foreground p-8">
+          <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
+          <h3 className="text-lg font-medium">Tidak ada mata kuliah</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {searchQuery || selectedDayFilter !== 'Semua'
+              ? 'Tidak ditemukan mata kuliah yang sesuai filter.'
+              : 'Klik "Tambah Mata Kuliah" untuk membuat mata kuliah baru.'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredSubjects.map((subject) => {
+            const subjectItems = items.filter((i) => i.subjectId === subject.id);
+            const notesCount = subjectItems.filter((i) => i.sectionId === 'catatan').length;
+            const tasksCount = subjectItems.filter((i) => i.sectionId === 'tugas').length;
+            const projectsCount = subjectItems.filter((i) => i.sectionId === 'project').length;
+
             return (
               <div
                 key={subject.id}
-                onClick={() =>
-                  selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
-                }
-                className={`press glass-card spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4 ${
-                  isSelected ? "ring-2 ring-destructive" : ""
-                }`}
+                className="group relative rounded-xl border bg-card text-card-foreground p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-4"
               >
-                {selectMode && (
-                  <div
-                    className={`absolute right-3 top-3 flex size-6 items-center justify-center rounded-full border-2 ${
-                      isSelected
-                        ? "border-destructive bg-destructive text-destructive-foreground"
-                        : "border-border bg-background/50"
-                    }`}
-                  >
-                    {isSelected && <Check className="size-3.5" />}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      to="/subject/$subjectId"
+                      params={{ subjectId: subject.id }}
+                      className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2 leading-snug"
+                    >
+                      {subject.name}
+                    </Link>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive gap-2 cursor-pointer"
+                          onClick={() => deleteSubject(subject.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Hapus Mata Kuliah
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                )}
-                <p className="text-lg font-semibold">{subject.name}</p>
-                <p className="text-sm text-muted-foreground">{pages.length} pertemuan</p>
+
+                  {/* Jam & Hari (di bawah judul) */}
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+                    <Clock className="w-4 h-4 text-primary shrink-0" />
+                    <span>
+                      {subject.day}, {subject.startTime} – {subject.endTime}
+                    </span>
+                  </div>
+
+                  {/* Ruangan Opsional (langsung merapat jika tidak diisi) */}
+                  {subject.room && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground/90 mt-0.5">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <span>Ruang: {subject.room}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ringkasan Jumlah & Link */}
+                <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1" title="Catatan">
+                      <FileText className="w-3.5 h-3.5" /> {notesCount}
+                    </span>
+                    <span className="flex items-center gap-1" title="Tugas">
+                      <CheckSquare className="w-3.5 h-3.5" /> {tasksCount}
+                    </span>
+                    <span className="flex items-center gap-1" title="Project">
+                      <FolderKanban className="w-3.5 h-3.5" /> {projectsCount}
+                    </span>
+                  </div>
+
+                  <Link
+                    to="/subject/$subjectId"
+                    params={{ subjectId: subject.id }}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Buka Menu &rarr;
+                  </Link>
+                </div>
               </div>
             );
           })}
         </div>
-      </section>
-
-      {selectMode && selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <button
-            onClick={deleteSelected}
-            className="press glass-floating flex items-center gap-2 rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground shadow-2xl active:scale-95"
-          >
-            <Trash2 className="size-4" /> Hapus {selected.size} mata kuliah
-          </button>
-        </div>
       )}
 
-      <BottomNav />
-    </main>
+      {/* Modal Dialog Tambah Matkul */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Tambah Mata Kuliah Baru</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleAddSubject} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="subjectName">Nama Mata Kuliah *</Label>
+              <Input
+                id="subjectName"
+                placeholder="Contoh: Metodologi Penelitian Bisnis"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="day">Hari *</Label>
+                <Select value={day} onValueChange={setDay}>
+                  <SelectTrigger id="day">
+                    <SelectValue placeholder="Pilih Hari" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="room">Ruangan (Opsional)</Label>
+                <Input
+                  id="room"
+                  placeholder="e.g. B.201"
+                  value={room}
+                  onChange={(e) => setRoom(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Jam Mulai *</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Jam Selesai *</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit">Simpan Mata Kuliah</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
