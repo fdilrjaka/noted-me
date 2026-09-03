@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { Editor } from "@/components/noteme/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
-import { exportPageJson, exportPageMarkdown } from "@/lib/noteme/backup";
+import { exportPageJson, exportPageMarkdown, exportPagePdf } from "@/lib/noteme/backup";
 import {
   createPage,
   deletePage,
@@ -294,6 +294,18 @@ function SubjectView() {
                       >
                         <p className="font-medium">Ekspor Markdown</p>
                         <p className="text-xs text-muted-foreground">Teks saja, mudah dibaca</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          void exportPagePdf(active.id);
+                          setExportOpen(false);
+                        }}
+                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
+                      >
+                        <p className="font-medium">Ekspor PDF</p>
+                        <p className="text-xs text-muted-foreground">
+                          Buka dialog print, simpan sebagai PDF
+                        </p>
                       </button>
                     </div>
                   </>
