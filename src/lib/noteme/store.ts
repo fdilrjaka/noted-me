@@ -31,13 +31,14 @@ export interface SectionItem {
   isDirty?: boolean;
 }
 
-// Alias tipe pendukung untuk kompatibilitas file lama (auth, trash, editor)
+// Alias tipe pendukung kompatibilitas
 export type Note = SectionItem;
 export type NoteSubject = Subject;
 
 export interface NoteMeState {
   subjects: Subject[];
   items: SectionItem[];
+  notes: SectionItem[]; // Alias kompatibilitas untuk versi lama
   trash: SectionItem[];
   activeSubjectId: string | null;
   activeNoteId: string | null;
@@ -57,7 +58,7 @@ export interface NoteMeState {
   deleteItem: (id: string) => void;
   toggleItemComplete: (id: string) => void;
 
-  // Action pendukung kompatibilitas (trash, sync, editor)
+  // Action Kompatibilitas Versi Lama (Auth, Sync, Editor, Trash)
   addNote: (note: Partial<SectionItem>) => void;
   updateNote: (id: string, data: Partial<SectionItem>) => void;
   deleteNote: (id: string) => void;
@@ -67,6 +68,7 @@ export interface NoteMeState {
   setActiveNoteId: (id: string | null) => void;
   setActiveSubjectId: (id: string | null) => void;
   setItems: (items: SectionItem[]) => void;
+  setNotes: (notes: SectionItem[]) => void;
   setSubjects: (subjects: Subject[]) => void;
 }
 
@@ -154,6 +156,7 @@ export const useNoteMeStore = create<NoteMeState>()(
     (set, get) => ({
       subjects: INITIAL_SUBJECTS,
       items: [],
+      notes: [],
       trash: [],
       activeSubjectId: null,
       activeNoteId: null,
@@ -185,10 +188,14 @@ export const useNoteMeStore = create<NoteMeState>()(
       },
 
       deleteSubject: (id) => {
-        set((state) => ({
-          subjects: state.subjects.filter((sbj) => sbj.id !== id),
-          items: state.items.filter((item) => item.subjectId !== id),
-        }));
+        set((state) => {
+          const newItems = state.items.filter((item) => item.subjectId !== id);
+          return {
+            subjects: state.subjects.filter((sbj) => sbj.id !== id),
+            items: newItems,
+            notes: newItems,
+          };
+        });
       },
 
       addSection: (subjectId, sectionName) => {
@@ -207,20 +214,24 @@ export const useNoteMeStore = create<NoteMeState>()(
       },
 
       deleteSection: (subjectId, sectionId) => {
-        set((state) => ({
-          subjects: state.subjects.map((sbj) => {
-            if (sbj.id === subjectId) {
-              return {
-                ...sbj,
-                sections: sbj.sections.filter((sec) => sec.id !== sectionId),
-              };
-            }
-            return sbj;
-          }),
-          items: state.items.filter(
+        set((state) => {
+          const newItems = state.items.filter(
             (item) => !(item.subjectId === subjectId && item.sectionId === sectionId)
-          ),
-        }));
+          );
+          return {
+            subjects: state.subjects.map((sbj) => {
+              if (sbj.id === subjectId) {
+                return {
+                  ...sbj,
+                  sections: sbj.sections.filter((sec) => sec.id !== sectionId),
+                };
+              }
+              return sbj;
+            }),
+            items: newItems,
+            notes: newItems,
+          };
+        });
       },
 
       addItem: (data) => {
@@ -236,38 +247,47 @@ export const useNoteMeStore = create<NoteMeState>()(
           updatedAt: new Date().toISOString(),
           isDirty: true,
         };
-        set((state) => ({ items: [newItem, ...state.items] }));
+        set((state) => {
+          const newItems = [newItem, ...state.items];
+          return { items: newItems, notes: newItems };
+        });
       },
 
       updateItem: (id, data) => {
-        set((state) => ({
-          items: state.items.map((item) =>
+        set((state) => {
+          const newItems = state.items.map((item) =>
             item.id === id
               ? { ...item, ...data, isDirty: true, updatedAt: new Date().toISOString() }
               : item
-          ),
-        }));
+          );
+          return { items: newItems, notes: newItems };
+        });
       },
 
       deleteItem: (id) => {
         const itemToDelete = get().items.find((i) => i.id === id);
         if (!itemToDelete) return;
 
-        set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
-          trash: [itemToDelete, ...state.trash],
-        }));
+        set((state) => {
+          const newItems = state.items.filter((item) => item.id !== id);
+          return {
+            items: newItems,
+            notes: newItems,
+            trash: [itemToDelete, ...state.trash],
+          };
+        });
       },
 
       toggleItemComplete: (id) => {
-        set((state) => ({
-          items: state.items.map((item) =>
+        set((state) => {
+          const newItems = state.items.map((item) =>
             item.id === id ? { ...item, completed: !item.completed, isDirty: true } : item
-          ),
-        }));
+          );
+          return { items: newItems, notes: newItems };
+        });
       },
 
-      // Action kompatibilitas versi lama
+      // Action Kompatibilitas Versi Lama
       addNote: (noteData) => {
         const newItem: SectionItem = {
           id: noteData.id || `item-${Date.now()}`,
@@ -281,17 +301,14 @@ export const useNoteMeStore = create<NoteMeState>()(
           updatedAt: new Date().toISOString(),
           isDirty: true,
         };
-        set((state) => ({ items: [newItem, ...state.items] }));
+        set((state) => {
+          const newItems = [newItem, ...state.items];
+          return { items: newItems, notes: newItems };
+        });
       },
 
       updateNote: (id, data) => {
-        set((state) => ({
-          items: state.items.map((item) =>
-            item.id === id
-              ? { ...item, ...data, isDirty: true, updatedAt: new Date().toISOString() }
-              : item
-          ),
-        }));
+        get().updateItem(id, data);
       },
 
       deleteNote: (id) => {
@@ -302,10 +319,14 @@ export const useNoteMeStore = create<NoteMeState>()(
         const itemToRestore = get().trash.find((i) => i.id === id);
         if (!itemToRestore) return;
 
-        set((state) => ({
-          trash: state.trash.filter((i) => i.id !== id),
-          items: [itemToRestore, ...state.items],
-        }));
+        set((state) => {
+          const newItems = [itemToRestore, ...state.items];
+          return {
+            trash: state.trash.filter((i) => i.id !== id),
+            items: newItems,
+            notes: newItems,
+          };
+        });
       },
 
       purgeNote: (id) => {
@@ -320,7 +341,8 @@ export const useNoteMeStore = create<NoteMeState>()(
 
       setActiveNoteId: (id) => set({ activeNoteId: id }),
       setActiveSubjectId: (id) => set({ activeSubjectId: id }),
-      setItems: (items) => set({ items }),
+      setItems: (items) => set({ items, notes: items }),
+      setNotes: (notes) => set({ items: notes, notes }),
       setSubjects: (subjects) => set({ subjects }),
     }),
     {
@@ -329,7 +351,10 @@ export const useNoteMeStore = create<NoteMeState>()(
   )
 );
 
-// Ekspor dirtyCount helper selector
+// Export Hook Alias useData
+export const useData = useNoteMeStore;
+
+// Export Helper Selector dirtyCount
 export const dirtyCount = (state?: Partial<NoteMeState>) => {
   if (!state) {
     try {
@@ -338,6 +363,6 @@ export const dirtyCount = (state?: Partial<NoteMeState>) => {
       return 0;
     }
   }
-  const itemsList = state.items || [];
+  const itemsList = state?.items || state?.notes || [];
   return itemsList.filter((item) => item.isDirty).length;
 };
