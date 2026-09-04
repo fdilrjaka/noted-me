@@ -239,6 +239,7 @@ export async function importBackupJson(
       deleted: false,
       updated_at: nowIso,
       dirty: true,
+      editedOffline: false,
     });
   }
 
