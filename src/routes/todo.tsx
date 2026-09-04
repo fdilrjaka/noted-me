@@ -54,24 +54,36 @@ function TodoPage() {
 
   const sections = useMemo(() => categorySections(data, category), [data, category]);
 
+  const total = sections.reduce((n, s) => n + sectionTasks(data, s.id).length, 0);
+  const done = sections.reduce(
+    (n, s) => n + sectionTasks(data, s.id).filter((t) => t.completed).length,
+    0,
+  );
+
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-6xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]">
-      <header className="flex items-center justify-between gap-3 py-4">
-        <div className="flex items-center gap-2">
+    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]">
+      <Sidebar />
+      <header className="flex items-center justify-between gap-3 pb-2 pt-4">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             to="/explore"
             aria-label="Kembali"
-            className="press glass-floating flex size-9 items-center justify-center rounded-full active:scale-90 md:hidden"
+            className="press glass-floating flex size-9 flex-none items-center justify-center rounded-full active:scale-90"
           >
             <ChevronLeft className="size-4" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">To Do List</h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold tracking-tight">To Do List</h1>
             <div className="mt-0.5">
               <SyncStatus />
             </div>
           </div>
         </div>
+        {total > 0 && (
+          <div className="glass-input flex-none rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            {done}/{total} selesai
+          </div>
+        )}
       </header>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -89,6 +101,8 @@ function TodoPage() {
           </button>
         ))}
       </div>
+
+
 
       <div className="mt-5 flex snap-x gap-3 overflow-x-auto pb-6">
         {sections.map((section) => (
