@@ -23,6 +23,13 @@ export type Page = {
   deleted: boolean;
   updated_at: string;
   dirty: boolean;
+  // Nyala kalau ADA bagian dari edit yang belum ke-push ini terjadi saat perangkat offline.
+  // Dipakai sync.ts buat mutusin: kalau konflik ketemu dan flag ini nyala, kita gak yakin
+  // versi mana yang "menang" (bisa jadi ketinggalan banyak perubahan lain selama offline),
+  // jadi tetap tanya user lewat dialog. Kalau flag ini mati (edit terjadi waktu online terus,
+  // biasa terjadi pas dua device sama-sama lagi ngetik live), konflik digabung otomatis tanpa
+  // nanya — biar pengalaman ngetik bareng gak keganggu dialog tiap beberapa detik.
+  editedOffline: boolean;
 };
 
 // Metadata gambar/tulisan tangan — bukan blob-nya (blob ada di IndexedDB via imageStore.ts).
@@ -266,16 +273,28 @@ export function createPage(subjectId: string, title?: string) {
     deleted: false,
     updated_at: now(),
     dirty: true,
+    editedOffline: typeof navigator !== "undefined" && !navigator.onLine,
   };
   update((d) => ({ ...d, pages: [...d.pages, page] }));
   return id;
 }
 
 export function patchPage(id: string, patch: Partial<Page>) {
+  const offlineNow = typeof navigator !== "undefined" && !navigator.onLine;
   update((d) => ({
     ...d,
     pages: d.pages.map((p) =>
-      p.id === id ? { ...p, ...patch, updated_at: now(), dirty: true } : p,
+      p.id === id
+        ? {
+            ...p,
+            ...patch,
+            updated_at: now(),
+            dirty: true,
+            // Sticky sampai berhasil sync: sekali edit ini kesentuh offline, tetap dianggap
+            // "edit offline" walau sisa ketikan berikutnya terjadi pas udah online lagi.
+            editedOffline: p.editedOffline || offlineNow,
+          }
+        : p,
     ),
   }));
 }
