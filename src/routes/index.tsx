@@ -364,6 +364,9 @@ export function Dashboard() {
         </div>
       )}
 
+      </div>
+      </div>
+
       <BottomNav />
     </main>
   );
