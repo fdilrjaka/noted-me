@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Editor } from "@/components/noteme/Editor";
+import { Editor } from "@/components/noteme/editor/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { exportPageJson, exportPageMarkdown, exportPagePdf } from "@/lib/noteme/backup";
 import {
