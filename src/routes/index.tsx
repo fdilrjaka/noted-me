@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { HueSlider } from "@/components/HueSlider";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
@@ -118,8 +119,9 @@ export function Dashboard() {
         mainRef.current = el;
         registerNavDragTarget(el);
       }}
-      className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg"
+      className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
     >
+      <Sidebar />
       <header className="flex items-center justify-between gap-3 py-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
