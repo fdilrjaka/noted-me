@@ -119,6 +119,81 @@ export type Database = {
         }
         Relationships: []
       }
+      todo_sections: {
+        Row: {
+          category_id: string
+          created_at: string
+          deleted: boolean
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          deleted?: boolean
+          id: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          deleted?: boolean
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      todo_tasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          deadline: string | null
+          deleted: boolean
+          description: string
+          id: string
+          position: number
+          section_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          deadline?: string | null
+          deleted?: boolean
+          description?: string
+          id: string
+          position?: number
+          section_id: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          deadline?: string | null
+          deleted?: boolean
+          description?: string
+          id?: string
+          position?: number
+          section_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
