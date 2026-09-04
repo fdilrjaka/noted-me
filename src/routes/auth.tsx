@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, LogOut, Trash2, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { Sidebar } from "@/components/noteme/Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, usernameToEmail } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
@@ -217,8 +218,9 @@ function AuthPage() {
   return (
     <main
       ref={registerNavDragTarget}
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg"
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
     >
+      <Sidebar />
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
