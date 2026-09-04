@@ -236,7 +236,10 @@ function SectionColumn({
             }}
             className="truncate text-left text-sm font-semibold"
           >
-            {name} <span className="text-muted-foreground">{tasks.length}</span>
+            {name}{" "}
+            <span className="text-muted-foreground">
+              {tasks.filter((t) => t.completed).length}/{tasks.length}
+            </span>
           </button>
         )}
         <button
@@ -248,7 +251,20 @@ function SectionColumn({
         </button>
       </div>
 
+      {/* Progres section ala Notion: bar tipis yang keisi sesuai task selesai. */}
+      <div className="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-input">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{
+            width: `${tasks.length ? (tasks.filter((t) => t.completed).length / tasks.length) * 100 : 0}%`,
+          }}
+        />
+      </div>
+
       <div className="flex flex-col gap-1.5">
+        {tasks.length === 0 && !addingTask && (
+          <p className="px-1 py-2 text-xs text-muted-foreground">Belum ada task di sini.</p>
+        )}
         {tasks.map((task) => {
           const deadline = deadlineLabel(task.deadline);
           return (
@@ -275,12 +291,17 @@ function SectionColumn({
                 >
                   {task.title}
                 </p>
+                {task.description.trim() && (
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                    {task.description}
+                  </p>
+                )}
                 {deadline && (
                   <p
-                    className={`mt-0.5 text-[11px] ${
+                    className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[11px] ${
                       deadline.overdue && !task.completed
-                        ? "text-destructive"
-                        : "text-muted-foreground"
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-input text-muted-foreground"
                     }`}
                   >
                     {deadline.text}
@@ -291,6 +312,7 @@ function SectionColumn({
           );
         })}
       </div>
+
 
       {addingTask ? (
         <div className="mt-1.5">
