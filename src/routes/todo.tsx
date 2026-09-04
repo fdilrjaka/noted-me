@@ -52,7 +52,13 @@ function TodoPage() {
 
   useEffect(() => {
     loadTodoLocal();
+    // Halaman ini punya kolom yang bisa di-scroll ke samping; kalau halaman ikut
+    // ke-geser, halaman lain (dashboard/sidebar) keliatan "kegeser ke kanan" saat balik.
+    window.scrollTo({ left: 0 });
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
   }, []);
+
 
   const sections = useMemo(() => categorySections(data, category), [data, category]);
 
