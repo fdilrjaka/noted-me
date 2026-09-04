@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { Sidebar } from "@/components/noteme/Sidebar";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import {
   emptyTrash,
@@ -39,8 +40,9 @@ function TrashPage() {
   return (
     <main
       ref={registerNavDragTarget}
-      className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg"
+      className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
     >
+      <Sidebar />
       <header className="flex items-center gap-2 py-3">
         <Link
           to="/"
