@@ -164,8 +164,17 @@ function findDateMatch(text: string): { date: Date; match: NaturalMatch } | null
   }
 
   // 4) "tanggal 20 desember" / "tgl 20" / "20 desember" / "december 20" / "dec 20"
-  re =
-    /\b(?:tanggal|tgl)\s+(\d{1,2})(?:\s+([a-zA-Z]+))?\b|\b(\d{1,2})\s+([a-zA-Z]+)\b|\b([a-zA-Z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\b/gi;
+  //
+  // PENTING: grup nama bulan HARUS berupa alternasi nama bulan asli (bukan [a-zA-Z]+),
+  // supaya kata sembarang setelah angka (misal "jam" di "tanggal 20 jam 10.30") tidak
+  // ikut ke-swallow ke dalam span match tanggal.
+  const monthAlt = [...MONTHS_ID, ...MONTHS_EN, ...MONTHS_EN_SHORT].join("|");
+  re = new RegExp(
+    `\\b(?:tanggal|tgl)\\s+(\\d{1,2})(?:\\s+(${monthAlt}))?\\b` +
+      `|\\b(\\d{1,2})\\s+(${monthAlt})\\b` +
+      `|\\b(${monthAlt})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`,
+    "gi",
+  );
   while ((m = re.exec(text))) {
     let day: number | null = null;
     let monthWord: string | undefined;
@@ -184,8 +193,8 @@ function findDateMatch(text: string): { date: Date; match: NaturalMatch } | null
     if (monthWord) {
       const mi = monthIndex(monthWord);
       if (mi === null) {
-        // kata setelah angka bukan nama bulan (misal "20 jam") → bukan match tanggal valid,
-        // kecuali polanya "tanggal N" tanpa perlu nama bulan.
+        // Karena grup bulan sekarang cuma bisa match nama bulan asli, kasus ini
+        // seharusnya tidak pernah kejadian lagi kecuali untuk pola "tanggal N" tanpa bulan.
         if (m[1] === undefined) continue;
       } else {
         month = mi;
