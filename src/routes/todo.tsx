@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 
@@ -43,6 +44,13 @@ function deadlineLabel(deadline: string | null): { text: string; overdue: boolea
   if (isTomorrow(date)) return { text: `Besok${timeSuffix}`, overdue: false };
   const overdue = isBefore(date, hasTime ? new Date() : today);
   return { text: `${format(date, "d MMM", { locale: idLocale })}${timeSuffix}`, overdue };
+}
+
+function formatDetectedBadge(date: string, time: string): string {
+  const d = new Date(`${date}T00:00:00`);
+  const today = startOfDay(new Date());
+  const dayLabel = isToday(d) ? "Hari ini" : isTomorrow(d) ? "Besok" : format(d, "d MMM", { locale: idLocale });
+  return time ? `${dayLabel}, ${time}` : dayLabel;
 }
 
 function TodoPage() {
@@ -331,17 +339,31 @@ function SectionColumn({
 
       {addingTask ? (
         <div className="glass-input mt-1.5 rounded-2xl p-2.5">
-          <input
+          <NaturalDateTitleInput
             autoFocus
             value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitTask();
-              if (e.key === "Escape") resetTaskForm();
+            onChange={setTaskTitle}
+            onDetected={({ date, time }) => {
+              setTaskDate(date);
+              setTaskTime(time);
             }}
-            placeholder="Judul task"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            onEnter={submitTask}
+            onEscape={resetTaskForm}
+            placeholder="Judul task — coba tulis 'besok jam 10.30'"
           />
+          {taskDate && (
+            <button
+              type="button"
+              onClick={() => {
+                setTaskDate("");
+                setTaskTime("");
+              }}
+              className="press-sm mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary"
+            >
+              {formatDetectedBadge(taskDate, taskTime)}
+              <X className="size-3" />
+            </button>
+          )}
           <div className="mt-2 flex gap-1.5">
             <input
               type="date"
@@ -391,12 +413,6 @@ function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void
   const [deadlineTime, setDeadlineTime] = useState(
     task.deadline?.includes("T") ? task.deadline.split("T")[1] : "",
   );
-  const titleRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    titleRef.current?.focus();
-  }, []);
-
   const save = () => {
     const deadline = deadlineDate ? (deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate) : null;
     patchTask(task.id, {
@@ -413,14 +429,20 @@ function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void
         className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <input
-            ref={titleRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-transparent text-base font-semibold outline-none"
-          />
-          <button onClick={save} aria-label="Tutup" className="press-sm flex-none">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <NaturalDateTitleInput
+              autoFocus
+              value={title}
+              onChange={setTitle}
+              onDetected={({ date, time }) => {
+                setDeadlineDate(date);
+                setDeadlineTime(time);
+              }}
+              className="text-base font-semibold"
+            />
+          </div>
+          <button onClick={save} aria-label="Tutup" className="press-sm mt-0.5 flex-none">
             <X className="size-4 text-muted-foreground" />
           </button>
         </div>
