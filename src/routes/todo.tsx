@@ -106,7 +106,7 @@ function TodoPage() {
 
 
 
-      <div className="mt-5 flex snap-x gap-3 overflow-x-auto pb-6">
+      <div className="-mx-4 mt-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-28">
         {sections.map((section) => (
           <SectionColumn
             key={section.id}
