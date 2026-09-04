@@ -65,6 +65,7 @@ function buildPage(row: Row): Page {
     deleted: Boolean(row["deleted"]),
     updated_at: new Date(String(row["updated_at"])).toISOString(),
     dirty: false,
+    editedOffline: false,
   };
 }
 
@@ -221,6 +222,7 @@ export function resolveConflict(id: string, choice: "overwrite" | "merge") {
       content: mergePageContent(conflict.local, conflict.remote),
       updated_at: new Date().toISOString(),
       dirty: true,
+      editedOffline: false,
     };
   });
   persistSyncedVersions();
@@ -337,6 +339,12 @@ async function doSync(userId: string, full: boolean) {
   const remotePagesById = new Map((pagesRes.data ?? []).map((r) => [String((r as Row)["id"]), r as Row]));
   const conflictIds = new Set<string>();
   const newConflicts: PageConflict[] = [];
+  // Konflik yang ketemu saat KEDUA sisi sempat online terus (bukan hasil edit offline) —
+  // ini kasus normal "dua device lagi ngetik bareng". Gak perlu nanya user tiap kali;
+  // otomatis digabung (setelan pabrik) biar live-typing gak keganggu dialog tiap beberapa
+  // detik. `editedOffline` cuma nyala kalau edit lokal itu sempat kesentuh saat offline —
+  // di situ kita gak yakin versi mana yang paling "lengkap", jadi tetap tanya lewat dialog.
+  const autoMerged = new Map<string, Page>();
   for (const local of dirtyPages) {
     const row = remotePagesById.get(local.id);
     if (!row) continue;
@@ -345,10 +353,26 @@ async function doSync(userId: string, full: boolean) {
     // Remote persis sama dengan versi yang KITA sendiri terakhir push berhasil →
     // itu cuma gaung dari overlap window `since`, bukan edit dari device lain.
     if (remote.updated_at === syncedPageVersions.get(local.id)) continue;
-    conflictIds.add(local.id);
-    newConflicts.push({ id: local.id, local, remote });
+    if (local.editedOffline) {
+      conflictIds.add(local.id);
+      newConflicts.push({ id: local.id, local, remote });
+    } else {
+      autoMerged.set(local.id, {
+        ...local,
+        content: mergePageContent(local, remote),
+        updated_at: new Date().toISOString(),
+        dirty: true,
+        editedOffline: false,
+      });
+    }
   }
   upsertConflicts(newConflicts);
+  // Tulis hasil auto-merge ke store SEKARANG (bukan nanti di akhir fungsi), supaya tidak
+  // ketiban balik oleh versi lama pas `current = getData()` dipanggil setelah push di bawah.
+  if (autoMerged.size) {
+    const cur = getData();
+    setData({ ...cur, pages: cur.pages.map((p) => autoMerged.get(p.id) ?? p) });
+  }
   // Konflik yang sebelumnya pending tapi ternyata sudah gak dirty lagi lokal (mis. sudah
   // diresolve dari device/tab lain) gak perlu terus nyangkut di daftar.
   if (pendingConflicts.length) {
@@ -357,7 +381,9 @@ async function doSync(userId: string, full: boolean) {
   }
 
   const pushableSubjects = dirtySubjects;
-  const pushablePages = dirtyPages.filter((p) => !conflictIds.has(p.id));
+  const pushablePages = dirtyPages
+    .filter((p) => !conflictIds.has(p.id))
+    .map((p) => autoMerged.get(p.id) ?? p);
 
   if (pushableSubjects.length) {
     const { error } = await supabase
