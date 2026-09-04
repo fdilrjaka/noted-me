@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, LogOut, Trash2, Camera, X } from "lucide-react";
+import { ChevronLeft, LogOut, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, usernameToEmail } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { dirtyCount, trashItems, useData } from "@/lib/noteme/store";
+import { dirtyCount, useData } from "@/lib/noteme/store";
 import { syncNow } from "@/lib/noteme/sync";
 
 // Warna fallback avatar kalau user belum (atau gak mau) pasang foto profil.
@@ -73,8 +73,6 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const { user } = useSession();
   const data = useData();
-  const { subjects: trashedSubjects, pages: trashedPages } = trashItems(data);
-  const trashCount = trashedSubjects.length + trashedPages.length;
   const navigate = useNavigate();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [username, setUsername] = useState("");
@@ -218,7 +216,7 @@ function AuthPage() {
   return (
     <main
       ref={registerNavDragTarget}
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
+      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
     >
       <Sidebar />
       <header className="flex items-center gap-2 py-3">
@@ -233,7 +231,7 @@ function AuthPage() {
       </header>
 
       {user ? (
-        <div className="glass-card spring-in mt-6 rounded-3xl p-6">
+        <div className="glass-card spring-in mt-6 rounded-3xl p-6 md:p-8">
           <div className="flex items-center gap-4">
             <div className="relative">
               {avatarUrl ? (
@@ -334,20 +332,6 @@ function AuthPage() {
               ? `${dirtyCount()} perubahan menunggu sinkronisasi.`
               : "Semua catatan tersinkron."}
           </p>
-
-          <Link
-            to="/trash"
-            className="press-sm mt-3 flex items-center gap-3 rounded-2xl border border-border px-4 py-3 active:scale-[0.98]"
-          >
-            <Trash2 className="size-4 text-muted-foreground" />
-            <span className="flex-1 text-sm font-medium">Trash</span>
-            {trashCount > 0 && (
-              <span className="rounded-full bg-input px-2 py-0.5 text-xs text-muted-foreground">
-                {trashCount}
-              </span>
-            )}
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </Link>
 
           <button
             onClick={async () => {
