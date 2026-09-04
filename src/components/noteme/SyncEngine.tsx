@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { dirtyCount, loadLocal, useData } from "@/lib/noteme/store";
 import { resolveConflict, syncNow, useConflicts, diffPageContent } from "@/lib/noteme/sync";
+import { dirtyTodoCount, loadTodoLocal, useTodoData } from "@/lib/noteme/todoStore";
+import { syncTodoNow } from "@/lib/noteme/todoSync";
 
 // Debounce realtime-triggered sync sedikit — kalau device lain nyimpen beberapa
 // baris sekaligus (mis. subject + beberapa page), event postgres_changes bisa
@@ -39,6 +41,7 @@ function describeSyncError(error: unknown): string {
 export function SyncStatus() {
   const { user } = useSession();
   const data = useData();
+  const todoData = useTodoData();
   const [online, setOnline] = useState(true);
   const [state, setState] = useState<"idle" | "syncing" | "error">("idle");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,6 +52,7 @@ export function SyncStatus() {
 
   useEffect(() => {
     loadLocal();
+    loadTodoLocal();
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     setOnline(navigator.onLine);
@@ -60,7 +64,7 @@ export function SyncStatus() {
     };
   }, []);
 
-  const pending = dirtyCount();
+  const pending = dirtyCount() + dirtyTodoCount();
 
   function clearRetry() {
     if (retryTimer.current) {
@@ -71,7 +75,7 @@ export function SyncStatus() {
 
   function attemptSync(userId: string, opts?: { announceSuccess?: boolean }) {
     setState("syncing");
-    syncNow(userId)
+    Promise.all([syncNow(userId), syncTodoNow(userId)])
       .then(() => {
         setState("idle");
         retryAttempt.current = 0;
@@ -108,7 +112,7 @@ export function SyncStatus() {
     };
     // re-run whenever local data changes so edits push automatically
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, online, data]);
+  }, [user, online, data, todoData]);
 
   // Coming back online should retry right away instead of waiting for the backoff timer.
   useEffect(() => {
@@ -150,6 +154,16 @@ export function SyncStatus() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "note_images", filter: `user_id=eq.${user.id}` },
+        scheduleRealtimeSync,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "todo_sections", filter: `user_id=eq.${user.id}` },
+        scheduleRealtimeSync,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "todo_tasks", filter: `user_id=eq.${user.id}` },
         scheduleRealtimeSync,
       )
       .subscribe();
