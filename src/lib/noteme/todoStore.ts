@@ -27,7 +27,8 @@ export type TodoTask = {
   section_id: string;
   title: string;
   description: string;
-  // ISO date (YYYY-MM-DD) or null kalau belum ada deadline.
+  // ISO date (YYYY-MM-DD) atau datetime lokal (YYYY-MM-DDTHH:mm) kalau ada jam,
+  // atau null kalau belum ada deadline.
   deadline: string | null;
   completed: boolean;
   position: number;
@@ -170,7 +171,7 @@ export function deleteSection(id: string) {
   }));
 }
 
-export function createTask(sectionId: string, title: string) {
+export function createTask(sectionId: string, title: string, deadline: string | null = null) {
   const id = uid();
   const siblings = data.tasks.filter((t) => t.section_id === sectionId && !t.deleted);
   const task: TodoTask = {
@@ -178,7 +179,7 @@ export function createTask(sectionId: string, title: string) {
     section_id: sectionId,
     title: title.trim() || "Task baru",
     description: "",
-    deadline: null,
+    deadline,
     completed: false,
     position: siblings.reduce((max, t) => Math.max(max, t.position), 0) + 1,
     deleted: false,
