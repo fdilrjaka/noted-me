@@ -421,6 +421,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   }, [initialContent]);
 
   const flush = () => {
+    timer.current = null;
     if (!ref.current) return;
     const html = serializeContent(ref.current);
     lastKnownContent.current = html;
