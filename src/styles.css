@@ -377,6 +377,42 @@
   }
 }
 
+/* Badge "sedang mengetik" — bentuk pin ala Google Maps (bulatan foto profil +
+   ekor lancip di bawah), mengambang & "bobbing" pelan-pelan kayak beneran
+   nungguin di atas peta. */
+@utility pin-bob {
+  animation: pin-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes pin-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Teks "X sedang mengetik" — brightness-nya naik-turun pelan, kesannya kayak
+   titik-titik yang berkedip nungguin lawan bicara masih ngetik. */
+@utility typing-pulse {
+  animation: typing-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes typing-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: brightness(0.75);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.15);
+  }
+}
+
+
 @utility route-push {
   animation: route-push 0.46s var(--ease-ios) backwards;
 }
