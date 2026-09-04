@@ -119,9 +119,11 @@ export function Dashboard() {
         mainRef.current = el;
         registerNavDragTarget(el);
       }}
-      className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
+      className="min-h-dvh w-full safe-top safe-bottom-lg"
     >
       <Sidebar />
+      <div className="md:ml-[16.5rem]">
+      <div className="mx-auto w-full max-w-5xl px-4">
       <header className="flex items-center justify-between gap-3 py-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
