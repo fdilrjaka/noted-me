@@ -81,7 +81,7 @@ export function NaturalDateTitleInput({
             seg.highlighted ? (
               <span
                 key={i}
-                className="rounded-[4px] bg-primary/15 text-primary"
+                className="rounded-[4px] bg-primary/25 text-transparent shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
                 style={{ boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
               >
                 {seg.text}
