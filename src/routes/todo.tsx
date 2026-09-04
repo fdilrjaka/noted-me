@@ -4,7 +4,9 @@ import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
+
 import {
   TODO_CATEGORIES,
   categorySections,
