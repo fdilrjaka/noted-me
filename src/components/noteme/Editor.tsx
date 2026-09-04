@@ -21,9 +21,12 @@ import {
   X,
 } from "lucide-react";
 import { DrawingCanvas } from "./DrawingCanvas";
+import { TypingIndicator } from "./TypingIndicator";
 import { putImage } from "@/lib/noteme/imageStore";
 import { resolveImageSrc, revokeAllResolved } from "@/lib/noteme/imageResolver";
 import { registerLocalImage } from "@/lib/noteme/store";
+import { useTypingPresence } from "@/lib/noteme/presence";
+import { useSession } from "@/hooks/useSession";
 
 type Props = {
   pageId: string;
@@ -283,6 +286,17 @@ function serializeContent(container: HTMLElement): string {
 }
 
 export function Editor({ pageId, initialContent, onChange }: Props) {
+  const { user } = useSession();
+  const myProfile = (() => {
+    const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+    const nickname = typeof meta["nickname"] === "string" ? meta["nickname"].trim() : "";
+    return {
+      name: nickname || user?.email?.split("@")[0] || "Seseorang",
+      avatarUrl: typeof meta["avatar_url"] === "string" ? meta["avatar_url"] : null,
+      avatarColor: typeof meta["avatar_color"] === "string" ? meta["avatar_color"] : "#7c3aed",
+    };
+  })();
+  const { typists, notifyTyping } = useTypingPresence(pageId, user ? myProfile : null);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -434,6 +448,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const handleInput = () => {
     setSaved(false);
     updateCounts();
+    notifyTyping();
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, 600);
   };
@@ -716,7 +731,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       {mobileToolbar}
 
       {/* Toolbar desktop: sticky di dalam layout normal, dibalikin ke gaya
@@ -746,6 +761,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         data-placeholder="Mulai menulis catatan…"
         className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32" 
       />
+
+      <TypingIndicator typists={typists} />
 
       {selectionToolbar &&
         typeof document !== "undefined" &&
