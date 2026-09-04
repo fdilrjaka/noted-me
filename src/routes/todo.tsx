@@ -35,12 +35,14 @@ export const Route = createFileRoute("/todo")({
 
 function deadlineLabel(deadline: string | null): { text: string; overdue: boolean } | null {
   if (!deadline) return null;
-  const date = new Date(`${deadline}T00:00:00`);
+  const hasTime = deadline.includes("T");
+  const date = new Date(hasTime ? deadline : `${deadline}T00:00:00`);
   const today = startOfDay(new Date());
-  if (isToday(date)) return { text: "Hari ini", overdue: false };
-  if (isTomorrow(date)) return { text: "Besok", overdue: false };
-  const overdue = isBefore(date, today);
-  return { text: format(date, "d MMM", { locale: idLocale }), overdue };
+  const timeSuffix = hasTime ? `, ${format(date, "HH:mm")}` : "";
+  if (isToday(date)) return { text: `Hari ini${timeSuffix}`, overdue: false };
+  if (isTomorrow(date)) return { text: `Besok${timeSuffix}`, overdue: false };
+  const overdue = isBefore(date, hasTime ? new Date() : today);
+  return { text: `${format(date, "d MMM", { locale: idLocale })}${timeSuffix}`, overdue };
 }
 
 function TodoPage() {
@@ -112,7 +114,7 @@ function TodoPage() {
 
 
 
-      <div className="-mx-4 mt-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-28">
+      <div className="-mx-4 mt-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-28 pt-3">
         {sections.map((section) => (
           <SectionColumn
             key={section.id}
@@ -125,7 +127,7 @@ function TodoPage() {
           />
         ))}
 
-        <div className="w-72 flex-none snap-start">
+        <div className="mt-1 w-72 flex-none snap-start">
           {addingSection ? (
             <div className="glass-card rounded-3xl p-3">
               <input
@@ -199,17 +201,30 @@ function SectionColumn({
 }) {
   const [addingTask, setAddingTask] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
+  const [taskDate, setTaskDate] = useState("");
+  const [taskTime, setTaskTime] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState(name);
 
-  const submitTask = () => {
-    if (taskTitle.trim()) createTask(sectionId, taskTitle);
+  const resetTaskForm = () => {
     setTaskTitle("");
+    setTaskDate("");
+    setTaskTime("");
     setAddingTask(false);
   };
 
+  const submitTask = () => {
+    if (!taskTitle.trim()) {
+      resetTaskForm();
+      return;
+    }
+    const deadline = taskDate ? (taskTime ? `${taskDate}T${taskTime}` : taskDate) : null;
+    createTask(sectionId, taskTitle, deadline);
+    resetTaskForm();
+  };
+
   return (
-    <div className="glass-card w-72 flex-none snap-start rounded-3xl p-3">
+    <div className="glass-card mt-1 w-72 flex-none snap-start rounded-3xl p-3">
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         {renaming ? (
           <input
@@ -315,19 +330,47 @@ function SectionColumn({
 
 
       {addingTask ? (
-        <div className="mt-1.5">
+        <div className="glass-input mt-1.5 rounded-2xl p-2.5">
           <input
             autoFocus
             value={taskTitle}
             onChange={(e) => setTaskTitle(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") submitTask();
-              if (e.key === "Escape") setAddingTask(false);
+              if (e.key === "Escape") resetTaskForm();
             }}
-            onBlur={submitTask}
             placeholder="Judul task"
-            className="glass-input w-full rounded-2xl px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
+          <div className="mt-2 flex gap-1.5">
+            <input
+              type="date"
+              value={taskDate}
+              onChange={(e) => setTaskDate(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl bg-input px-2 py-1.5 text-xs outline-none"
+            />
+            <input
+              type="time"
+              value={taskTime}
+              onChange={(e) => setTaskTime(e.target.value)}
+              disabled={!taskDate}
+              className="min-w-0 flex-1 rounded-xl bg-input px-2 py-1.5 text-xs outline-none disabled:opacity-50"
+            />
+          </div>
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              onClick={resetTaskForm}
+              className="press-sm rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground"
+            >
+              Batal
+            </button>
+            <button
+              onClick={submitTask}
+              className="press-sm rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+            >
+              Simpan
+            </button>
+          </div>
         </div>
       ) : (
         <button
@@ -344,7 +387,10 @@ function SectionColumn({
 function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
-  const [deadline, setDeadline] = useState(task.deadline ?? "");
+  const [deadlineDate, setDeadlineDate] = useState(task.deadline?.split("T")[0] ?? "");
+  const [deadlineTime, setDeadlineTime] = useState(
+    task.deadline?.includes("T") ? task.deadline.split("T")[1] : "",
+  );
   const titleRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -352,10 +398,11 @@ function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void
   }, []);
 
   const save = () => {
+    const deadline = deadlineDate ? (deadlineTime ? `${deadlineDate}T${deadlineTime}` : deadlineDate) : null;
     patchTask(task.id, {
       title: title.trim() || task.title,
       description,
-      deadline: deadline || null,
+      deadline,
     });
     onClose();
   };
@@ -387,12 +434,21 @@ function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void
         />
 
         <label className="mt-3 block text-xs font-medium text-muted-foreground">Deadline</label>
-        <input
-          type="date"
-          value={deadline}
-          onChange={(e) => setDeadline(e.target.value)}
-          className="glass-input mt-1 w-full rounded-2xl px-3 py-2.5 text-sm outline-none"
-        />
+        <div className="mt-1 flex gap-2">
+          <input
+            type="date"
+            value={deadlineDate}
+            onChange={(e) => setDeadlineDate(e.target.value)}
+            className="glass-input min-w-0 flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none"
+          />
+          <input
+            type="time"
+            value={deadlineTime}
+            onChange={(e) => setDeadlineTime(e.target.value)}
+            disabled={!deadlineDate}
+            className="glass-input min-w-0 flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none disabled:opacity-50"
+          />
+        </div>
 
         <div className="mt-4 flex justify-between gap-2">
           <button
