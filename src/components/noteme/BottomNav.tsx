@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, Trash2, User, ChevronLeft, Paintbrush, Table, Type, Camera } from "lucide-react";
+import { Home, Compass, User, ChevronLeft, Paintbrush, Table, Type, Camera } from "lucide-react";
 import { resetNavDragProgress, setNavDragProgress } from "@/lib/noteme/navDrag";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home },
-  { to: "/trash", label: "Trash", icon: Trash2 },
+  { to: "/explore", label: "Explore", icon: Compass },
   { to: "/auth", label: "Profile", icon: User },
 ] as const;
 
@@ -63,6 +63,7 @@ export function BottomNav({
 
   const activeIndex = useMemo(() => {
     if (pathname === "/") return 0;
+    if (pathname.startsWith("/todo")) return tabs.findIndex((t) => t.to === "/explore");
     const idx = tabs.findIndex((t) => t.to !== "/" && pathname.startsWith(t.to));
     return idx === -1 ? 0 : idx;
   }, [pathname]);
