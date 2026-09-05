@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import "./splash.css";
 
-const TOTAL_DURATION = 3000;
-const STAGE_PRESS_MS = 500;
-const STAGE_GLASS_MS = 720;
-const STAGE_ZOOM_MS = 1700;
+const TOTAL_DURATION = 3200;
+const STAGE_PRESS_MS = 550;
+const STAGE_GLASS_MS = 850;
+const STAGE_ZOOM_MS = 1950;
 
 type Stage = "enter" | "press" | "glass" | "zoom";
 
@@ -19,24 +19,37 @@ export function SplashIntro() {
       window.setTimeout(() => setStage("zoom"), STAGE_ZOOM_MS),
       window.setTimeout(() => setShow(false), TOTAL_DURATION),
     ];
+
     return () => timers.forEach(window.clearTimeout);
   }, []);
 
   if (!show) return null;
 
   return (
-    <div className={`splash-root stage-${stage}`} role="status" aria-label="Memuat NoteMe">
-      {/* Background Ambient Layer */}
+    <div
+      className={`splash-root stage-${stage}`}
+      role="status"
+      aria-label="Memuat NoteMe"
+    >
       <div className="splash-ambient-bg">
         <div className="ambient-layer-1" />
         <div className="ambient-layer-2" />
+        <div className="ambient-layer-3" />
       </div>
 
-      {/* Main Squircle Glass Box */}
+      <div className="splash-vignette" />
+
       <div className="splash-stage">
         <div className="splash-squircle">
-          <div className="splash-sheen" />
-          <h1 className="splash-text-emboss">NoteMe.</h1>
+          <div className="glass-backlight" />
+          <div className="glass-refraction" />
+          <div className="glass-highlight" />
+          <div className="glass-sheen" />
+          <div className="glass-noise" />
+
+          <h1 className="splash-text-emboss">
+            NoteMe.
+          </h1>
         </div>
       </div>
     </div>
