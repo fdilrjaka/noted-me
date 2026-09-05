@@ -45,6 +45,7 @@ export function SplashIntro() {
       role="status"
       aria-label="Memuat NoteMe"
     >
+      {/* Ambient background */}
       <div className="splash-ambient-bg" aria-hidden="true">
         <div className="ambient-layer-1" />
         <div className="ambient-layer-2" />
@@ -53,14 +54,25 @@ export function SplashIntro() {
 
       <div className="splash-vignette" aria-hidden="true" />
 
+      {/* Main stage */}
       <div className="splash-stage">
         <div className="splash-squircle">
+
+          {/* Glass lighting */}
           <div className="glass-backlight" />
           <div className="glass-refraction" />
           <div className="glass-highlight" />
+
+          {/* Continuous reflection */}
           <div className="glass-sheen" />
+
+          {/* Ripple from center */}
+          <div className="glass-ripple" />
+
+          {/* Texture */}
           <div className="glass-noise" />
 
+          {/* Logo */}
           <h1 className="splash-text-emboss">
             NoteMe.
           </h1>
