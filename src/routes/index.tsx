@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
+import { BrandMark } from "@/components/noteme/BrandMark";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { HueSlider } from "@/components/HueSlider";
