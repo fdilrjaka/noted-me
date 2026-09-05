@@ -36,7 +36,7 @@ export function SplashIntro() {
       <div className={`splash-stage stage-${stage}`}>
         <div className="splash-squircle">
           <div className="splash-sheen" />
-          <span className="splash-text-emboss">26</span>
+          <span className="splash-text-emboss">NoteMe</span>
         </div>
       </div>
     </div>
