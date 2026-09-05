@@ -1,4 +1,3 @@
-```tsx
 import { useEffect, useState } from "react";
 import "./splash.css";
 
@@ -72,4 +71,3 @@ export function SplashIntro() {
 }
 
 export default SplashIntro;
-```
