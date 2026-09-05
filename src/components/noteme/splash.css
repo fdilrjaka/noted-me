@@ -1,6 +1,6 @@
 /* =========================================================
    NoteMe — iOS 26 Liquid Glass Splash
-   Smooth Centered Version
+   Smooth Centered Version (Bounce + Slow Wave)
    ========================================================= */
 
 .splash-root {
@@ -369,7 +369,8 @@
 
 
 /* =========================================================
-   RIPPLE
+   RIPPLE — muncul perlahan seperti gelombang laut,
+   dipicu saat squircle memantul (stage-glass)
    ========================================================= */
 
 .glass-ripple {
@@ -409,10 +410,10 @@
   z-index: 5;
 }
 
-.stage-press .glass-ripple {
+.stage-glass .glass-ripple {
   animation:
-    glass-ripple-expand
-    1.25s
+    glass-ripple-wave
+    2.4s
     cubic-bezier(0.16, 1, 0.3, 1)
     forwards;
 }
@@ -486,45 +487,61 @@
 
 
 /* =========================================================
-   PRESS
+   PRESS — tekan cepat & tegas, ditahan sebentar
    ========================================================= */
 
 .stage-press .splash-squircle {
-  transform: scale(0.965);
+  transform: scale(0.955);
 
   filter:
     brightness(1.02)
     saturate(1.08);
+
+  transition:
+    transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.32s ease;
 }
 
 .stage-press .splash-text-emboss {
   transform:
     translate(-50%, -50%)
-    scale(0.985);
+    scale(0.98);
+
+  transition:
+    transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 
 /* =========================================================
-   GLASS REACTION
+   GLASS REACTION — efek memantul (bounce) ke atas
+   saat dilepas, lebih lama & lembut
    ========================================================= */
 
 .stage-glass .splash-squircle {
-  transform: scale(1.012);
+  transform: scale(1.035);
 
   filter:
-    brightness(1.10)
-    saturate(1.18);
+    brightness(1.12)
+    saturate(1.2);
+
+  transition:
+    transform 1s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.7s ease;
 }
 
 .stage-glass .splash-text-emboss {
   transform:
     translate(-50%, -50%)
-    scale(1.015);
+    scale(1.04);
 
   filter:
     drop-shadow(
       0 2px 12px rgba(255, 255, 255, 0.18)
     );
+
+  transition:
+    transform 1s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.5s ease;
 }
 
 
@@ -581,10 +598,10 @@
 
 
 /* =========================================================
-   RIPPLE
+   RIPPLE WAVE — membesar & pudar pelan seperti ombak
    ========================================================= */
 
-@keyframes glass-ripple-expand {
+@keyframes glass-ripple-wave {
   0% {
     width: 20px;
     height: 20px;
@@ -596,21 +613,21 @@
       scale(0);
   }
 
-  10% {
-    opacity: 0.9;
+  25% {
+    opacity: 0.5;
   }
 
-  38% {
-    opacity: 0.45;
+  50% {
+    opacity: 0.38;
   }
 
-  68% {
+  75% {
     opacity: 0.16;
   }
 
   100% {
-    width: 520px;
-    height: 520px;
+    width: 560px;
+    height: 560px;
 
     opacity: 0;
 
