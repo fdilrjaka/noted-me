@@ -2,6 +2,8 @@ export const SCHEDULE_DAYS = [
   { id: "senin", label: "Senin" },
   { id: "selasa", label: "Selasa" },
   { id: "rabu", label: "Rabu" },
+  { id: "kamis", label: "Kamis" },
+  { id: "jumat", label: "Jumat" },
   { id: "lainnya", label: "Lainnya" },
 ] as const;
 
