@@ -213,7 +213,11 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.12),
     inset 0 0 30px rgba(255, 255, 255, 0.08);
 
-  transform: scale(1);
+  transform: scale(1) translateZ(0);
+  -webkit-transform: scale(1) translateZ(0);
+
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
 
   transition:
     transform 0.58s cubic-bezier(0.22, 1, 0.36, 1),
@@ -491,7 +495,7 @@
    ========================================================= */
 
 .stage-press .splash-squircle {
-  transform: scale(0.955);
+  transform: scale(0.955) translateZ(0);
 
   filter:
     brightness(1.02)
@@ -518,7 +522,7 @@
    ========================================================= */
 
 .stage-glass .splash-squircle {
-  transform: scale(1.035);
+  transform: scale(1.035) translateZ(0);
 
   filter:
     brightness(1.12)
@@ -550,7 +554,7 @@
    ========================================================= */
 
 .stage-zoom .splash-squircle {
-  transform: scale(14);
+  transform: scale(14) translateZ(0);
 
   opacity: 0;
 
