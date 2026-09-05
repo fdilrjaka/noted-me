@@ -122,65 +122,69 @@ function TodoPage() {
 
 
 
-      <div className="-mx-4 mt-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-28 pt-3">
-        {sections.map((section) => (
-          <SectionColumn
-            key={section.id}
-            sectionId={section.id}
-            name={section.name}
-            tasks={sectionTasks(data, section.id)}
-            onRename={(name) => patchSection(section.id, { name })}
-            onDelete={() => deleteSection(section.id)}
-            onEditTask={setEditingTask}
-          />
-        ))}
+      <div className="mt-4 flex gap-4 pb-28">
+        <div className="-mx-4 flex min-w-0 flex-1 snap-x items-start gap-3 overflow-x-auto px-4 pt-3">
+          {sections.map((section) => (
+            <SectionColumn
+              key={section.id}
+              sectionId={section.id}
+              name={section.name}
+              tasks={sectionTasks(data, section.id)}
+              onRename={(name) => patchSection(section.id, { name })}
+              onDelete={() => deleteSection(section.id)}
+              onEditTask={setEditingTask}
+            />
+          ))}
 
-        <div className="mt-1 w-72 flex-none snap-start">
-          {addingSection ? (
-            <div className="glass-card rounded-3xl p-3">
-              <input
-                autoFocus
-                value={sectionName}
-                onChange={(e) => setSectionName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && sectionName.trim()) {
-                    createSection(category, sectionName);
-                    setSectionName("");
-                    setAddingSection(false);
-                  }
-                  if (e.key === "Escape") setAddingSection(false);
-                }}
-                placeholder="Nama section"
-                className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-muted-foreground"
-              />
-              <div className="mt-2 flex justify-end gap-2">
-                <button
-                  onClick={() => setAddingSection(false)}
-                  className="press-sm rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={() => {
-                    if (sectionName.trim()) createSection(category, sectionName);
-                    setSectionName("");
-                    setAddingSection(false);
+          <div className="mt-1 w-72 flex-none snap-start">
+            {addingSection ? (
+              <div className="glass-card rounded-3xl p-3">
+                <input
+                  autoFocus
+                  value={sectionName}
+                  onChange={(e) => setSectionName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && sectionName.trim()) {
+                      createSection(category, sectionName);
+                      setSectionName("");
+                      setAddingSection(false);
+                    }
+                    if (e.key === "Escape") setAddingSection(false);
                   }}
-                  className="press-sm rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-                >
-                  Simpan
-                </button>
+                  placeholder="Nama section"
+                  className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-muted-foreground"
+                />
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    onClick={() => setAddingSection(false)}
+                    className="press-sm rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (sectionName.trim()) createSection(category, sectionName);
+                      setSectionName("");
+                      setAddingSection(false);
+                    }}
+                    className="press-sm rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                  >
+                    Simpan
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setAddingSection(true)}
-              className="press-sm glass-input flex w-full items-center justify-center gap-1.5 rounded-3xl px-4 py-3 text-sm font-medium text-muted-foreground"
-            >
-              <Plus className="size-4" /> Add section
-            </button>
-          )}
+            ) : (
+              <button
+                onClick={() => setAddingSection(true)}
+                className="press-sm glass-input flex w-full items-center justify-center gap-1.5 rounded-3xl px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                <Plus className="size-4" /> Add section
+              </button>
+            )}
+          </div>
         </div>
+
+        <SummaryPanel data={data} className="hidden w-72 flex-none lg:block" />
       </div>
 
       {editingTask && (
