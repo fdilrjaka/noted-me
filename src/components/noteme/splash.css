@@ -1,5 +1,6 @@
 /* =========================================================
    NoteMe — iOS 26 Liquid Glass Splash
+   Smooth / Continuous Motion
    ========================================================= */
 
 .splash-root {
@@ -22,8 +23,9 @@
     #050714;
 
   opacity: 1;
+
   transition:
-    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 
@@ -38,14 +40,19 @@
   pointer-events: none;
 
   filter: blur(35px) saturate(130%);
+
   transform: scale(1.1);
+
+  will-change: transform;
 }
 
 .ambient-layer-1,
 .ambient-layer-2,
 .ambient-layer-3 {
   position: absolute;
+
   border-radius: 50%;
+
   will-change: transform;
 }
 
@@ -64,7 +71,12 @@
       transparent 72%
     );
 
-  animation: ambient-float-1 9s ease-in-out infinite alternate;
+  animation:
+    ambient-float-1
+    9s
+    ease-in-out
+    infinite
+    alternate;
 }
 
 .ambient-layer-2 {
@@ -82,7 +94,12 @@
       transparent 72%
     );
 
-  animation: ambient-float-2 11s ease-in-out infinite alternate;
+  animation:
+    ambient-float-2
+    11s
+    ease-in-out
+    infinite
+    alternate;
 }
 
 .ambient-layer-3 {
@@ -101,7 +118,12 @@
 
   filter: blur(50px);
 
-  animation: ambient-float-3 8s ease-in-out infinite alternate;
+  animation:
+    ambient-float-3
+    8s
+    ease-in-out
+    infinite
+    alternate;
 }
 
 
@@ -145,6 +167,8 @@
     0.8s
     cubic-bezier(0.16, 1, 0.3, 1)
     both;
+
+  will-change: transform, opacity;
 }
 
 
@@ -166,10 +190,6 @@
 
   border-radius: 42px;
 
-  /*
-    Bukan sekadar putih transparan.
-    Layer ini memberi efek optical glass.
-  */
   background:
     linear-gradient(
       135deg,
@@ -189,23 +209,13 @@
     saturate(180%)
     brightness(1.08);
 
-  /*
-    Double edge.
-  */
   border: 1px solid rgba(255, 255, 255, 0.38);
 
   box-shadow:
-    /* outer depth */
     0 30px 80px rgba(0, 0, 0, 0.38),
-
-    /* colored atmospheric glow */
     0 0 80px rgba(96, 165, 250, 0.18),
-
-    /* inner glass lighting */
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     inset 0 -1px 0 rgba(255, 255, 255, 0.12),
-
-    /* subtle internal depth */
     inset 0 0 30px rgba(255, 255, 255, 0.08);
 
   transform-style: preserve-3d;
@@ -249,7 +259,10 @@
     liquid-breathe
     4s
     ease-in-out
-    infinite alternate;
+    infinite
+    alternate;
+
+  will-change: transform;
 }
 
 
@@ -282,6 +295,8 @@
   transform:
     translate3d(0, 0, 20px)
     scale(1.1);
+
+  will-change: transform, opacity;
 }
 
 
@@ -314,8 +329,18 @@
 
 
 /* =========================================================
-   MOVING LIGHT REFLECTION
+   CONTINUOUS LIGHT REFLECTION
    ========================================================= */
+
+/*
+   PENTING:
+   Sheen TIDAK diberi animation baru berdasarkan stage.
+
+   Jadi perpindahan:
+   enter → press → glass → zoom
+
+   tidak pernah me-reset posisi pantulan cahaya.
+*/
 
 .glass-sheen {
   position: absolute;
@@ -340,13 +365,17 @@
 
   filter: blur(8px);
 
-  transform: rotate(22deg);
+  transform:
+    translate3d(0, 0, 0)
+    rotate(22deg);
 
   animation:
     liquid-sheen
     3.8s
     cubic-bezier(0.16, 1, 0.3, 1)
     infinite;
+
+  will-change: transform;
 }
 
 
@@ -393,10 +422,6 @@
 
   color: rgba(255, 255, 255, 0.82);
 
-  /*
-    Bukan outline putih tebal.
-    iOS glass lebih subtle.
-  */
   text-shadow:
     0 1px 1px rgba(255, 255, 255, 0.45),
     0 8px 25px rgba(0, 0, 0, 0.18);
@@ -407,32 +432,50 @@
     );
 
   transition:
-    opacity 0.4s ease,
-    transform 0.4s ease;
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.45s ease;
+
+  will-change: transform, opacity, filter;
 }
 
 
 /* =========================================================
-   STAGES
+   STAGE: PRESS
    ========================================================= */
+
+/*
+   Hanya SATU press.
+   Tidak ada bounce berkali-kali.
+
+   Gerakan dibuat:
+   normal
+      ↓
+   sedikit compressed
+      ↓
+   soft release
+*/
 
 .stage-press .splash-squircle {
   animation:
     liquid-press
-    0.3s
-    cubic-bezier(0.4, 0, 0.2, 1)
+    0.55s
+    cubic-bezier(0.22, 1, 0.36, 1)
     both;
 }
 
+
+/* =========================================================
+   STAGE: GLASS REACTION
+   ========================================================= */
 
 .stage-glass .splash-squircle {
   animation:
     liquid-react
-    1.1s
+    1.05s
     cubic-bezier(0.16, 1, 0.3, 1)
     both;
 }
-
 
 .stage-glass .splash-text-emboss {
   animation:
@@ -443,6 +486,10 @@
 }
 
 
+/* =========================================================
+   STAGE: ZOOM
+   ========================================================= */
+
 .stage-zoom .splash-squircle {
   animation:
     liquid-zoom
@@ -450,7 +497,6 @@
     cubic-bezier(0.7, 0, 0.84, 0)
     forwards;
 }
-
 
 .splash-root.stage-zoom {
   opacity: 0;
@@ -467,66 +513,66 @@
 @keyframes splash-enter {
   from {
     opacity: 0;
+
     transform:
       scale(0.82)
       translateY(24px);
+
     filter: blur(8px);
   }
 
   to {
     opacity: 1;
+
     transform:
       scale(1)
       translateY(0);
+
     filter: blur(0);
   }
 }
 
 
+/* =========================================================
+   SINGLE PRESS
+   ========================================================= */
+
 @keyframes liquid-press {
   0% {
-    transform: scale(1);
-  }
-
-  50% {
     transform:
-      scale(0.94, 0.91)
-      translateY(2px);
-  }
+      scale(1)
+      translateY(0);
 
-  100% {
-    transform: scale(1);
-  }
-}
-
-
-@keyframes liquid-react {
-  0% {
-    transform:
-      scale(0.96)
-      translateY(3px);
     filter:
-      brightness(1)
-      saturate(1);
+      brightness(1.08)
+      saturate(1.15);
   }
 
-  35% {
+  32% {
     transform:
-      scale(1.035)
-      translateY(-2px);
+      scale(0.965, 0.945)
+      translateY(1px);
+
     filter:
-      brightness(1.16)
-      saturate(1.3);
+      brightness(1.02)
+      saturate(1.08);
   }
 
-  65% {
+  58% {
     transform:
-      scale(1.015);
+      scale(0.975, 0.96)
+      translateY(0);
+
+    filter:
+      brightness(1.04)
+      saturate(1.1);
   }
 
   100% {
     transform:
-      scale(1);
+      scale(1)
+      translateY(0);
+
     filter:
       brightness(1.08)
       saturate(1.15);
@@ -534,46 +580,115 @@
 }
 
 
-@keyframes text-glass-react {
+/* =========================================================
+   GLASS REACTION
+   ========================================================= */
+
+@keyframes liquid-react {
   0% {
-    opacity: 0.45;
-    transform: scale(0.96);
-    filter: blur(2px);
+    transform:
+      scale(0.985)
+      translateY(0);
+
+    filter:
+      brightness(1.08)
+      saturate(1.15);
   }
 
-  45% {
+  38% {
+    transform:
+      scale(1.025)
+      translateY(-1px);
+
+    filter:
+      brightness(1.14)
+      saturate(1.24);
+  }
+
+  68% {
+    transform:
+      scale(1.012)
+      translateY(0);
+
+    filter:
+      brightness(1.1)
+      saturate(1.18);
+  }
+
+  100% {
+    transform:
+      scale(1)
+      translateY(0);
+
+    filter:
+      brightness(1.08)
+      saturate(1.15);
+  }
+}
+
+
+/* =========================================================
+   TEXT REACTION
+   ========================================================= */
+
+@keyframes text-glass-react {
+  0% {
+    opacity: 0.72;
+
+    transform:
+      scale(0.985);
+
+    filter: blur(1px);
+  }
+
+  42% {
     opacity: 1;
-    transform: scale(1.04);
+
+    transform:
+      scale(1.025);
+
     filter: blur(0);
   }
 
   100% {
     opacity: 0.82;
-    transform: scale(1);
+
+    transform:
+      scale(1);
+
+    filter: blur(0);
   }
 }
 
 
+/* =========================================================
+   CONTINUOUS SHEEN
+   ========================================================= */
+
 @keyframes liquid-sheen {
   0% {
     transform:
-      translateX(-160%)
+      translate3d(-160%, 0, 0)
       rotate(22deg);
   }
 
   45% {
     transform:
-      translateX(120%)
+      translate3d(120%, 0, 0)
       rotate(22deg);
   }
 
   100% {
     transform:
-      translateX(180%)
+      translate3d(180%, 0, 0)
       rotate(22deg);
   }
 }
 
+
+/* =========================================================
+   LIQUID BREATHING
+   ========================================================= */
 
 @keyframes liquid-breathe {
   from {
@@ -590,23 +705,39 @@
 }
 
 
+/* =========================================================
+   LIQUID ZOOM
+   ========================================================= */
+
 @keyframes liquid-zoom {
   0% {
-    transform: scale(1);
+    transform:
+      scale(1);
+
     opacity: 1;
-    filter: blur(0);
+
+    filter:
+      blur(0);
   }
 
   45% {
-    transform: scale(2.2);
+    transform:
+      scale(2.2);
+
     opacity: 0.92;
-    filter: blur(1px);
+
+    filter:
+      blur(1px);
   }
 
   100% {
-    transform: scale(14);
+    transform:
+      scale(14);
+
     opacity: 0;
-    filter: blur(18px);
+
+    filter:
+      blur(18px);
   }
 }
 
@@ -631,7 +762,6 @@
   }
 }
 
-
 @keyframes ambient-float-2 {
   from {
     transform:
@@ -647,7 +777,6 @@
       scale(1.12);
   }
 }
-
 
 @keyframes ambient-float-3 {
   from {
@@ -674,6 +803,7 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+
     transition-duration: 0.01ms !important;
   }
 }
