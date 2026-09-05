@@ -1,21 +1,23 @@
 import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 
-export type ClassStatus = "selesai" | "live" | "akan-datang";
+export type ClassType = "online" | "offline";
+export type ClassStatus = "ongoing" | "done" | "upcoming";
 
 export interface LmsLinkItem {
-  label: string; // Contoh: "LMS Parahaan"
-  url: string;   // URL manual yang diinput
+  label: string;
+  url: string;
 }
 
 export interface ScheduleClass {
   id: string;
   day: ScheduleDayId;
   courseName: string;
-  time: string; 
+  time: string;
   room: string;
+  classType: ClassType;
   status: ClassStatus;
-  lmsLinks: LmsLinkItem[]; // Diubah menjadi array untuk banyak link LMS
-  deadline: string | null; 
+  lmsLinks: LmsLinkItem[];
+  deadline?: string | null;
 }
 
 export const SAMPLE_CLASSES: ScheduleClass[] = [
