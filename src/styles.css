@@ -270,6 +270,45 @@
   box-shadow: var(--glass-shadow-floating), inset 0 1px 0 oklch(1 0 0 / 0.12);
 }
 
+/* glass-fab — round icon-only action button (e.g. Tambah). iOS 26 style:
+   glossy convex glass with a bright specular highlight top-left and a soft
+   dark bezel underneath, so the icon reads as etched metal on glass. */
+@utility glass-fab {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 130% at 28% 18%, oklch(1 0 0 / 0.3), transparent 52%),
+    radial-gradient(100% 100% at 72% 88%, oklch(1 0 0 / 0.06), transparent 60%),
+    oklch(0.32 0.015 285 / 0.5);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid oklch(1 0 0 / 0.14);
+  border-top-color: oklch(1 0 0 / 0.4);
+  box-shadow:
+    var(--glass-shadow-floating),
+    inset 0 1px 1px oklch(1 0 0 / 0.3),
+    inset 0 -3px 5px oklch(0 0 0 / 0.4),
+    inset 0 0 0 1px oklch(0 0 0 / 0.08);
+  transition:
+    transform 0.42s var(--ease-spring),
+    box-shadow 0.35s var(--ease-ios);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      box-shadow:
+        var(--glass-shadow-ambient),
+        inset 0 1px 1px oklch(1 0 0 / 0.36),
+        inset 0 -3px 5px oklch(0 0 0 / 0.4);
+    }
+  }
+}
+
+@utility glass-fab-icon {
+  filter:
+    drop-shadow(0 1px 1px oklch(0 0 0 / 0.55))
+    drop-shadow(0 -0.5px 0 oklch(1 0 0 / 0.5));
+}
+
 /* glass-input — search / form fields. Slightly recessed feeling (inner
    shadow) rather than raised, so it reads as a place to type into. */
 @utility glass-input {
