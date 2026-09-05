@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, CheckSquare, NotebookText, Trash2, User } from "lucide-react";
+import { BrandMark } from "@/components/noteme/BrandMark";
 
 const items = [
   { to: "/", label: "Notes", icon: NotebookText },
@@ -15,7 +16,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between p-4 safe-top safe-bottom md:flex">
       <div className="glass-navigation flex h-full flex-col rounded-3xl p-3">
         <div className="px-2 py-3">
-          <p className="text-lg font-bold tracking-tight">NoteMe</p>
+          <BrandMark className="text-lg" />
         </div>
 
         <nav className="mt-2 flex flex-col gap-1">

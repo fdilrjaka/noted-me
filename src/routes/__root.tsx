@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ConflictDialog, ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
+import { SplashIntro } from "@/components/noteme/SplashIntro";
 import { useBackgroundHue } from "@/hooks/use-background-hue"; // <-- Import Hook
 
 function NotFoundComponent() {
@@ -127,6 +128,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SplashIntro />
       <ServiceWorkerRegistrar />
       <RouteTransition />
       <ConflictDialog />
