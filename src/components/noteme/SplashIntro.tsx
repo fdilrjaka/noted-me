@@ -4,24 +4,21 @@ import "./splash.css";
 /** Total durasi splash sebelum unmount (ms) */
 const TOTAL_DURATION = 3000;
 
-/** Titik transisi tiap stage, sesuai spesifikasi timeline */
-const STAGE_ENTER_MS = 0;
 const STAGE_PRESS_MS = 500;
 const STAGE_GLASS_MS = 720;
 const STAGE_ZOOM_MS = 1700;
-/** Setelah zoom selesai (~2500ms) disisakan buffer sampai TOTAL_DURATION agar
- *  layar sudah benar-benar transparan/hitam sebelum splash di-unmount. */
 
 type Stage = "enter" | "press" | "glass" | "zoom";
 
 /**
- * Splash Intro — "NoteMe."
- * Background hitam murni, teks putih dengan tipografi tebal ala Apple.
+ * Splash Intro — iOS Liquid Glass 3D Icon "NoteMe."
+ * Squircle glassmorphism icon dengan teks emboss/refraksi,
+ * di atas background deep midnight blue/purple berlapis ambient curved shapes.
  *
  * Sequence:
- *  1. enter  (0ms   - 500ms)  fade in + scale halus
- *  2. press  (500ms - 720ms)  scale 0.95 seolah ditekan + ripple air
- *  3. glass  (720ms - 1700ms) 3D flip 360deg sumbu Y + morph jadi liquid glass
+ *  1. enter  (0ms   - 500ms)   fade in + scale halus
+ *  2. press  (500ms - 720ms)   scale 0.95 seolah ditekan + ripple air
+ *  3. glass  (720ms - 1700ms)  3D flip + intensifikasi glass, sheen sweep
  *  4. zoom   (1700ms - 2500ms) scale up dramatis + fade out ke aplikasi
  */
 export function SplashIntro() {
@@ -41,23 +38,26 @@ export function SplashIntro() {
   if (!show) return null;
 
   return (
-    <div
-      className="splash-root"
-      role="status"
-      aria-label="Memuat NoteMe"
-    >
+    <div className="splash-root" role="status" aria-label="Memuat NoteMe">
+      {/* Background midnight blue/purple + curved ambient layers untuk depth */}
+      <div className="splash-bg">
+        <span className="splash-ambient splash-ambient--a" />
+        <span className="splash-ambient splash-ambient--b" />
+        <span className="splash-ambient splash-ambient--c" />
+      </div>
+
       <div className={`splash-stage stage-${stage}`}>
         {/* Ripple air — hanya aktif di stage "press" */}
         <span className="splash-ripple splash-ripple--a" />
         <span className="splash-ripple splash-ripple--b" />
 
-        {/* Panel Liquid Glass di belakang teks — muncul dari stage "glass" */}
-        <div className="splash-glass-panel">
-          <div className="splash-glass-liquid" />
-          <div className="splash-glass-sheen" />
+        {/* Squircle Glass Container ala iOS Liquid Glass icon */}
+        <div className="splash-icon">
+          <div className="splash-icon-top-highlight" />
+          <div className="splash-icon-liquid" />
+          <div className="splash-icon-sheen" />
+          <h1 className="splash-word">NoteMe.</h1>
         </div>
-
-        <h1 className="splash-word">NoteMe.</h1>
       </div>
     </div>
   );
