@@ -2,15 +2,20 @@ import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 
 export type ClassStatus = "selesai" | "live" | "akan-datang";
 
+export interface LmsLinkItem {
+  label: string; // Contoh: "LMS Parahaan"
+  url: string;   // URL manual yang diinput
+}
+
 export interface ScheduleClass {
   id: string;
   day: ScheduleDayId;
   courseName: string;
-  time: string; // contoh: "08.00 - 09.40"
+  time: string; 
   room: string;
   status: ClassStatus;
-  lmsUrl: string | null;
-  deadline: string | null; // contoh: "Tugas 3 — 12 Sep, 23.59"
+  lmsLinks: LmsLinkItem[]; // Diubah menjadi array untuk banyak link LMS
+  deadline: string | null; 
 }
 
 export const SAMPLE_CLASSES: ScheduleClass[] = [
@@ -21,7 +26,10 @@ export const SAMPLE_CLASSES: ScheduleClass[] = [
     time: "08.00 - 09.40",
     room: "FEB 2.3",
     status: "selesai",
-    lmsUrl: "https://lms.unpad.ac.id",
+    lmsLinks: [
+      { label: "LMS Parahaan", url: "https://lms.unpad.ac.id" },
+      { label: "LMS Astra", url: "https://lms.unpad.ac.id" }
+    ],
     deadline: null,
   },
   {
@@ -31,7 +39,9 @@ export const SAMPLE_CLASSES: ScheduleClass[] = [
     time: "10.00 - 11.40",
     room: "Zoom Meeting",
     status: "live",
-    lmsUrl: "https://lms.unpad.ac.id",
+    lmsLinks: [
+      { label: "LMS Statistika", url: "https://lms.unpad.ac.id" }
+    ],
     deadline: "Kuis 2 — hari ini, 23.59",
   },
   {
@@ -41,7 +51,9 @@ export const SAMPLE_CLASSES: ScheduleClass[] = [
     time: "13.00 - 15.30",
     room: "FEB 1.1",
     status: "akan-datang",
-    lmsUrl: "https://lms.unpad.ac.id",
+    lmsLinks: [
+      { label: "LMS UX", url: "https://lms.unpad.ac.id" }
+    ],
     deadline: "Laporan Riset — 15 Sep, 23.59",
   },
 ];
