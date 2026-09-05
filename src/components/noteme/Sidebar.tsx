@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CheckSquare, NotebookText, Trash2, User } from "lucide-react";
+import { CalendarDays, CheckSquare, NotebookText, Trash2, User } from "lucide-react";
 
 const items = [
   { to: "/", label: "Notes", icon: NotebookText },
   { to: "/todo", label: "To Do List", icon: CheckSquare },
+  { to: "/schedule", label: "Jadwal", icon: CalendarDays },
 ] as const;
 
 /** Sidebar persisten desktop (md+). Di HP, navigasi tetap lewat BottomNav. */
