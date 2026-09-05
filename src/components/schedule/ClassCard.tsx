@@ -1,24 +1,25 @@
-import { CalendarClock, Clock, ExternalLink, MapPin, Radio } from "lucide-react";
-import type { ClassStatus, ScheduleClass } from "@/components/schedule/scheduleData";
+import { CalendarClock, Clock, ExternalLink, MapPin, Radio, Laptop, School, Trash2 } from "lucide-react";
+import type { ScheduleClass } from "@/components/schedule/scheduleData";
 
-const STATUS_LABEL: Record<ClassStatus, string> = {
-  selesai: "Selesai",
-  live: "Live Class",
-  "akan-datang": "Akan Datang",
+const STATUS_CONFIG = {
+  ongoing: { label: "Ongoing", class: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" },
+  done: { label: "Done", class: "bg-slate-500/15 text-slate-400" },
+  upcoming: { label: "Upcoming", class: "bg-blue-500/15 text-blue-400" },
 };
 
-const STATUS_CLASS: Record<ClassStatus, string> = {
-  selesai: "bg-input text-muted-foreground",
-  live: "bg-destructive/15 text-destructive",
-  "akan-datang": "bg-primary/15 text-primary",
-};
-
-export function ClassCard({ item }: { item: ScheduleClass }) {
+export function ClassCard({ 
+  item, 
+  onDelete 
+}: { 
+  item: ScheduleClass; 
+  onDelete: (id: string) => void;
+}) {
   return (
-    <div className="glass-card rounded-3xl p-4">
+    <div className="glass-card relative rounded-3xl p-4 transition-all">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold">{item.courseName}</p>
+          
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="size-3.5" />
@@ -28,15 +29,43 @@ export function ClassCard({ item }: { item: ScheduleClass }) {
               <MapPin className="size-3.5" />
               {item.room}
             </span>
+            {/* Status di sebelah kanan lokasi */}
+            <span className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${STATUS_CONFIG[item.status].class}`}>
+              {STATUS_CONFIG[item.status].label}
+            </span>
           </div>
         </div>
 
-        <span
-          className={`flex-none rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_CLASS[item.status]}`}
-        >
-          {item.status === "live" && <Radio className="mr-1 inline size-3 animate-pulse" />}
-          {STATUS_LABEL[item.status]}
-        </span>
+        {/* Badge Tipe Kelas (Pojok Kanan Atas) */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              item.classType === "online" 
+                ? "bg-rose-500/15 text-rose-400" 
+                : "bg-indigo-500/15 text-indigo-400"
+            }`}
+          >
+            {item.classType === "online" ? (
+              <>
+                <Radio className="size-3 animate-pulse text-rose-400" />
+                Online Class
+              </>
+            ) : (
+              <>
+                <School className="size-3" />
+                Offline Class
+              </>
+            )}
+          </span>
+
+          <button
+            onClick={() => onDelete(item.id)}
+            className="text-muted-foreground hover:text-destructive p-1 rounded-lg"
+            title="Hapus Jadwal"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       </div>
 
       {item.deadline && (
@@ -46,7 +75,6 @@ export function ClassCard({ item }: { item: ScheduleClass }) {
         </div>
       )}
 
-      {/* Render Banyak Tombol LMS secara Dinamis */}
       {item.lmsLinks && item.lmsLinks.map((lms, idx) => (
         <a
           key={idx}
