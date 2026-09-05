@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
 import { Sidebar } from "@/components/noteme/Sidebar";
