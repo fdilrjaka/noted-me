@@ -126,7 +126,7 @@ export function Dashboard() {
       <div className="mx-auto w-full max-w-5xl px-4">
       <header className="flex items-center justify-between gap-3 py-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">NoteMe</h1>
+          <BrandMark className="text-2xl" />
           <div className="mt-0.5">
             <SyncStatus />
           </div>
