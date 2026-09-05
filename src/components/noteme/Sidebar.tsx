@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, CheckSquare, NotebookText, Trash2, User } from "lucide-react";
+import { BrandMark } from "@/components/noteme/BrandMark";
 
 const items = [
   { to: "/", label: "Notes", icon: NotebookText },
