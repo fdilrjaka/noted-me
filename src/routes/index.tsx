@@ -256,9 +256,10 @@ export function Dashboard() {
             {!selectMode && (
               <button
                 onClick={() => setAdding(true)}
-                className="press flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+                aria-label="Tambah mata kuliah"
+                className="press glass-fab flex size-11 items-center justify-center rounded-full text-foreground/95 active:scale-90"
               >
-                <Plus className="size-4" /> Tambah
+                <Plus className="glass-fab-icon size-5" strokeWidth={2.25} />
               </button>
             )}
           </div>
