@@ -17,7 +17,7 @@ export function DayTabs({
   onChange: (day: ScheduleDayId) => void;
 }) {
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+    <div className="-mx-4 flex min-w-0 flex-1 gap-2 overflow-x-auto px-4 pb-1">
       {SCHEDULE_DAYS.map((day) => (
         <button
           key={day.id}
