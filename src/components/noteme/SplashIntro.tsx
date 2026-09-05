@@ -1,32 +1,20 @@
 import { useEffect, useState } from "react";
 
-const KEY = "noteme.splash.v1";
 const DURATION = 3000;
 
 /**
  * Intro splash 3 detik: logo squircle + wordmark "NoteMe" iOS 26, lalu fade out.
- * Tampil sekali per sesi browser (sessionStorage) saat membuka aplikasi.
+ * Tampil setiap kali halaman web di-reload.
  */
 export function SplashIntro() {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true); // Langsung set true agar selalu muncul saat reload
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      if (window.sessionStorage.getItem(KEY)) return;
-    } catch {
-      /* ignore */
-    }
-    setShow(true);
-    try {
-      window.sessionStorage.setItem(KEY, "1");
-    } catch {
-      /* ignore */
-    }
-
+    // Jalankan timer animasi keluar dan menghilang
     const leave = window.setTimeout(() => setLeaving(true), DURATION - 550);
     const gone = window.setTimeout(() => setShow(false), DURATION);
+
     return () => {
       window.clearTimeout(leave);
       window.clearTimeout(gone);
@@ -75,11 +63,9 @@ export function SplashIntro() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            {/* Halaman Catatan */}
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
             <path d="M8 7h6" />
             <path d="M8 11h8" />
-            {/* Aksen Pensil */}
             <path d="M18 21l3-3-9-9-3 3 9 9z" className="text-indigo-300" />
           </svg>
         </div>
