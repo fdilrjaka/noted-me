@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Splash Intro — iOS Liquid Glass 3D Icon "NoteMe."
-   Squircle glassmorphism + teks emboss di atas background midnight depth.
+   Splash Intro — iOS 26 Ultra-Realistic Liquid Glass
    ========================================================================== */
 
 .splash-root {
@@ -9,274 +8,143 @@
   z-index: 999;
   display: grid;
   place-items: center;
+  background: #060814;
   overflow: hidden;
-  background: #05060f;
 }
 
-/* ------------------------------------------------------------------------
-   Background — deep midnight blue/purple + curved ambient layers (depth)
-   ------------------------------------------------------------------------ */
-.splash-bg {
+/* Layer Ambient Background Bergelombang */
+.splash-ambient-bg {
   position: absolute;
   inset: 0;
-  z-index: 0;
-  background:
-    radial-gradient(120% 90% at 50% -10%, rgba(60, 50, 120, 0.55), transparent 60%),
-    linear-gradient(165deg, #05060f 0%, #0a0e2a 45%, #150b30 78%, #05040a 100%);
+  pointer-events: none;
 }
 
-.splash-ambient {
+.ambient-layer-1 {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.55;
-  will-change: transform;
+  top: -10%;
+  left: -20%;
+  width: 140%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, #1e3a8a 0%, #0f172a 60%, transparent 100%);
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  transform: rotate(-12deg);
 }
 
-.splash-ambient--a {
-  width: 42vmax;
-  height: 42vmax;
-  top: -12%;
-  left: -10%;
-  background: radial-gradient(circle, rgba(80, 130, 255, 0.45), transparent 70%);
-  animation: splash-drift-a 9s ease-in-out infinite;
+.ambient-layer-2 {
+  position: absolute;
+  bottom: -20%;
+  right: -10%;
+  width: 90%;
+  height: 90%;
+  background: radial-gradient(circle at 70% 70%, #581c87 0%, #3b0764 50%, transparent 100%);
+  border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%;
+  transform: rotate(15deg);
+  opacity: 0.85;
 }
 
-.splash-ambient--b {
-  width: 38vmax;
-  height: 38vmax;
-  bottom: -14%;
-  right: -8%;
-  background: radial-gradient(circle, rgba(150, 90, 255, 0.4), transparent 70%);
-  animation: splash-drift-b 11s ease-in-out infinite;
-}
-
-.splash-ambient--c {
-  width: 30vmax;
-  height: 30vmax;
-  top: 35%;
-  left: 55%;
-  background: radial-gradient(circle, rgba(70, 200, 255, 0.28), transparent 70%);
-  animation: splash-drift-c 8s ease-in-out infinite;
-}
-
-@keyframes splash-drift-a {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(4%, 3%) scale(1.08); }
-}
-@keyframes splash-drift-b {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-3%, -4%) scale(1.1); }
-}
-@keyframes splash-drift-c {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-4%, 3%) scale(1.06); }
-}
-
-/* ------------------------------------------------------------------------
-   Wrapper stage — mengontrol enter / press / flip / zoom
-   ------------------------------------------------------------------------ */
+/* Container Squircle Kaca iOS 3D */
 .splash-stage {
   position: relative;
-  z-index: 2;
   display: grid;
   place-items: center;
-  perspective: 1000px;
-  animation: splash-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  width: 170px;
+  height: 170px;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  animation: splash-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes splash-enter {
-  from { opacity: 0; transform: scale(0.82); }
-  to { opacity: 1; transform: scale(1); }
+.splash-squircle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 42px; /* Smooth iOS Squircle */
+  background: linear-gradient(
+    135deg,
+    rgba(165, 243, 252, 0.65) 0%,
+    rgba(56, 189, 248, 0.35) 40%,
+    rgba(59, 130, 246, 0.2) 100%
+  );
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -8px 20px rgba(14, 165, 233, 0.3),
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(56, 189, 248, 0.35);
+  overflow: hidden;
+  transform-style: preserve-3d;
 }
 
-/* Stage 2 — Press: scale 0.95 seolah ditekan */
-.stage-press .splash-icon {
+/* Kilatan Cahaya Diagonal (Sheen) */
+.splash-sheen {
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(
+    115deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 60%
+  );
+  animation: splash-sheen-sweep 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes splash-sheen-sweep {
+  0% { transform: translateX(-100%) translateY(-30%) rotate(15deg); }
+  100% { transform: translateX(100%) translateY(30%) rotate(15deg); }
+}
+
+/* Teks Timbul Refraksi Kaca (Embossed Glass Effect) */
+.splash-text-emboss {
+  position: relative;
+  z-index: 5;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  font-weight: 800;
+  font-size: 2.75rem;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(255, 255, 255, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  transform-style: preserve-3d;
+}
+
+/* Timeline Animation Stages */
+.stage-press .splash-squircle {
   animation: splash-press 0.22s cubic-bezier(0.4, 0, 0.6, 1) both;
 }
 
+.stage-glass .splash-squircle {
+  animation: splash-flip 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.stage-zoom {
+  animation: splash-zoom 0.8s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+/* Keyframes */
+@keyframes splash-enter {
+  from { opacity: 0; transform: scale(0.8) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 @keyframes splash-press {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
+  50% { transform: scale(0.92); }
   100% { transform: scale(1); }
 }
 
-.splash-ripple {
-  position: absolute;
-  z-index: 1;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  border: 1px solid rgba(180, 210, 255, 0.55);
-  opacity: 0;
-  pointer-events: none;
-}
-.stage-press .splash-ripple--a {
-  animation: splash-ripple 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.stage-press .splash-ripple--b {
-  animation: splash-ripple 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
-}
-@keyframes splash-ripple {
-  0% { transform: scale(0.4); opacity: 0.55; border-color: rgba(200, 220, 255, 0.7); }
-  100% { transform: scale(3.2); opacity: 0; border-color: rgba(200, 220, 255, 0); }
+@keyframes splash-flip {
+  0% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.1); }
+  100% { transform: rotateY(360deg) scale(1); }
 }
 
-/* Stage 3 — Glass morph: 3D flip halus + intensifikasi glass */
-.stage-glass .splash-icon {
-  animation: splash-tilt 0.95s cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-@keyframes splash-tilt {
-  0% { transform: rotateY(0deg) rotateX(0deg); }
-  50% { transform: rotateY(180deg) rotateX(6deg); }
-  100% { transform: rotateY(360deg) rotateX(0deg); }
-}
-.stage-glass .splash-icon-sheen {
-  animation: splash-sheen-sweep 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
-}
-.stage-glass .splash-icon {
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.7),
-    inset 0 -18px 30px rgba(140, 190, 255, 0.12),
-    0 30px 70px rgba(90, 110, 255, 0.4),
-    0 10px 40px rgba(160, 90, 255, 0.3);
-}
-
-/* Stage 4 — Zoom in: membesar dramatis + fade out ke aplikasi */
-.stage-zoom {
-  animation: splash-zoom 0.8s cubic-bezier(0.6, 0, 0.85, 0.15) forwards;
-}
 @keyframes splash-zoom {
   0% { transform: scale(1); opacity: 1; filter: blur(0px); }
-  55% { transform: scale(4); opacity: 1; filter: blur(2px); }
-  100% { transform: scale(9); opacity: 0; filter: blur(10px); }
-}
-
-/* ------------------------------------------------------------------------
-   Squircle Glass Container ala iOS Liquid Glass icon
-   ------------------------------------------------------------------------ */
-.splash-icon {
-  position: relative;
-  width: 156px;
-  height: 156px;
-  display: grid;
-  place-items: center;
-  border-radius: 30%;
-  overflow: hidden;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  background: linear-gradient(
-    145deg,
-    rgba(180, 235, 255, 0.35) 0%,
-    rgba(110, 160, 255, 0.22) 45%,
-    rgba(130, 90, 255, 0.2) 100%
-  );
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    inset 0 -16px 26px rgba(140, 190, 255, 0.08),
-    0 22px 55px rgba(90, 110, 255, 0.32),
-    0 8px 30px rgba(160, 90, 255, 0.22);
-  transition: box-shadow 0.4s ease;
-}
-
-/* Highlight arc tipis di tepi atas — kesan cahaya memantul di kaca */
-.splash-icon-top-highlight {
-  position: absolute;
-  top: 0;
-  left: 10%;
-  right: 10%;
-  height: 42%;
-  z-index: 1;
-  border-radius: 50% 50% 60% 60% / 100% 100% 40% 40%;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0) 90%
-  );
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Pendar gradasi cair yang bergerak pelan di dalam kaca */
-.splash-icon-liquid {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(
-    125deg,
-    rgba(120, 200, 255, 0.3),
-    rgba(255, 255, 255, 0.06) 35%,
-    rgba(170, 120, 255, 0.28) 65%,
-    rgba(120, 200, 255, 0.3)
-  );
-  background-size: 240% 240%;
-  animation: splash-liquid-move 6s ease-in-out infinite;
-}
-@keyframes splash-liquid-move {
-  0% { background-position: 0% 30%; }
-  50% { background-position: 100% 70%; }
-  100% { background-position: 0% 30%; }
-}
-
-/* Refraction sheen / shine sweep diagonal */
-.splash-icon-sheen {
-  position: absolute;
-  inset: -30% -100%;
-  z-index: 2;
-  background: linear-gradient(
-    100deg,
-    transparent 42%,
-    rgba(255, 255, 255, 0.65) 50%,
-    transparent 58%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-60%) skewX(-14deg);
-}
-@keyframes splash-sheen-sweep {
-  0% { transform: translateX(-60%) skewX(-14deg); opacity: 0; }
-  12% { opacity: 1; }
-  100% { transform: translateX(60%) skewX(-14deg); opacity: 0; }
-}
-
-/* ------------------------------------------------------------------------
-   Teks "NoteMe." — timbul/emboss di dalam kaca (glass embossing)
-   ------------------------------------------------------------------------ */
-.splash-word {
-  position: relative;
-  z-index: 3;
-  margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter",
-    "Helvetica Neue", Arial, sans-serif;
-  font-weight: 800;
-  font-size: 1.35rem;
-  letter-spacing: -0.01em;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5),
-    0 -1px 1px rgba(10, 15, 40, 0.35),
-    0 2px 6px rgba(10, 15, 40, 0.45);
-  mix-blend-mode: overlay;
-  filter: brightness(1.4) contrast(1.1);
-}
-
-/* ------------------------------------------------------------------------
-   Aksesibilitas — hormati preferensi reduced motion
-   ------------------------------------------------------------------------ */
-@media (prefers-reduced-motion: reduce) {
-  .splash-stage,
-  .splash-icon,
-  .splash-icon-liquid,
-  .splash-icon-sheen,
-  .splash-ripple,
-  .splash-ambient,
-  .stage-zoom {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
+  100% { transform: scale(15); opacity: 0; filter: blur(16px); }
 }
