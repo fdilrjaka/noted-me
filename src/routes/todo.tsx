@@ -21,6 +21,7 @@ import {
   sectionTasks,
   toggleTaskCompleted,
   useTodoData,
+  type TodoData,
   type TodoTask,
 } from "@/lib/noteme/todoStore";
 
