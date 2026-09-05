@@ -1,9 +1,11 @@
+```tsx
 import { useEffect, useState } from "react";
 import "./splash.css";
 
 const TOTAL_DURATION = 3200;
+
 const STAGE_PRESS_MS = 550;
-const STAGE_GLASS_MS = 850;
+const STAGE_GLASS_MS = 900;
 const STAGE_ZOOM_MS = 1950;
 
 type Stage = "enter" | "press" | "glass" | "zoom";
@@ -14,13 +16,26 @@ export function SplashIntro() {
 
   useEffect(() => {
     const timers = [
-      window.setTimeout(() => setStage("press"), STAGE_PRESS_MS),
-      window.setTimeout(() => setStage("glass"), STAGE_GLASS_MS),
-      window.setTimeout(() => setStage("zoom"), STAGE_ZOOM_MS),
-      window.setTimeout(() => setShow(false), TOTAL_DURATION),
+      window.setTimeout(() => {
+        setStage("press");
+      }, STAGE_PRESS_MS),
+
+      window.setTimeout(() => {
+        setStage("glass");
+      }, STAGE_GLASS_MS),
+
+      window.setTimeout(() => {
+        setStage("zoom");
+      }, STAGE_ZOOM_MS),
+
+      window.setTimeout(() => {
+        setShow(false);
+      }, TOTAL_DURATION),
     ];
 
-    return () => timers.forEach(window.clearTimeout);
+    return () => {
+      timers.forEach(window.clearTimeout);
+    };
   }, []);
 
   if (!show) return null;
@@ -31,13 +46,13 @@ export function SplashIntro() {
       role="status"
       aria-label="Memuat NoteMe"
     >
-      <div className="splash-ambient-bg">
+      <div className="splash-ambient-bg" aria-hidden="true">
         <div className="ambient-layer-1" />
         <div className="ambient-layer-2" />
         <div className="ambient-layer-3" />
       </div>
 
-      <div className="splash-vignette" />
+      <div className="splash-vignette" aria-hidden="true" />
 
       <div className="splash-stage">
         <div className="splash-squircle">
@@ -57,3 +72,4 @@ export function SplashIntro() {
 }
 
 export default SplashIntro;
+```
