@@ -196,6 +196,135 @@ function TodoPage() {
   );
 }
 
+function SummaryPanel({ data, className }: { data: TodoData; className?: string }) {
+  const today = startOfDay(new Date());
+
+  // Semua task aktif lintas section untuk ringkasan global.
+  const allTasks = useMemo(
+    () => data.tasks.filter((t) => !t.deleted),
+    [data.tasks],
+  );
+
+  const todayTasks = useMemo(
+    () => allTasks.filter((t) => t.deadline && isToday(new Date(t.deadline.includes("T") ? t.deadline : `${t.deadline}T00:00:00`))),
+    [allTasks],
+  );
+  const todayDone = todayTasks.filter((t) => t.completed).length;
+  const todayPct = todayTasks.length
+    ? Math.round((todayDone / todayTasks.length) * 100)
+    : allTasks.length
+      ? Math.round((allTasks.filter((t) => t.completed).length / allTasks.length) * 100)
+      : 0;
+
+  // Upcoming: belum selesai, ada deadline, belum terlewat (termasuk hari ini).
+  const upcoming = useMemo(() => {
+    return allTasks
+      .filter((t) => !t.completed && t.deadline)
+      .map((t) => ({ t, date: new Date(t.deadline!.includes("T") ? t.deadline! : `${t.deadline!}T00:00:00`) }))
+      .filter(({ date }) => !isBefore(date, date.includes("T") ? new Date() : today) || isToday(date))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 4);
+  }, [allTasks, today]);
+
+  // Priority Focus: task terlewat yang belum selesai.
+  const overdue = useMemo(() => {
+    return allTasks
+      .filter((t) => !t.completed && t.deadline)
+      .map((t) => ({ t, date: new Date(t.deadline!.includes("T") ? t.deadline! : `${t.deadline!}T00:00:00`) }))
+      .filter(({ date }) => isBefore(date, date.includes("T") ? new Date() : today) && !isToday(date))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 4);
+  }, [allTasks, today]);
+
+  const ringPct = todayPct;
+  const ringColor = todayPct >= 75 ? "text-primary" : todayPct >= 40 ? "text-primary" : "text-muted-foreground";
+
+  return (
+    <aside className={`${className ?? ""} sticky top-4 self-start`}>
+      <div className="glass-card flex flex-col gap-4 rounded-3xl p-4">
+        {/* Today's Progress */}
+        <section>
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Check className="size-3.5" /> Today's Progress
+          </h2>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="relative size-14 flex-none">
+              <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.5" className="text-input" />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  className={ringColor}
+                  strokeDasharray={`${(ringPct / 100) * 97.4} 97.4`}
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
+                {todayPct}%
+              </span>
+            </div>
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">
+                {todayTasks.length ? `${todayDone}/${todayTasks.length} hari ini` : "Tanpa deadline hari ini"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {allTasks.filter((t) => t.completed).length}/{allTasks.length} total selesai
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Upcoming Deadlines */}
+        <section>
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <CalendarClock className="size-3.5" /> Upcoming Deadlines
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {upcoming.length === 0 && (
+              <li className="text-xs text-muted-foreground">Tidak ada deadline mendatang.</li>
+            )}
+            {upcoming.map(({ t, date }) => {
+              const lbl = deadlineLabel(t.deadline)!;
+              return (
+                <li key={t.id} className="flex items-center gap-2">
+                  <span className="size-1.5 flex-none rounded-full bg-primary" />
+                  <span className="min-w-0 flex-1 truncate text-xs">{t.title}</span>
+                  <span className="flex-none text-[11px] text-muted-foreground">{lbl.text}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* Priority Focus */}
+        <section>
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <AlertTriangle className="size-3.5 text-destructive" /> Priority Focus
+          </h2>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {overdue.length === 0 && (
+              <li className="text-xs text-muted-foreground">Tidak ada yang terlewat. 🎉</li>
+            )}
+            {overdue.map(({ t }) => {
+              const lbl = deadlineLabel(t.deadline)!;
+              return (
+                <li key={t.id} className="flex items-center gap-2 rounded-lg bg-destructive/10 px-2 py-1">
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-destructive">{t.title}</span>
+                  <span className="flex-none text-[11px] text-destructive">{lbl.text}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
+    </aside>
+  );
+}
+
 function SectionColumn({
   sectionId,
   name,
