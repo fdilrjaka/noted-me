@@ -46,17 +46,19 @@ export function ClassCard({ item }: { item: ScheduleClass }) {
         </div>
       )}
 
-      {item.lmsUrl && (
+      {/* Render Banyak Tombol LMS secara Dinamis */}
+      {item.lmsLinks && item.lmsLinks.map((lms, idx) => (
         <a
-          href={item.lmsUrl}
+          key={idx}
+          href={lms.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="press-sm mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+          className="press-sm mt-3 flex w-full items-center justify-between rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
         >
-          Buka LMS
+          <span>Ke LMS: {lms.label}</span>
           <ExternalLink className="size-3.5" />
         </a>
-      )}
+      ))}
     </div>
   );
 }
