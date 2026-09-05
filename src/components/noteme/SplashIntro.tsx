@@ -25,18 +25,18 @@ export function SplashIntro() {
   if (!show) return null;
 
   return (
-    <div className="splash-root" role="status" aria-label="Memuat NoteMe">
-      {/* Background Layer Bergelombang ala Wallpaper iOS 26 */}
+    <div className={`splash-root stage-${stage}`} role="status" aria-label="Memuat NoteMe">
+      {/* Background Ambient Layer */}
       <div className="splash-ambient-bg">
         <div className="ambient-layer-1" />
         <div className="ambient-layer-2" />
       </div>
 
       {/* Main Squircle Glass Box */}
-      <div className={`splash-stage stage-${stage}`}>
+      <div className="splash-stage">
         <div className="splash-squircle">
           <div className="splash-sheen" />
-          <span className="splash-text-emboss">NoteMe</span>
+          <h1 className="splash-text-emboss">NoteMe.</h1>
         </div>
       </div>
     </div>
