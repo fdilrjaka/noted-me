@@ -6,7 +6,8 @@ import { Sidebar } from "@/components/noteme/Sidebar";
 import { ScheduleHeader } from "@/components/schedule/ScheduleHeader";
 import { DayTabs, SCHEDULE_DAYS, type ScheduleDayId } from "@/components/schedule/DayTabs";
 import { ClassCard } from "@/components/schedule/ClassCard";
-import type { ScheduleClass, ClassType, ClassStatus } from "@/components/schedule/scheduleData";
+import type { ClassType, ClassStatus } from "@/components/schedule/scheduleData";
+import { classesForDay, createClass, deleteClass, loadScheduleLocal, useScheduleData } from "@/lib/noteme/scheduleStore";
 
 export const Route = createFileRoute("/schedule")({
   component: SchedulePage,
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/schedule")({
 
 function SchedulePage() {
   const [activeDay, setActiveDay] = useState<ScheduleDayId>("senin");
-  const [classes, setClasses] = useState<ScheduleClass[]>([]);
+  const scheduleData = useScheduleData();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form States
@@ -27,46 +28,33 @@ function SchedulePage() {
   const [lmsLabel, setLmsLabel] = useState("");
   const [lmsUrl, setLmsUrl] = useState("");
 
-  // Load data dari LocalStorage
   useEffect(() => {
-    const saved = localStorage.getItem("schedule_data");
-    if (saved) {
-      try { setClasses(JSON.parse(saved)); } catch (e) { setClasses([]); }
-    }
+    loadScheduleLocal();
   }, []);
-
-  // Save data ke LocalStorage tiap ada perubahan
-  const saveClasses = (newClasses: ScheduleClass[]) => {
-    setClasses(newClasses);
-    localStorage.setItem("schedule_data", JSON.stringify(newClasses));
-  };
 
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
-    const newClass: ScheduleClass = {
-      id: Date.now().toString(),
-      courseName,
+    createClass({
       day,
+      courseName,
       time,
       room,
       classType,
       status,
       lmsLinks: lmsUrl ? [{ label: lmsLabel || "LMS Mata Kuliah", url: lmsUrl }] : [],
-    };
-
-    saveClasses([...classes, newClass]);
+    });
     setIsModalOpen(false);
     // Reset Form
     setCourseName(""); setTime(""); setRoom(""); setLmsLabel(""); setLmsUrl("");
   };
 
   const handleDelete = (id: string) => {
-    saveClasses(classes.filter((item) => item.id !== id));
+    deleteClass(id);
   };
 
   const filteredClasses = useMemo(
-    () => classes.filter((c) => c.day === activeDay),
-    [classes, activeDay]
+    () => classesForDay(scheduleData, activeDay),
+    [scheduleData, activeDay]
   );
 
   return (
@@ -74,13 +62,14 @@ function SchedulePage() {
       <Sidebar />
       <ScheduleHeader />
 
-      <div className="flex items-center justify-between my-4">
+      <div className="flex items-center justify-between my-4 gap-2">
         <DayTabs active={activeDay} onChange={setActiveDay} />
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-semibold press-sm"
+          aria-label="Tambah Jadwal"
+          className="press glass-fab flex size-10 flex-none items-center justify-center rounded-full text-foreground/95 active:scale-90"
         >
-          <Plus className="size-4" /> Tambah Jadwal
+          <Plus className="glass-fab-icon size-5" strokeWidth={2.25} />
         </button>
       </div>
 
