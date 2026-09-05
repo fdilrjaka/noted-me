@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { AlertTriangle, CalendarClock, Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, Check, ChevronLeft, PieChart, Plus, Trash2, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
 import { Sidebar } from "@/components/noteme/Sidebar";
@@ -80,7 +80,7 @@ function TodoPage() {
   );
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]">
+    <main className="mx-auto min-h-dvh w-full max-w-[100rem] px-4 safe-top safe-bottom-lg md:pl-[16.5rem] xl:pr-80">
       <Sidebar />
       <header className="flex items-center justify-between gap-3 pb-2 pt-4">
         <div className="flex min-w-0 items-center gap-2">
@@ -123,8 +123,8 @@ function TodoPage() {
 
 
 
-      <div className="mt-4 flex gap-4 pb-28">
-        <div className="-mx-4 flex min-w-0 flex-1 snap-x items-start gap-3 overflow-x-auto px-4 pt-3">
+      <div className="mt-4 pb-28">
+        <div className="-mx-4 flex min-w-0 snap-x items-start gap-3 overflow-x-auto px-4 pt-3">
           {sections.map((section) => (
             <SectionColumn
               key={section.id}
@@ -184,9 +184,9 @@ function TodoPage() {
             )}
           </div>
         </div>
-
-        <SummaryPanel data={data} className="hidden w-72 flex-none lg:block" />
       </div>
+
+      <SummaryPanel data={data} />
 
       {editingTask && (
         <TaskEditDialog task={editingTask} onClose={() => setEditingTask(null)} />
@@ -197,7 +197,15 @@ function TodoPage() {
   );
 }
 
-function SummaryPanel({ data, className }: { data: TodoData; className?: string }) {
+const CATEGORY_COLORS: Record<string, string> = {
+  project: "#8b5cf6",
+  "tugas-kuliah": "#38bdf8",
+  organisasi: "#f97316",
+  pribadi: "#22c55e",
+  lainnya: "#f43f5e",
+};
+
+function SummaryPanel({ data }: { data: TodoData }) {
   const today = startOfDay(new Date());
 
   // Semua task aktif lintas section untuk ringkasan global.
@@ -249,9 +257,33 @@ function SummaryPanel({ data, className }: { data: TodoData; className?: string 
   const ringPct = todayPct;
   const ringColor = todayPct >= 75 ? "text-primary" : todayPct >= 40 ? "text-primary" : "text-muted-foreground";
 
+  // Distribusi task (belum selesai) per kategori, buat pie chart.
+  const categoryBreakdown = useMemo(() => {
+    return TODO_CATEGORIES.map((c) => {
+      const sectionIds = new Set(
+        data.sections.filter((s) => s.category_id === c.id && !s.deleted).map((s) => s.id),
+      );
+      const count = allTasks.filter((t) => sectionIds.has(t.section_id)).length;
+      return { ...c, count, color: CATEGORY_COLORS[c.id] ?? "#94a3b8" };
+    }).filter((c) => c.count > 0);
+  }, [allTasks, data.sections]);
+
+  const totalForPie = categoryBreakdown.reduce((n, c) => n + c.count, 0);
+  const pieGradient = useMemo(() => {
+    if (totalForPie === 0) return null;
+    let acc = 0;
+    const stops = categoryBreakdown.map((c) => {
+      const start = (acc / totalForPie) * 360;
+      acc += c.count;
+      const end = (acc / totalForPie) * 360;
+      return `${c.color} ${start}deg ${end}deg`;
+    });
+    return `conic-gradient(${stops.join(", ")})`;
+  }, [categoryBreakdown, totalForPie]);
+
   return (
-    <aside className={`${className ?? ""} sticky top-4 self-start`}>
-      <div className="glass-card flex flex-col gap-4 rounded-3xl p-4">
+    <aside className="fixed inset-y-0 right-0 z-20 hidden w-72 flex-col p-4 safe-top safe-bottom xl:flex">
+      <div className="glass-navigation flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-3xl p-4">
         {/* Today's Progress */}
         <section>
           <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -329,6 +361,39 @@ function SummaryPanel({ data, className }: { data: TodoData; className?: string 
               );
             })}
           </ul>
+        </section>
+
+        {/* Distribusi Kategori — pie chart */}
+        <section className="border-t border-border pt-3.5">
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <PieChart className="size-3.5" /> Distribusi Kategori
+          </h2>
+          {totalForPie === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">Belum ada task aktif.</p>
+          ) : (
+            <div className="mt-3 flex items-center gap-4">
+              <div
+                className="relative size-20 flex-none rounded-full"
+                style={{ background: pieGradient ?? undefined }}
+              >
+                <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-card">
+                  <span className="text-xs font-bold">{totalForPie}</span>
+                </div>
+              </div>
+              <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+                {categoryBreakdown.map((c) => (
+                  <li key={c.id} className="flex items-center gap-1.5 text-xs">
+                    <span
+                      className="size-2 flex-none rounded-full"
+                      style={{ backgroundColor: c.color }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground">{c.label}</span>
+                    <span className="flex-none font-medium">{c.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       </div>
     </aside>
