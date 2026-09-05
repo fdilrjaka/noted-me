@@ -217,25 +217,34 @@ function SummaryPanel({ data, className }: { data: TodoData; className?: string 
       ? Math.round((allTasks.filter((t) => t.completed).length / allTasks.length) * 100)
       : 0;
 
-  // Upcoming: belum selesai, ada deadline, belum terlewat (termasuk hari ini).
+  // Deadline {date, hasTime} untuk semua task punya-deadline.
+  const withDeadlines = useMemo(
+    () =>
+      allTasks
+        .filter((t) => t.deadline)
+        .map((t) => {
+          const dl = t.deadline!;
+          const hasTime = dl.includes("T");
+          return { t, date: new Date(hasTime ? dl : `${dl}T00:00:00`), hasTime };
+        }),
+    [allTasks],
+  );
+
+  // Upcoming: belum selesai, belum terlewat (termasuk hari ini).
   const upcoming = useMemo(() => {
-    return allTasks
-      .filter((t) => !t.completed && t.deadline)
-      .map((t) => ({ t, date: new Date(t.deadline!.includes("T") ? t.deadline! : `${t.deadline!}T00:00:00`) }))
-      .filter(({ date }) => !isBefore(date, date.includes("T") ? new Date() : today) || isToday(date))
+    return withDeadlines
+      .filter(({ t, date, hasTime }) => !t.completed && (!isBefore(date, hasTime ? new Date() : today) || isToday(date)))
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .slice(0, 4);
-  }, [allTasks, today]);
+  }, [withDeadlines, today]);
 
   // Priority Focus: task terlewat yang belum selesai.
   const overdue = useMemo(() => {
-    return allTasks
-      .filter((t) => !t.completed && t.deadline)
-      .map((t) => ({ t, date: new Date(t.deadline!.includes("T") ? t.deadline! : `${t.deadline!}T00:00:00`) }))
-      .filter(({ date }) => isBefore(date, date.includes("T") ? new Date() : today) && !isToday(date))
+    return withDeadlines
+      .filter(({ t, date, hasTime }) => !t.completed && isBefore(date, hasTime ? new Date() : today) && !isToday(date))
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .slice(0, 4);
-  }, [allTasks, today]);
+  }, [withDeadlines, today]);
 
   const ringPct = todayPct;
   const ringColor = todayPct >= 75 ? "text-primary" : todayPct >= 40 ? "text-primary" : "text-muted-foreground";
