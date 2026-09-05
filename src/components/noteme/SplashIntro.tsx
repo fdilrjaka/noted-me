@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import "./splash.css";
 
-const TOTAL_DURATION = 3200;
-
-const STAGE_PRESS_MS = 550;
-const STAGE_GLASS_MS = 900;
-const STAGE_ZOOM_MS = 1950;
+const TOTAL_DURATION = 3800;
+const STAGE_PRESS_MS = 500;
+const STAGE_GLASS_MS = 1150;
+const STAGE_ZOOM_MS = 2350;
 
 type Stage = "enter" | "press" | "glass" | "zoom";
 
@@ -18,15 +17,12 @@ export function SplashIntro() {
       window.setTimeout(() => {
         setStage("press");
       }, STAGE_PRESS_MS),
-
       window.setTimeout(() => {
         setStage("glass");
       }, STAGE_GLASS_MS),
-
       window.setTimeout(() => {
         setStage("zoom");
       }, STAGE_ZOOM_MS),
-
       window.setTimeout(() => {
         setShow(false);
       }, TOTAL_DURATION),
@@ -61,10 +57,7 @@ export function SplashIntro() {
           <div className="glass-sheen" />
           <div className="glass-ripple" />
           <div className="glass-noise" />
-
-          <h1 className="splash-text-emboss">
-            NoteMe.
-          </h1>
+          <h1 className="splash-text-emboss">NoteMe.</h1>
         </div>
       </div>
     </div>
