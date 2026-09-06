@@ -349,7 +349,7 @@ export function Dashboard() {
                 onClick={() =>
                   selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
                 }
-                className={`press glass-card spring-in group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-2xl p-3 sm:aspect-auto sm:rounded-3xl sm:p-4 ${
+                className={`press glass-card spring-in group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-2xl p-3 sm:aspect-[4/3] sm:rounded-3xl sm:p-4 ${
                   isSelected ? "ring-2 ring-destructive" : ""
                 }`}
               >
@@ -364,9 +364,11 @@ export function Dashboard() {
                     {isSelected && <Check className="size-3 sm:size-3.5" />}
                   </div>
                 )}
-                <NotebookText className="size-3.5 flex-none text-muted-foreground sm:size-4.5" />
-                <p className="mt-1.5 line-clamp-2 text-sm font-semibold sm:mt-2 sm:text-lg">{subject.name}</p>
-                <p className="text-xs text-muted-foreground sm:text-sm">{pages.length} pertemuan</p>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <NotebookText className="size-3.5 flex-none text-muted-foreground sm:size-4.5" />
+                  <p className="line-clamp-2 text-sm font-semibold sm:text-lg">{subject.name}</p>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground sm:mt-2 sm:text-sm">{pages.length} pertemuan</p>
                 <div className="mt-auto pt-1.5 text-[10px] text-muted-foreground sm:pt-2 sm:text-xs">
                   <span className="hidden sm:inline">Last modified: </span>
                   <span className="sm:hidden">Diubah: </span>
