@@ -130,24 +130,32 @@ export function Dashboard() {
   };
 
   const handleCardPointerDown = (e: ReactPointerEvent, subjectId: string) => {
-    if (selectMode || e.button === 2) return;
+    if (e.button === 2) return;
     // Pointer capture memastikan pointermove/pointerup TETAP terkirim ke card
     // ini walau jari/kursor sudah bergerak ke atas elemen lain (mis. folder).
     // Tanpa ini, event lepas jari bisa "nyasar" ke elemen di bawahnya dan
     // drag jadi tidak pernah selesai (ghost mengambang terus).
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Saat selectMode aktif, tap hanya untuk toggle pilihan — tidak perlu
+    // drag/long-press ke folder, jadi timer-nya dilewati saja (timer: null).
+    // Sebelumnya fungsi ini return lebih awal saat selectMode, sehingga
+    // dragStateRef.current tidak pernah terisi dan pointerUp (yang butuh
+    // state ini) tidak pernah men-toggle seleksi — itu sebabnya card tidak
+    // bisa dipencet saat mode pilih aktif.
     dragStateRef.current = {
       id: subjectId,
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
-      timer: window.setTimeout(() => {
-        if (!dragStateRef.current || dragStateRef.current.id !== subjectId) return;
-        dragStateRef.current.longPressed = true;
-        setDraggingId(subjectId);
-        setDragPos({ x: dragStateRef.current.startX, y: dragStateRef.current.startY });
-        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
-      }, LONG_PRESS_MS),
+      timer: selectMode
+        ? null
+        : window.setTimeout(() => {
+            if (!dragStateRef.current || dragStateRef.current.id !== subjectId) return;
+            dragStateRef.current.longPressed = true;
+            setDraggingId(subjectId);
+            setDragPos({ x: dragStateRef.current.startX, y: dragStateRef.current.startY });
+            if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
+          }, LONG_PRESS_MS),
       longPressed: false,
       hoverFolderId: null,
     };
