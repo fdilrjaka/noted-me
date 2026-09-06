@@ -4,14 +4,17 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
+  CalendarClock,
   Check,
   Download,
   FileText,
   Folder as FolderIcon,
+  ListTodo,
   NotebookPen,
   Palette,
   Plus,
   Search,
+  Settings,
   Trash2,
   X,
 } from "lucide-react";
@@ -40,6 +43,9 @@ import {
   subjectPages,
   useData,
 } from "@/lib/noteme/store";
+import { useTodoData } from "@/lib/noteme/todoStore";
+import { useScheduleData } from "@/lib/noteme/scheduleStore";
+import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -93,6 +99,9 @@ export function Dashboard() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const todoData = useTodoData();
+  const scheduleData = useScheduleData();
   const [importBusy, setImportBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -124,6 +133,66 @@ export function Dashboard() {
     () => folders.find((f) => f.id === openFolderId) ?? null,
     [folders, openFolderId],
   );
+
+  const searchHits = useMemo(() => search(data, query), [data, query]);
+
+  const notifications = useMemo(() => {
+    const now = new Date();
+    const soonCutoff = new Date(now);
+    soonCutoff.setDate(soonCutoff.getDate() + 2);
+    soonCutoff.setHours(23, 59, 59, 999);
+
+    type Notif = {
+      id: string;
+      title: string;
+      subtitle: string;
+      overdue: boolean;
+      onClick: () => void;
+    };
+    const items: Notif[] = [];
+
+    todoData.tasks
+      .filter((t) => !t.deleted && !t.completed && t.deadline)
+      .forEach((t) => {
+        const due = new Date(t.deadline as string);
+        if (Number.isNaN(due.getTime()) || due > soonCutoff) return;
+        const overdue = due < now;
+        items.push({
+          id: `todo-${t.id}`,
+          title: t.title || "Tugas tanpa judul",
+          subtitle: overdue
+            ? `Terlewat • ${due.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`
+            : `Tenggat • ${due.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`,
+          overdue,
+          onClick: () => void navigate({ to: "/todo" }),
+        });
+      });
+
+    const jsDayToId: Record<number, ScheduleDayId | undefined> = {
+      1: "senin",
+      2: "selasa",
+      3: "rabu",
+      4: "kamis",
+      5: "jumat",
+    };
+    const todayId = jsDayToId[now.getDay()];
+    if (todayId) {
+      scheduleData.classes
+        .filter((c) => !c.deleted && c.day === todayId && c.status !== "done")
+        .forEach((c) => {
+          items.push({
+            id: `schedule-${c.id}`,
+            title: c.courseName || "Kelas",
+            subtitle: `Hari ini • ${c.time}`,
+            overdue: false,
+            onClick: () => void navigate({ to: "/schedule" }),
+          });
+        });
+    }
+
+    items.sort((a, b) => Number(b.overdue) - Number(a.overdue));
+    return items;
+  }, [todoData, scheduleData, navigate]);
 
   const clearDragTimer = () => {
     if (dragStateRef.current?.timer) window.clearTimeout(dragStateRef.current.timer);
@@ -376,18 +445,78 @@ export function Dashboard() {
                   </button>
                 )}
                 <button
-                  aria-label="Cari"
+                  onClick={() => setColorPickerOpen((v) => !v)}
+                  aria-label="Pengaturan"
                   className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
                 >
-                  <Search className="size-4" />
+                  <Settings className="size-4" />
                 </button>
-                <button
-                  aria-label="Notifikasi"
-                  className="press glass-floating relative flex size-10 items-center justify-center rounded-full active:scale-90"
-                >
-                  <Bell className="size-4" />
-                  <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setNotifOpen((v) => !v)}
+                    aria-label="Notifikasi"
+                    className="press glass-floating relative flex size-10 items-center justify-center rounded-full active:scale-90"
+                  >
+                    <Bell className="size-4" />
+                    {notifications.length > 0 && (
+                      <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                  {notifOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
+                      <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-2xl p-2">
+                        <p className="px-2 py-1.5 text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                          Notifikasi
+                        </p>
+                        {notifications.length === 0 ? (
+                          <p className="px-2 py-3 text-sm text-muted-foreground">
+                            Tidak ada tenggat atau jadwal dekat.
+                          </p>
+                        ) : (
+                          <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+                            {notifications.map((n) => (
+                              <button
+                                key={n.id}
+                                onClick={() => {
+                                  n.onClick();
+                                  setNotifOpen(false);
+                                }}
+                                className="press-sm flex items-start gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-white/5"
+                              >
+                                <span
+                                  className={`mt-0.5 flex size-7 flex-none items-center justify-center rounded-full ${
+                                    n.id.startsWith("todo-")
+                                      ? "bg-primary/15 text-primary"
+                                      : "bg-blue-500/15 text-blue-400"
+                                  }`}
+                                >
+                                  {n.id.startsWith("todo-") ? (
+                                    <ListTodo className="size-3.5" />
+                                  ) : (
+                                    <CalendarClock className="size-3.5" />
+                                  )}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-medium">
+                                    {n.title}
+                                  </span>
+                                  <span
+                                    className={`block text-xs ${
+                                      n.overdue ? "text-destructive" : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {n.subtitle}
+                                  </span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <Link
                   to="/auth"
                   aria-label="Akun"
@@ -431,6 +560,45 @@ export function Dashboard() {
             )}
           </div>
 
+          {query.trim() && (
+            <section className="mt-4">
+              <h2 className="mb-3 text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                Hasil pencarian
+              </h2>
+              {searchHits.length === 0 ? (
+                <div className="glass-card rounded-2xl px-4 py-6 text-center text-sm text-muted-foreground">
+                  Tidak ada catatan yang cocok dengan &ldquo;{query}&rdquo;.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {searchHits.map((hit) => (
+                    <button
+                      key={hit.page.id}
+                      onClick={() => {
+                        setQuery("");
+                        openSubject(hit.page.subject_id, hit.page.id);
+                      }}
+                      className="press glass-card flex w-full flex-col items-start gap-1 rounded-2xl px-4 py-3 text-left active:scale-[0.99]"
+                    >
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{hit.page.title || "Tanpa judul"}</span>
+                        {hit.subject && (
+                          <span className="flex-none truncate rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-muted-foreground">
+                            {hit.subject.name}
+                          </span>
+                        )}
+                      </div>
+                      {hit.snippet && (
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{hit.snippet}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {!query.trim() && (
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
@@ -702,6 +870,7 @@ export function Dashboard() {
               })}
             </div>
           </section>
+          )}
 
           {selectMode && selected.size > 0 && (
             <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)]">
