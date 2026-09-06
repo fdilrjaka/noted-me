@@ -48,7 +48,7 @@ import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NoteMe — Catatan Mata Kuliah" },
+      { title: "NoteMe" },
       {
         name: "description",
         content:
