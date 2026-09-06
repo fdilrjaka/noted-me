@@ -53,6 +53,16 @@ function migrateLegacyIds(data: ScheduleData): ScheduleData {
   return next;
 }
 
+let running: Promise<void> | null = null;
+
+export function syncScheduleNow(userId: string, opts?: { full?: boolean }): Promise<void> {
+  if (running) return running;
+  running = syncScheduleWithSupabase(userId, opts?.full ?? false).finally(() => {
+    running = null;
+  });
+  return running;
+}
+
 export async function syncScheduleWithSupabase(userId: string, full = false) {
   const before = migrateLegacyIds(getScheduleData());
   const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
