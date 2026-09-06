@@ -1,21 +1,20 @@
-import type { ScheduleDayId } from "@/components/schedule/DayTabs";
-
 export type ClassType = "online" | "offline";
-export type ClassStatus = "ongoing" | "done" | "upcoming";
+export type ClassStatus = "upcoming" | "ongoing" | "done";
 
-export interface LmsLinkItem {
+export interface LmsLink {
   label: string;
   url: string;
 }
 
 export interface ScheduleClass {
   id: string;
-  day: ScheduleDayId;
+  day: string;
   courseName: string;
   time: string;
   room: string;
   classType: ClassType;
   status: ClassStatus;
-  lmsLinks: LmsLinkItem[];
-  deadline?: string | null;
+  lecturer?: string; // Menambahkan field Dosen
+  deadline?: string;
+  lmsLinks?: LmsLink[];
 }
