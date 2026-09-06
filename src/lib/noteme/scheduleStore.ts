@@ -97,6 +97,10 @@ export function classesForDay(d: ScheduleData, day: ScheduleDayId) {
   return d.classes.filter((c) => c.day === day && !c.deleted).sort((a, b) => a.position - b.position);
 }
 
+export function dirtyScheduleCount(d: ScheduleData): number {
+  return d.classes.filter((c) => c.dirty).length;
+}
+
 export function createClass(input: {
   day: ScheduleDayId;
   courseName: string;
