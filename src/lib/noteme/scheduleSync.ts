@@ -3,14 +3,13 @@ import { getScheduleData, setScheduleData, type ScheduleClassRow, type ScheduleD
 
 type Row = Record<string, unknown>;
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 function classRow(c: ScheduleClassRow, userId: string): Row {
   return {
     id: c.id,
     user_id: userId,
     day: c.day,
     course_name: c.courseName,
+    lecturer: c.lecturer,
     time: c.time,
     room: c.room,
     class_type: c.classType,
@@ -28,6 +27,7 @@ function buildClass(row: Row): ScheduleClassRow {
     id: String(row["id"]),
     day: String(row["day"]) as ScheduleClassRow["day"],
     courseName: String(row["course_name"] ?? ""),
+    lecturer: String(row["lecturer"] ?? "Dr. Andi Wijaya"),
     time: String(row["time"] ?? ""),
     room: String(row["room"] ?? ""),
     classType: (row["class_type"] as ScheduleClassRow["classType"]) ?? "online",
@@ -36,42 +36,13 @@ function buildClass(row: Row): ScheduleClassRow {
     deadline: row["deadline"] == null ? null : String(row["deadline"]),
     position: Number(row["position"] ?? 0),
     deleted: Boolean(row["deleted"]),
-    updated_at: new Date(String(row["updated_at"])).toISOString(),
+    updated_at: String(row["updated_at"] ?? new Date().toISOString()),
     dirty: false,
   };
 }
 
-// Last-write-wins per baris, sama seperti todo: field jadwal pendek &
-// terstruktur, gak butuh dialog konflik kayak isi catatan panjang.
-function mergeRemote(local: ScheduleClassRow[], remote: Array<Record<string, unknown>>): ScheduleClassRow[] {
-  const byId = new Map(local.map((item) => [item.id, item]));
-  for (const row of remote) {
-    const incoming = buildClass(row);
-    const existing = byId.get(incoming.id);
-    if (!existing) {
-      byId.set(incoming.id, incoming);
-      continue;
-    }
-    if (existing.dirty && existing.updated_at >= incoming.updated_at) continue;
-    byId.set(incoming.id, incoming);
-  }
-  return [...byId.values()];
-}
-
-let running: Promise<void> | null = null;
-
-export function syncScheduleNow(userId: string, opts?: { full?: boolean }): Promise<void> {
-  if (running) return running;
-  running = doSync(userId, opts?.full ?? false).finally(() => {
-    running = null;
-  });
-  return running;
-}
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Jadwal lama mungkin menyimpan id numerik (Date.now) yang ditolak kolom uuid.
-// Ganti dengan UUID baru dan tandai dirty supaya ter-upload ulang.
 function migrateLegacyIds(data: ScheduleData): ScheduleData {
   if (!data.classes.some((c) => !UUID_RE.test(c.id))) return data;
   const classes = data.classes.map((c) =>
@@ -82,7 +53,7 @@ function migrateLegacyIds(data: ScheduleData): ScheduleData {
   return next;
 }
 
-async function doSync(userId: string, full: boolean) {
+export async function syncScheduleWithSupabase(userId: string, full = false) {
   const before = migrateLegacyIds(getScheduleData());
   const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
 
@@ -101,15 +72,18 @@ async function doSync(userId: string, full: boolean) {
     if (upsertError) throw upsertError;
   }
 
-  const pushed = new Map(dirtyClasses.map((c) => [c.id, c.updated_at]));
+  const localMap = new Map(before.classes.map((c) => [c.id, c]));
 
-  const current = getScheduleData();
-  const classes = current.classes.map((c) => (pushed.get(c.id) === c.updated_at ? { ...c, dirty: false } : c));
+  if (remoteRows) {
+    for (const r of remoteRows) {
+      const incoming = buildClass(r as Row);
+      const existing = localMap.get(incoming.id);
+      if (!existing || new Date(incoming.updated_at) > new Date(existing.updated_at)) {
+        localMap.set(incoming.id, incoming);
+      }
+    }
+  }
 
-  const next: ScheduleData = {
-    classes: mergeRemote(classes, remoteRows ?? []),
-    lastPull: new Date(Date.now() - 5000).toISOString(),
-  };
-
-  setScheduleData(next);
+  const nextClasses = Array.from(localMap.values()).map((c) => ({ ...c, dirty: false }));
+  setScheduleData({ classes: nextClasses, lastPull: new Date().toISOString() });
 }
