@@ -5,6 +5,7 @@ import {
   BookOpen,
   Check,
   Download,
+  NotebookText,
   Pin,
   PinOff,
   Plus,
@@ -46,6 +47,18 @@ export const Route = createFileRoute("/")({
   }),
   component: Dashboard,
 });
+
+const lastModifiedFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+function formatLastModified(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return lastModifiedFormatter.format(d);
+}
 
 export function Dashboard() {
   const data = useData();
@@ -322,33 +335,43 @@ export function Dashboard() {
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => {
             const pages = subjectPages(data, subject.id);
             const isSelected = selected.has(subject.id);
+            const lastModifiedIso = pages.reduce(
+              (latest, p) => (p.updated_at > latest ? p.updated_at : latest),
+              subject.updated_at,
+            );
             return (
               <div
                 key={subject.id}
                 onClick={() =>
                   selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
                 }
-                className={`press glass-card spring-in group relative flex cursor-pointer flex-col overflow-hidden rounded-3xl p-4 ${
+                className={`press glass-card spring-in group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-2xl p-3 sm:rounded-3xl sm:p-4 ${
                   isSelected ? "ring-2 ring-destructive" : ""
                 }`}
               >
                 {selectMode && (
                   <div
-                    className={`absolute right-3 top-3 flex size-6 items-center justify-center rounded-full border-2 ${
+                    className={`absolute right-2 top-2 flex size-5 items-center justify-center rounded-full border-2 sm:right-3 sm:top-3 sm:size-6 ${
                       isSelected
                         ? "border-destructive bg-destructive text-destructive-foreground"
                         : "border-border bg-background/50"
                     }`}
                   >
-                    {isSelected && <Check className="size-3.5" />}
+                    {isSelected && <Check className="size-3 sm:size-3.5" />}
                   </div>
                 )}
-                <p className="text-lg font-semibold">{subject.name}</p>
-                <p className="text-sm text-muted-foreground">{pages.length} pertemuan</p>
+                <NotebookText className="size-3.5 flex-none text-muted-foreground sm:size-4.5" />
+                <p className="mt-1.5 line-clamp-2 text-sm font-semibold sm:mt-2 sm:text-lg">{subject.name}</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">{pages.length} pertemuan</p>
+                <div className="mt-auto pt-1.5 text-[10px] text-muted-foreground sm:pt-2 sm:text-xs">
+                  <span className="hidden sm:inline">Last modified: </span>
+                  <span className="sm:hidden">Diubah: </span>
+                  <span className="font-medium">{formatLastModified(lastModifiedIso)}</span>
+                </div>
               </div>
             );
           })}
