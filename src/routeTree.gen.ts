@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TodoRouteImport } from './routes/todo'
 import { Route as TrashRouteImport } from './routes/trash'
 import { Route as SubjectSubjectIdRouteImport } from './routes/subject.$subjectId'
@@ -37,6 +38,11 @@ const ScheduleRoute = ScheduleRouteImport.update({
   path: '/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TodoRoute = TodoRouteImport.update({
   id: '/todo',
   path: '/todo',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/explore': typeof ExploreRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
   '/todo': typeof TodoRoute
   '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/explore': typeof ExploreRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
   '/todo': typeof TodoRoute
   '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/explore': typeof ExploreRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
   '/todo': typeof TodoRoute
   '/trash': typeof TrashRoute
   '/subject/$subjectId': typeof SubjectSubjectIdRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/explore'
     | '/schedule'
+    | '/settings'
     | '/todo'
     | '/trash'
     | '/subject/$subjectId'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/explore'
     | '/schedule'
+    | '/settings'
     | '/todo'
     | '/trash'
     | '/subject/$subjectId'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/explore'
     | '/schedule'
+    | '/settings'
     | '/todo'
     | '/trash'
     | '/subject/$subjectId'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ExploreRoute: typeof ExploreRoute
   ScheduleRoute: typeof ScheduleRoute
+  SettingsRoute: typeof SettingsRoute
   TodoRoute: typeof TodoRoute
   TrashRoute: typeof TrashRoute
   SubjectSubjectIdRoute: typeof SubjectSubjectIdRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/todo': {
       id: '/todo'
       path: '/todo'
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ExploreRoute: ExploreRoute,
   ScheduleRoute: ScheduleRoute,
+  SettingsRoute: SettingsRoute,
   TodoRoute: TodoRoute,
   TrashRoute: TrashRoute,
   SubjectSubjectIdRoute: SubjectSubjectIdRoute,
