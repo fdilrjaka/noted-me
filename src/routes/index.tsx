@@ -319,11 +319,20 @@ export function Dashboard() {
                       onClick={() => setActionHubOpen((v) => !v)}
                       aria-label="Tambah baru"
                       aria-expanded={actionHubOpen}
-                      className={`press glass-floating flex size-9 items-center justify-center rounded-full text-foreground active:scale-90 ${
-                        actionHubOpen ? "rotate-45" : ""
-                      } transition-transform duration-300`}
+                      className={`press glass-floating relative flex size-9 items-center justify-center overflow-hidden rounded-full text-foreground active:scale-90 ${
+                        actionHubOpen ? "bg-white/10" : ""
+                      }`}
+                      style={{ transition: "background-color 0.3s var(--ease-ios)" }}
                     >
-                      <Plus className="size-5" />
+                      <Plus
+                        className="size-5"
+                        style={{
+                          transform: actionHubOpen
+                            ? "rotate(135deg) scale(1.1)"
+                            : "rotate(0deg) scale(1)",
+                          transition: "transform 0.45s var(--ease-spring)",
+                        }}
+                      />
                     </button>
 
                     {actionHubOpen && (
