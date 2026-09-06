@@ -84,6 +84,34 @@ function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean 
 
 let running: Promise<void> | null = null;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Data lama menyimpan id numerik (Date.now) yang ditolak kolom uuid di server.
+// Beri id UUID baru (task ikut dipetakan ke section_id baru) lalu simpan lokal
+// supaya upsert berikutnya valid.
+function migrateLegacyIds(data: TodoData): TodoData {
+  const needs =
+    data.sections.some((s) => !UUID_RE.test(s.id)) ||
+    data.tasks.some((t) => !UUID_RE.test(t.id) || !UUID_RE.test(t.section_id));
+  if (!needs) return data;
+  const idMap = new Map<string, string>();
+  const sections = data.sections.map((s) => {
+    if (UUID_RE.test(s.id)) return s;
+    const id = crypto.randomUUID();
+    idMap.set(s.id, id);
+    return { ...s, id, dirty: true as const };
+  });
+  const tasks = data.tasks.map((t) => {
+    const id = UUID_RE.test(t.id) ? t.id : crypto.randomUUID();
+    const section_id = idMap.get(t.section_id) ?? t.section_id;
+    if (id === t.id && section_id === t.section_id) return t;
+    return { ...t, id, section_id, dirty: true as const };
+  });
+  const next = { ...data, sections, tasks };
+  setTodoData(next);
+  return next;
+}
+
 export function syncTodoNow(userId: string, opts?: { full?: boolean }): Promise<void> {
   if (running) return running;
   running = doSync(userId, opts?.full ?? false).finally(() => {
@@ -93,7 +121,7 @@ export function syncTodoNow(userId: string, opts?: { full?: boolean }): Promise<
 }
 
 async function doSync(userId: string, full: boolean) {
-  const before = getTodoData();
+  const before = migrateLegacyIds(getTodoData());
   const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
 
   const [sectionsRes, tasksRes] = await Promise.all([
@@ -103,8 +131,8 @@ async function doSync(userId: string, full: boolean) {
   if (sectionsRes.error) throw sectionsRes.error;
   if (tasksRes.error) throw tasksRes.error;
 
-  const dirtySections = before.sections.filter((s) => s.dirty);
-  const dirtyTasks = before.tasks.filter((t) => t.dirty);
+  const dirtySections = before.sections.filter((s) => s.dirty && UUID_RE.test(s.id));
+  const dirtyTasks = before.tasks.filter((t) => t.dirty && UUID_RE.test(t.id) && UUID_RE.test(t.section_id));
 
   if (dirtySections.length) {
     const { error } = await supabase

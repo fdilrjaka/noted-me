@@ -68,8 +68,22 @@ export function syncScheduleNow(userId: string, opts?: { full?: boolean }): Prom
   return running;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Jadwal lama mungkin menyimpan id numerik (Date.now) yang ditolak kolom uuid.
+// Ganti dengan UUID baru dan tandai dirty supaya ter-upload ulang.
+function migrateLegacyIds(data: ScheduleData): ScheduleData {
+  if (!data.classes.some((c) => !UUID_RE.test(c.id))) return data;
+  const classes = data.classes.map((c) =>
+    UUID_RE.test(c.id) ? c : { ...c, id: crypto.randomUUID(), dirty: true as const },
+  );
+  const next = { ...data, classes };
+  setScheduleData(next);
+  return next;
+}
+
 async function doSync(userId: string, full: boolean) {
-  const before = getScheduleData();
+  const before = migrateLegacyIds(getScheduleData());
   const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
 
   const { data: remoteRows, error } = await supabase
@@ -78,7 +92,7 @@ async function doSync(userId: string, full: boolean) {
     .gt("updated_at", since);
   if (error) throw error;
 
-  const dirtyClasses = before.classes.filter((c) => c.dirty);
+  const dirtyClasses = before.classes.filter((c) => c.dirty && UUID_RE.test(c.id));
 
   if (dirtyClasses.length) {
     const { error: upsertError } = await supabase
