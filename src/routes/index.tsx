@@ -11,7 +11,6 @@ import {
   Folder as FolderIcon,
   ListTodo,
   NotebookPen,
-  Palette,
   Plus,
   Search,
   Settings,
@@ -23,8 +22,6 @@ import { BottomNav } from "@/components/noteme/BottomNav";
 import { BrandMark } from "@/components/noteme/BrandMark";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
-import { HueSlider } from "@/components/HueSlider";
-import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import {
@@ -45,6 +42,7 @@ import {
 } from "@/lib/noteme/store";
 import { useTodoData } from "@/lib/noteme/todoStore";
 import { useScheduleData } from "@/lib/noteme/scheduleStore";
+import { useNotifPrefs } from "@/lib/noteme/notifPrefs";
 import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 
 export const Route = createFileRoute("/")({
@@ -77,7 +75,6 @@ export function Dashboard() {
   const data = useData();
   const navigate = useNavigate();
   const { user } = useSession();
-  const { hue, setHue } = useBackgroundHue();
   const profileMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const profileAvatarUrl =
     typeof profileMeta["avatar_url"] === "string" ? (profileMeta["avatar_url"] as string) : null;
@@ -98,10 +95,10 @@ export function Dashboard() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const todoData = useTodoData();
   const scheduleData = useScheduleData();
+  const notifPrefs = useNotifPrefs();
   const [importBusy, setImportBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -151,6 +148,7 @@ export function Dashboard() {
     };
     const items: Notif[] = [];
 
+    if (notifPrefs.todoReminders) {
     todoData.tasks
       .filter((t) => !t.deleted && !t.completed && t.deadline)
       .forEach((t) => {
@@ -167,6 +165,7 @@ export function Dashboard() {
           onClick: () => void navigate({ to: "/todo" }),
         });
       });
+    }
 
     const jsDayToId: Record<number, ScheduleDayId | undefined> = {
       1: "senin",
@@ -176,7 +175,7 @@ export function Dashboard() {
       5: "jumat",
     };
     const todayId = jsDayToId[now.getDay()];
-    if (todayId) {
+    if (todayId && notifPrefs.scheduleReminders) {
       scheduleData.classes
         .filter((c) => !c.deleted && c.day === todayId && c.status !== "done")
         .forEach((c) => {
@@ -192,7 +191,7 @@ export function Dashboard() {
 
     items.sort((a, b) => Number(b.overdue) - Number(a.overdue));
     return items;
-  }, [todoData, scheduleData, navigate]);
+  }, [todoData, scheduleData, notifPrefs, navigate]);
 
   const clearDragTimer = () => {
     if (dragStateRef.current?.timer) window.clearTimeout(dragStateRef.current.timer);
@@ -358,24 +357,6 @@ export function Dashboard() {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <button
-                  onClick={() => setColorPickerOpen((v) => !v)}
-                  aria-label="Ganti warna latar"
-                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-                >
-                  <Palette className="size-4" />
-                </button>
-                {colorPickerOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setColorPickerOpen(false)} />
-                    <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-64 rounded-2xl p-4">
-                      <HueSlider hue={hue} onChange={setHue} />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="relative">
-                <button
                   onClick={() => setExportOpen((v) => !v)}
                   aria-label="Ekspor cadangan"
                   className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
@@ -444,13 +425,13 @@ export function Dashboard() {
                     <Trash2 className="size-4" />
                   </button>
                 )}
-                <button
-                  onClick={() => setColorPickerOpen((v) => !v)}
+                <Link
+                  to="/settings"
                   aria-label="Pengaturan"
                   className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
                 >
                   <Settings className="size-4" />
-                </button>
+                </Link>
                 <div className="relative">
                   <button
                     onClick={() => setNotifOpen((v) => !v)}
