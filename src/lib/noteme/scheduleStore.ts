@@ -7,6 +7,7 @@ export type ScheduleClassRow = {
   id: string;
   day: ScheduleDayId;
   courseName: string;
+  lecturer?: string;
   time: string;
   room: string;
   classType: ClassType;
@@ -25,7 +26,6 @@ export type ScheduleData = {
 };
 
 const KEY = "noteme.schedule.v1";
-const LEGACY_KEY = "schedule_data";
 const EMPTY: ScheduleData = { classes: [], lastPull: null };
 
 let data: ScheduleData = EMPTY;
@@ -46,53 +46,18 @@ function persist() {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(data));
   } catch {
-    toast.error("Gagal menyimpan perubahan Jadwal ke penyimpanan lokal perangkat ini.");
+    toast.error("Gagal menyimpan perubahan Jadwal ke penyimpanan lokal.");
   }
 }
 
-function emit() {
+function notify() {
   listeners.forEach((l) => l());
 }
 
-/** Migrasi satu kali dari format lama (localStorage polos, tanpa id sync-aware
- *  atau tanda dirty) supaya jadwal yang sudah dibuat sebelumnya tidak hilang. */
-function migrateLegacy(): ScheduleData | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(LEGACY_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Array<{
-      id: string;
-      day: ScheduleDayId;
-      courseName: string;
-      time: string;
-      room: string;
-      classType: ClassType;
-      status: ClassStatus;
-      lmsLinks: LmsLinkItem[];
-      deadline?: string | null;
-    }>;
-    const ts = now();
-    const classes: ScheduleClassRow[] = parsed.map((c, i) => ({
-      id: c.id || uid(),
-      day: c.day,
-      courseName: c.courseName ?? "",
-      time: c.time ?? "",
-      room: c.room ?? "",
-      classType: c.classType ?? "online",
-      status: c.status ?? "upcoming",
-      lmsLinks: c.lmsLinks ?? [],
-      deadline: c.deadline ?? null,
-      position: i,
-      deleted: false,
-      updated_at: ts,
-      dirty: true,
-    }));
-    window.localStorage.removeItem(LEGACY_KEY);
-    return { classes, lastPull: null };
-  } catch {
-    return null;
-  }
+function update(fn: (prev: ScheduleData) => ScheduleData) {
+  data = fn(data);
+  persist();
+  notify();
 }
 
 export function loadScheduleLocal() {
@@ -100,60 +65,42 @@ export function loadScheduleLocal() {
   loaded = true;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as ScheduleData;
-      data = { classes: parsed.classes ?? [], lastPull: parsed.lastPull ?? null };
-    } else {
-      const migrated = migrateLegacy();
-      if (migrated) data = migrated;
-    }
+    if (raw) data = JSON.parse(raw);
   } catch {
     data = EMPTY;
   }
-  persist();
-  emit();
-}
-
-export function setScheduleData(next: ScheduleData) {
-  data = next;
-  persist();
-  emit();
+  notify();
 }
 
 export function getScheduleData() {
   return data;
 }
 
-function update(fn: (d: ScheduleData) => ScheduleData) {
-  setScheduleData(fn(data));
+export function setScheduleData(next: ScheduleData) {
+  data = next;
+  persist();
+  notify();
 }
 
-export function useScheduleData(): ScheduleData {
+export function useScheduleData() {
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => data,
+    getScheduleData,
     () => EMPTY,
   );
 }
-
-/* ---------------- selectors ---------------- */
 
 export function classesForDay(d: ScheduleData, day: ScheduleDayId) {
   return d.classes.filter((c) => c.day === day && !c.deleted).sort((a, b) => a.position - b.position);
 }
 
-export function dirtyScheduleCount() {
-  return data.classes.filter((c) => c.dirty).length;
-}
-
-/* ---------------- mutations ---------------- */
-
 export function createClass(input: {
   day: ScheduleDayId;
   courseName: string;
+  lecturer?: string;
   time: string;
   room: string;
   classType: ClassType;
@@ -167,6 +114,7 @@ export function createClass(input: {
     id,
     day: input.day,
     courseName: input.courseName.trim(),
+    lecturer: input.lecturer?.trim() || "Dr. Andi Wijaya",
     time: input.time,
     room: input.room,
     classType: input.classType,
@@ -179,7 +127,25 @@ export function createClass(input: {
     dirty: true,
   };
   update((d) => ({ ...d, classes: [...d.classes, row] }));
-  return id;
+}
+
+export function updateClass(
+  id: string,
+  input: Partial<Omit<ScheduleClassRow, "id" | "position" | "deleted" | "updated_at" | "dirty">>
+) {
+  update((d) => ({
+    ...d,
+    classes: d.classes.map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            ...input,
+            updated_at: now(),
+            dirty: true,
+          }
+        : c
+    ),
+  }));
 }
 
 export function deleteClass(id: string) {
@@ -187,8 +153,4 @@ export function deleteClass(id: string) {
     ...d,
     classes: d.classes.map((c) => (c.id === id ? { ...c, deleted: true, updated_at: now(), dirty: true } : c)),
   }));
-}
-
-export function clearScheduleLocal() {
-  setScheduleData({ classes: [], lastPull: null });
 }
