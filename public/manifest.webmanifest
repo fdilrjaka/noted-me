@@ -1,5 +1,5 @@
 {
-  "name": "NoteMe — Catatan Mata Kuliah",
+  "name": "NoteMe",
   "short_name": "NoteMe",
   "description": "Catatan kuliah offline-first dengan halaman per pertemuan, pencarian, dan sinkronisasi otomatis.",
   "start_url": "/",
