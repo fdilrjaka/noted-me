@@ -37,12 +37,11 @@ export function applyHue(hue: number) {
   root.setProperty("--glow-purple", `oklch(0.4 0.15 ${mid.toFixed(1)})`);
   root.setProperty("--glow-pink", `oklch(0.55 0.2 ${hue.toFixed(1)})`);
   root.setProperty("--glow-green", `oklch(0.5 0.17 ${green.toFixed(1)})`);
-  // Latar dasar sengaja TIDAK diikutkan ke hue lagi — slider warna sekarang
-  // hanya mengubah "cahaya" (glow blobs) dan warna tombol/aksen, sementara
-  // latar tetap abu-abu gelap netral seperti pada referensi.
-  root.setProperty("--primary", `oklch(0.7 0.15 ${hue.toFixed(1)})`);
-  root.setProperty("--accent", `oklch(0.6 0.19 ${hue.toFixed(1)})`);
-  root.setProperty("--ring", `oklch(0.7 0.15 ${hue.toFixed(1)})`);
+  // Slider warna cuma ganti "cahaya" (glow blobs) di latar belakang.
+  // --primary/--accent/--ring SENGAJA tidak disentuh di sini supaya warna
+  // semua tombol & aksen di seluruh app tetap konsisten (teal) apa pun hue
+  // yang dipilih user — dulu ketiga variabel ini ikut diubah, makanya warna
+  // tombol berubah-ubah ikut slider.
 }
 
 export function useBackgroundHue() {
