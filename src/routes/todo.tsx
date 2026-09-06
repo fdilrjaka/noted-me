@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { AlertTriangle, CalendarClock, Check, ChevronLeft, PieChart, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
 import { Sidebar } from "@/components/noteme/Sidebar";
@@ -322,20 +322,19 @@ function SummaryPanel({ data }: { data: TodoData }) {
 
         {/* Upcoming Deadlines */}
         <section>
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <CalendarClock className="size-3.5" /> Upcoming Deadlines
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Upcoming Deadlines
           </h2>
-          <ul className="mt-2 flex flex-col gap-1.5">
+          <ul className="mt-2 flex flex-col gap-2">
             {upcoming.length === 0 && (
-              <li className="text-xs text-muted-foreground">Tidak ada deadline mendatang.</li>
+              <li className="text-sm text-muted-foreground">Tidak ada deadline mendatang.</li>
             )}
             {upcoming.map(({ t, date }) => {
               const lbl = deadlineLabel(t.deadline)!;
               return (
-                <li key={t.id} className="flex items-center gap-2">
-                  <span className="size-1.5 flex-none rounded-full bg-primary" />
-                  <span className="min-w-0 flex-1 truncate text-xs">{t.title}</span>
-                  <span className="flex-none text-[11px] text-muted-foreground">{lbl.text}</span>
+                <li key={t.id} className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 flex-1 break-words text-sm">{t.title}</span>
+                  <span className="flex-none text-xs text-muted-foreground">{lbl.text}</span>
                 </li>
               );
             })}
@@ -344,19 +343,19 @@ function SummaryPanel({ data }: { data: TodoData }) {
 
         {/* Priority Focus */}
         <section>
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <AlertTriangle className="size-3.5 text-destructive" /> Priority Focus
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Priority Focus
           </h2>
-          <ul className="mt-2 flex flex-col gap-1.5">
+          <ul className="mt-2 flex flex-col gap-2">
             {overdue.length === 0 && (
-              <li className="text-xs text-muted-foreground">Tidak ada yang terlewat. 🎉</li>
+              <li className="text-sm text-muted-foreground">Tidak ada yang terlewat.</li>
             )}
             {overdue.map(({ t }) => {
               const lbl = deadlineLabel(t.deadline)!;
               return (
-                <li key={t.id} className="flex items-center gap-2 rounded-lg bg-destructive/10 px-2 py-1">
-                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-destructive">{t.title}</span>
-                  <span className="flex-none text-[11px] text-destructive">{lbl.text}</span>
+                <li key={t.id} className="flex flex-col gap-0.5 rounded-lg bg-destructive/10 px-2 py-1.5">
+                  <span className="break-words text-sm font-medium text-destructive">{t.title}</span>
+                  <span className="text-xs text-destructive">{lbl.text}</span>
                 </li>
               );
             })}
@@ -364,12 +363,12 @@ function SummaryPanel({ data }: { data: TodoData }) {
         </section>
 
         {/* Distribusi Kategori — pie chart */}
-        <section className="border-t border-border pt-3.5">
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <PieChart className="size-3.5" /> Distribusi Kategori
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Distribusi Kategori
           </h2>
           {totalForPie === 0 ? (
-            <p className="mt-2 text-xs text-muted-foreground">Belum ada task aktif.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Belum ada task aktif.</p>
           ) : (
             <div className="mt-3 flex items-center gap-4">
               <div
@@ -380,14 +379,16 @@ function SummaryPanel({ data }: { data: TodoData }) {
                   <span className="text-xs font-bold">{totalForPie}</span>
                 </div>
               </div>
-              <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <ul className="flex min-w-0 flex-1 flex-col gap-2">
                 {categoryBreakdown.map((c) => (
-                  <li key={c.id} className="flex items-center gap-1.5 text-xs">
-                    <span
-                      className="size-2 flex-none rounded-full"
-                      style={{ backgroundColor: c.color }}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-muted-foreground">{c.label}</span>
+                  <li key={c.id} className="flex items-start justify-between gap-1.5 text-sm">
+                    <span className="flex min-w-0 flex-1 items-start gap-1.5 break-words text-muted-foreground">
+                      <span
+                        className="mt-1.5 size-2 flex-none rounded-full"
+                        style={{ backgroundColor: c.color }}
+                      />
+                      {c.label}
+                    </span>
                     <span className="flex-none font-medium">{c.count}</span>
                   </li>
                 ))}
