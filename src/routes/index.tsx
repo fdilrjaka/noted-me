@@ -1,15 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowRight,
   Bell,
   BookOpen,
   Check,
   Download,
   FileText,
   Palette,
-  Pin,
-  PinOff,
   Plus,
   Search,
   Trash2,
@@ -29,7 +26,6 @@ import {
   activeSubjects,
   createSubject,
   deleteSubject,
-  patchSubject,
   search,
   subjectPages,
   useData,
@@ -89,7 +85,6 @@ export function Dashboard() {
   const mainRef = useRef<HTMLElement | null>(null);
 
   const subjects = useMemo(() => activeSubjects(data), [data]);
-  const hits = useMemo(() => search(data, query), [data, query]);
 
   const openSubject = (subjectId: string, pageId: string | undefined) => {
     void navigate({
@@ -301,8 +296,8 @@ export function Dashboard() {
 
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-                {selectMode ? `${selected.size} dipilih` : "Mata Kuliah"}
+              <h2 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                {selectMode ? `${selected.size} dipilih` : "MATA KULIAH"}
               </h2>
               <div className="flex items-center gap-2">
                 {selectMode && (
@@ -317,9 +312,9 @@ export function Dashboard() {
                   <button
                     onClick={() => setAdding(true)}
                     aria-label="Tambah mata kuliah"
-                    className="press glass-fab flex size-11 items-center justify-center rounded-full text-foreground/95 active:scale-90"
+                    className="press glass-floating flex size-9 items-center justify-center rounded-full text-foreground active:scale-90"
                   >
-                    <Plus className="glass-fab-icon size-5" strokeWidth={2.25} />
+                    <Plus className="size-5" />
                   </button>
                 )}
               </div>
@@ -334,7 +329,7 @@ export function Dashboard() {
 
             {adding && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
                 onClick={() => setAdding(false)}
               >
                 <div
@@ -382,7 +377,7 @@ export function Dashboard() {
               </div>
             )}
 
-            {/* Grid Mata Kuliah Disesuaikan dengan UI Gambar */}
+            {/* Grid Card Mata Kuliah Presisi & Utuh */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {subjects.map((subject) => {
                 const pages = subjectPages(data, subject.id);
@@ -398,7 +393,7 @@ export function Dashboard() {
                     onClick={() =>
                       selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
                     }
-                    className={`press glass-card spring-in group relative flex flex-col justify-between cursor-pointer rounded-xl p-4 transition-all ${
+                    className={`press glass-soft spring-in group relative flex min-h-[110px] flex-col justify-between cursor-pointer rounded-2xl p-4 transition-all hover:border-slate-700 ${
                       isSelected ? "ring-2 ring-destructive" : ""
                     }`}
                   >
@@ -415,20 +410,19 @@ export function Dashboard() {
                     )}
 
                     <div>
-                      <div className="flex items-start gap-2.5">
-                        <FileText className="mt-0.5 size-4 flex-none text-muted-foreground/70" />
-                        <p className="line-clamp-1 text-sm font-semibold tracking-wide text-foreground">
+                      <div className="flex items-start gap-2">
+                        <FileText className="mt-0.5 size-4 flex-none text-muted-foreground" />
+                        <h3 className="font-bold text-sm text-foreground leading-snug">
                           {subject.name}
-                        </p>
+                        </h3>
                       </div>
-                      <p className="mt-1 pl-6 text-xs text-muted-foreground/80">
+                      <p className="mt-1 pl-6 text-xs text-muted-foreground">
                         {pages.length} pertemuan
                       </p>
                     </div>
 
-                    <div className="mt-4 pl-6 text-[11px] text-muted-foreground/60">
-                      Last modified:{" "}
-                      <span className="font-normal">{formatLastModified(lastModifiedIso)}</span>
+                    <div className="mt-3 pl-6 text-[11px] text-muted-foreground/70">
+                      Last modified: {formatLastModified(lastModifiedIso)}
                     </div>
                   </div>
                 );
