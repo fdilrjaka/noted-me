@@ -2,7 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Check, ChevronLeft, Plus, Trash2, X } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Eye,
+  PieChart,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
 import { Sidebar } from "@/components/noteme/Sidebar";
@@ -282,120 +293,164 @@ function SummaryPanel({ data }: { data: TodoData }) {
   }, [categoryBreakdown, totalForPie]);
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-20 hidden w-72 flex-col p-4 safe-top safe-bottom xl:flex">
-      <div className="glass-navigation flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-3xl p-4">
-        {/* Today's Progress */}
-        <section>
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Check className="size-3.5" /> Today's Progress
-          </h2>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="relative size-14 flex-none">
-              <svg viewBox="0 0 36 36" className="size-full -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.5" className="text-input" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className={ringColor}
-                  strokeDasharray={`${(ringPct / 100) * 97.4} 97.4`}
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
-                {todayPct}%
-              </span>
-            </div>
-            <div className="min-w-0 text-sm">
-              <p className="font-medium">
-                {todayTasks.length ? `${todayDone}/${todayTasks.length} hari ini` : "Tanpa deadline hari ini"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {allTasks.filter((t) => t.completed).length}/{allTasks.length} total selesai
-              </p>
-            </div>
-          </div>
-        </section>
+    <aside className="fixed inset-y-0 right-0 z-20 hidden w-80 flex-col p-4 safe-top safe-bottom xl:flex">
+      <div className="glass-navigation flex h-full min-h-0 flex-col overflow-hidden rounded-3xl">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <h1 className="px-1 pb-3 pt-1 text-center text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Progress Dashboard
+          </h1>
 
-        {/* Upcoming Deadlines */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Upcoming Deadlines
-          </h2>
-          <ul className="mt-2 flex flex-col gap-2">
-            {upcoming.length === 0 && (
-              <li className="text-sm text-muted-foreground">Tidak ada deadline mendatang.</li>
-            )}
-            {upcoming.map(({ t, date }) => {
-              const lbl = deadlineLabel(t.deadline)!;
-              return (
-                <li key={t.id} className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 flex-1 break-words text-sm">{t.title}</span>
-                  <span className="flex-none text-xs text-muted-foreground">{lbl.text}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {/* Priority Focus */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Priority Focus
-          </h2>
-          <ul className="mt-2 flex flex-col gap-2">
-            {overdue.length === 0 && (
-              <li className="text-sm text-muted-foreground">Tidak ada yang terlewat.</li>
-            )}
-            {overdue.map(({ t }) => {
-              const lbl = deadlineLabel(t.deadline)!;
-              return (
-                <li key={t.id} className="flex flex-col gap-0.5 rounded-lg bg-destructive/10 px-2 py-1.5">
-                  <span className="break-words text-sm font-medium text-destructive">{t.title}</span>
-                  <span className="text-xs text-destructive">{lbl.text}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {/* Distribusi Kategori — pie chart */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Distribusi Kategori
-          </h2>
-          {totalForPie === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">Belum ada task aktif.</p>
-          ) : (
-            <div className="mt-3 flex items-center gap-4">
-              <div
-                className="relative size-20 flex-none rounded-full"
-                style={{ background: pieGradient ?? undefined }}
-              >
-                <div className="absolute inset-[6px] flex items-center justify-center rounded-full bg-card">
-                  <span className="text-xs font-bold">{totalForPie}</span>
+          <div className="flex flex-col gap-3">
+            {/* Today's Progress */}
+            <section className="rounded-2xl border border-border/60 p-3.5">
+              <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <ChevronDown className="size-3.5" /> Today's Progress
+              </h2>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="relative size-16 flex-none">
+                  <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.5" className="text-input" />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      className={ringColor}
+                      strokeDasharray={`${(ringPct / 100) * 97.4} 97.4`}
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-base font-bold leading-none">{todayPct}%</span>
+                  </span>
+                </div>
+                <div className="min-w-0 text-sm">
+                  <p className="font-semibold leading-snug">
+                    {todayTasks.length ? `${todayDone}/${todayTasks.length} hari ini` : "Tanpa deadline hari ini"}
+                  </p>
                 </div>
               </div>
-              <ul className="flex min-w-0 flex-1 flex-col gap-2">
-                {categoryBreakdown.map((c) => (
-                  <li key={c.id} className="flex items-start justify-between gap-1.5 text-sm">
-                    <span className="flex min-w-0 flex-1 items-start gap-1.5 break-words text-muted-foreground">
-                      <span
-                        className="mt-1.5 size-2 flex-none rounded-full"
-                        style={{ backgroundColor: c.color }}
-                      />
-                      {c.label}
+              <div className="mt-3 flex justify-center">
+                <span className="glass-input rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                  {allTasks.filter((t) => t.completed).length}/{allTasks.length} task
+                </span>
+              </div>
+            </section>
+
+            {/* Upcoming Deadlines */}
+            <section className="rounded-2xl border border-border/60 p-3.5">
+              <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <Calendar className="size-3.5" /> Upcoming Deadlines
+              </h2>
+              {upcoming.length === 0 ? (
+                <div className="mt-3 flex flex-col items-center gap-1 py-1 text-center">
+                  <Sparkles className="size-6 text-primary/70" />
+                  <p className="text-base font-bold leading-tight">
+                    Waktunya Menikmati
+                    <br />
+                    Ketenangan
+                  </p>
+                </div>
+              ) : (
+                <ul className="mt-2.5 flex flex-col gap-2">
+                  {upcoming.map(({ t }) => {
+                    const lbl = deadlineLabel(t.deadline)!;
+                    return (
+                      <li key={t.id} className="flex items-start justify-between gap-2">
+                        <span className="min-w-0 flex-1 break-words text-sm">{t.title}</span>
+                        <span className="flex-none text-xs text-muted-foreground">{lbl.text}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {/* Priority Focus */}
+            <section className="rounded-2xl border border-border/60 p-3.5">
+              <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <Eye className="size-3.5" /> Priority Focus
+              </h2>
+              {overdue.length === 0 ? (
+                <div className="mt-3 flex flex-col gap-1">
+                  <p className="text-base font-bold">Clear Horizon</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Fokus Prioritas: Tidak ada tugas yang terlewat, Anda mengontrol segalanya.
+                  </p>
+                </div>
+              ) : (
+                <ul className="mt-2.5 flex flex-col gap-2">
+                  {overdue.map(({ t }) => {
+                    const lbl = deadlineLabel(t.deadline)!;
+                    return (
+                      <li key={t.id} className="flex flex-col gap-0.5 rounded-lg bg-destructive/10 px-2 py-1.5">
+                        <span className="break-words text-sm font-medium text-destructive">{t.title}</span>
+                        <span className="text-xs text-destructive">{lbl.text}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {/* Distribusi Kategori — pie chart */}
+            <section className="rounded-2xl border border-border/60 p-3.5">
+              <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <PieChart className="size-3.5" /> Distribusi Kategori
+              </h2>
+              <div className="mt-3 flex justify-center">
+                <div
+                  className="relative flex size-40 flex-none items-center justify-center rounded-full"
+                  style={{
+                    background:
+                      pieGradient ?? "conic-gradient(hsl(var(--primary) / 0.5) 0deg 360deg)",
+                  }}
+                >
+                  <div className="absolute inset-[14px] flex flex-col items-center justify-center rounded-full bg-card px-3 text-center">
+                    {totalForPie === 0 ? (
+                      <>
+                        <p className="text-[11px] leading-snug text-muted-foreground">
+                          Mulai aktivitas Anda untuk melihat visualisasi distribusi tugas Anda di sini.
+                        </p>
+                        <p className="mt-1.5 text-[10px] font-medium text-muted-foreground/70">
+                          Data Belum Tersedia
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-xl font-bold">{totalForPie}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-sm">
+                {totalForPie === 0 ? (
+                  <>
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2.5 rounded-full bg-primary" /> Kategori: 0
                     </span>
-                    <span className="flex-none font-medium">{c.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      Belum kategori: <span className="size-2.5 rounded-full bg-[#a855f7]" />
+                    </span>
+                  </>
+                ) : (
+                  categoryBreakdown.map((c) => (
+                    <span key={c.id} className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                      {c.label}: <span className="font-medium text-foreground">{c.count}</span>
+                    </span>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div className="flex-none border-t border-border/60 py-3 text-center text-xs text-muted-foreground">
+          {format(new Date(), "d MMMM yyyy", { locale: idLocale })}
+        </div>
       </div>
     </aside>
   );
