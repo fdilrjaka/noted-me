@@ -413,6 +413,14 @@ export function Dashboard() {
                 />
               </div>
 
+              <Link
+                to="/settings"
+                aria-label="Pengaturan"
+                className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
+              >
+                <Settings className="size-4" />
+              </Link>
+
               <div className="hidden items-center gap-2 md:flex">
                 {subjects.length > 0 && (
                   <button
@@ -425,13 +433,6 @@ export function Dashboard() {
                     <Trash2 className="size-4" />
                   </button>
                 )}
-                <Link
-                  to="/settings"
-                  aria-label="Pengaturan"
-                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-                >
-                  <Settings className="size-4" />
-                </Link>
                 <div className="relative">
                   <button
                     onClick={() => setNotifOpen((v) => !v)}
