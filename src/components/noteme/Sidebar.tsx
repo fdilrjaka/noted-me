@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, CheckSquare, NotebookText, Trash2, User } from "lucide-react";
+import { CalendarDays, CheckSquare, ChevronRight, NotebookText, Trash2, User } from "lucide-react";
 import { BrandMark } from "@/components/noteme/BrandMark";
 
 const items = [
@@ -31,7 +31,8 @@ export function Sidebar() {
                 }`}
               >
                 <Icon className="size-4.5" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {active && <ChevronRight className="size-4 flex-none" />}
               </Link>
             );
           })}
