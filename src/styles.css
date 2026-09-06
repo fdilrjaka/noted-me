@@ -71,6 +71,13 @@
 
   /* Hint Glow Tipis & Muted di Kanan Atas */
   --glow-hint: rgba(45, 212, 191, 0.08);
+
+  /* Diisi ulang oleh applyHue() di use-background-hue.ts saat slider warna
+     digeser — nilai default di bawah dipakai sebelum hook itu jalan. */
+  --glow-blue: oklch(0.26 0.09 250);
+  --glow-purple: oklch(0.4 0.15 300);
+  --glow-pink: oklch(0.55 0.2 320);
+  --glow-green: oklch(0.5 0.17 155);
 }
 
 @layer base {
@@ -93,7 +100,7 @@
     position: relative;
   }
 
-  /* Lighting hint halus di sudut kanan atas */
+  /* Lighting hint halus di sudut kanan atas — mengikuti slider warna latar */
   body::before {
     content: "";
     position: fixed;
@@ -101,9 +108,14 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(40% 40% at 85% 15%, var(--glow-hint) 0%, transparent 80%),
-      radial-gradient(50% 50% at 95% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 80%);
-    filter: blur(80px);
+      radial-gradient(40% 40% at 85% 15%, var(--glow-pink) 0%, transparent 80%),
+      radial-gradient(45% 45% at 100% 0%, var(--glow-purple) 0%, transparent 75%),
+      radial-gradient(45% 45% at 0% 100%, var(--glow-green) 0%, transparent 75%),
+      radial-gradient(50% 50% at 95% 50%, var(--glow-blue) 0%, transparent 80%),
+      radial-gradient(40% 40% at 85% 15%, var(--glow-hint) 0%, transparent 80%);
+    opacity: 0.55;
+    filter: blur(90px);
+    transition: opacity 0.3s var(--ease-ios);
   }
 
   ::selection {
@@ -201,4 +213,49 @@
   &:active {
     transform: scale(0.88);
   }
+}
+
+/* Hue Slider — trek pelangi supaya garis warnanya kelihatan jelas */
+.hue-range {
+  background: linear-gradient(
+    to right,
+    oklch(0.75 0.19 0),
+    oklch(0.75 0.19 60),
+    oklch(0.75 0.19 120),
+    oklch(0.75 0.19 180),
+    oklch(0.75 0.19 240),
+    oklch(0.75 0.19 300),
+    oklch(0.75 0.19 359)
+  );
+  outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.hue-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: white;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  margin-top: 0;
+}
+
+.hue-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: white;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.hue-range::-moz-range-track {
+  background: transparent;
+  border: none;
 }
