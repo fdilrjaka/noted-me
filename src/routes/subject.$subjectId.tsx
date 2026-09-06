@@ -36,13 +36,13 @@ export const Route = createFileRoute("/subject/$subjectId")({
   }),
   head: () => ({
     meta: [
-      { title: "Catatan Mata Kuliah — NoteMe" },
+      { title: "NoteMe" },
       {
         name: "description",
         content:
           "Tulis catatan per pertemuan dengan editor teks kaya, foto, tabel, dan checklist di NoteMe.",
       },
-      { property: "og:title", content: "Catatan Mata Kuliah — NoteMe" },
+      { property: "og:title", content: "NoteMe" },
       {
         property: "og:description",
         content: "Halaman pertemuan dengan editor teks kaya, gambar, dan auto-save.",
