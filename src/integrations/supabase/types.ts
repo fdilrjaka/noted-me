@@ -83,6 +83,57 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_classes: {
+        Row: {
+          class_type: string
+          course_name: string
+          created_at: string
+          day: string
+          deadline: string | null
+          deleted: boolean
+          id: string
+          lms_links: Json
+          position: number
+          room: string
+          status: string
+          time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_type?: string
+          course_name?: string
+          created_at?: string
+          day?: string
+          deadline?: string | null
+          deleted?: boolean
+          id: string
+          lms_links?: Json
+          position?: number
+          room?: string
+          status?: string
+          time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_type?: string
+          course_name?: string
+          created_at?: string
+          day?: string
+          deadline?: string | null
+          deleted?: boolean
+          id?: string
+          lms_links?: Json
+          position?: number
+          room?: string
+          status?: string
+          time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           color: string
@@ -189,57 +240,6 @@ export type Database = {
           position?: number
           section_id?: string
           title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      schedule_classes: {
-        Row: {
-          class_type: string
-          course_name: string
-          created_at: string
-          day: string
-          deadline: string | null
-          deleted: boolean
-          id: string
-          lms_links: Json
-          position: number
-          room: string
-          status: string
-          time: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          class_type?: string
-          course_name?: string
-          created_at?: string
-          day: string
-          deadline?: string | null
-          deleted?: boolean
-          id: string
-          lms_links?: Json
-          position?: number
-          room?: string
-          status?: string
-          time?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          class_type?: string
-          course_name?: string
-          created_at?: string
-          day?: string
-          deadline?: string | null
-          deleted?: boolean
-          id?: string
-          lms_links?: Json
-          position?: number
-          room?: string
-          status?: string
-          time?: string
           updated_at?: string
           user_id?: string
         }
