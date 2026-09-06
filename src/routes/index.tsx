@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
@@ -102,10 +103,12 @@ export function Dashboard() {
   const [hoverFolderId, setHoverFolderId] = useState<string | null>(null);
   const dragStateRef = useRef<{
     id: string;
+    pointerId: number;
     startX: number;
     startY: number;
     timer: number | null;
     longPressed: boolean;
+    hoverFolderId: string | null;
   } | null>(null);
 
   const LONG_PRESS_MS = 380;
@@ -128,8 +131,14 @@ export function Dashboard() {
 
   const handleCardPointerDown = (e: ReactPointerEvent, subjectId: string) => {
     if (selectMode || e.button === 2) return;
+    // Pointer capture memastikan pointermove/pointerup TETAP terkirim ke card
+    // ini walau jari/kursor sudah bergerak ke atas elemen lain (mis. folder).
+    // Tanpa ini, event lepas jari bisa "nyasar" ke elemen di bawahnya dan
+    // drag jadi tidak pernah selesai (ghost mengambang terus).
+    e.currentTarget.setPointerCapture(e.pointerId);
     dragStateRef.current = {
       id: subjectId,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       timer: window.setTimeout(() => {
@@ -140,6 +149,7 @@ export function Dashboard() {
         if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
       }, LONG_PRESS_MS),
       longPressed: false,
+      hoverFolderId: null,
     };
   };
 
@@ -155,14 +165,21 @@ export function Dashboard() {
       }
       return;
     }
+    e.preventDefault();
     setDragPos({ x: e.clientX, y: e.clientY });
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     const folderEl = el?.closest("[data-folder-drop]") as HTMLElement | null;
-    setHoverFolderId(folderEl?.dataset["folderDrop"] ?? null);
+    const nextHover = folderEl?.dataset["folderDrop"] ?? null;
+    state.hoverFolderId = nextHover;
+    setHoverFolderId(nextHover);
   };
 
-  const finishDrag = () => {
+  const finishDrag = (e?: ReactPointerEvent) => {
+    const state = dragStateRef.current;
     clearDragTimer();
+    if (e && state && e.currentTarget.hasPointerCapture(state.pointerId)) {
+      e.currentTarget.releasePointerCapture(state.pointerId);
+    }
     dragStateRef.current = null;
     setDraggingId(null);
     setHoverFolderId(null);
@@ -176,13 +193,16 @@ export function Dashboard() {
     const state = dragStateRef.current;
     if (!state) return;
     if (state.longPressed) {
-      if (hoverFolderId) {
-        assignSubjectToFolder(subjectId, hoverFolderId);
+      if (state.hoverFolderId) {
+        assignSubjectToFolder(subjectId, state.hoverFolderId);
         toast.success("Catatan dipindahkan ke folder");
       }
-      finishDrag();
+      finishDrag(e);
     } else {
       clearDragTimer();
+      if (e.currentTarget.hasPointerCapture(state.pointerId)) {
+        e.currentTarget.releasePointerCapture(state.pointerId);
+      }
       dragStateRef.current = null;
       if (selectMode) toggleSelected(subjectId);
       else openSubject(subjectId, firstPageId);
@@ -588,9 +608,18 @@ export function Dashboard() {
                     key={folder.id}
                     data-folder-drop={folder.id}
                     onClick={() => setOpenFolderId(folder.id)}
-                    className={`glass-soft spring-in relative flex min-h-[110px] cursor-pointer flex-col justify-between rounded-2xl p-4 transition-all ${
-                      isHover ? "scale-[1.04] ring-2 ring-primary" : ""
+                    className={`glass-soft spring-in relative flex min-h-[110px] cursor-pointer flex-col justify-between rounded-2xl p-4 ${
+                      isHover ? "ring-2 ring-primary" : ""
                     }`}
+                    style={{
+                      transition: "transform 0.18s var(--ease-spring), box-shadow 0.18s ease",
+                      transform: isHover
+                        ? "translateY(-6px) scale(1.04)"
+                        : "translateY(0) scale(1)",
+                      boxShadow: isHover
+                        ? "0 0 0 4px hsl(var(--primary) / 0.18), 0 18px 30px -12px hsl(var(--primary) / 0.45)"
+                        : undefined,
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
@@ -671,106 +700,111 @@ export function Dashboard() {
         </div>
       </div>
 
-      {draggingSubject && (
-        <div
-          className="glass-card pointer-events-none fixed z-[100] w-56 rounded-2xl p-4 shadow-2xl"
-          style={{
-            left: dragPos.x,
-            top: dragPos.y,
-            transform: "translate(-50%, -125%) scale(1.05) rotate(-2deg)",
-            transition: "transform 0.15s var(--ease-spring)",
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="size-4 flex-none text-muted-foreground" />
-            <h3 className="truncate text-sm font-bold text-foreground">{draggingSubject.name}</h3>
-          </div>
-        </div>
-      )}
-
-      {openFolder && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
-          onClick={() => setOpenFolderId(null)}
-        >
+      {draggingSubject &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
-            onClick={(e) => e.stopPropagation()}
+            className="glass-card pointer-events-none fixed z-[100] w-56 rounded-2xl p-4 shadow-2xl"
+            style={{
+              left: dragPos.x,
+              top: dragPos.y,
+              transform: "translate(-50%, -125%) scale(1.05) rotate(-2deg)",
+            }}
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
-                  <FolderIcon className="size-4" />
-                </span>
-                <p className="truncate text-base font-semibold">{openFolder.name}</p>
+            <div className="flex items-center gap-2">
+              <FileText className="size-4 flex-none text-muted-foreground" />
+              <h3 className="truncate text-sm font-bold text-foreground">{draggingSubject.name}</h3>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {openFolder &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
+            onClick={() => setOpenFolderId(null)}
+          >
+            <div
+              className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
+                    <FolderIcon className="size-4" />
+                  </span>
+                  <p className="truncate text-base font-semibold">{openFolder.name}</p>
+                </div>
+                <button
+                  onClick={() => setOpenFolderId(null)}
+                  aria-label="Tutup"
+                  className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
+
+              <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto">
+                {openFolder.subjectIds.length === 0 && (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Folder ini masih kosong. Tahan lalu seret catatan ke sini dari dashboard.
+                  </p>
+                )}
+                {openFolder.subjectIds.map((sid) => {
+                  const subj = subjects.find((s) => s.id === sid);
+                  if (!subj) return null;
+                  const pages = subjectPages(data, subj.id);
+                  return (
+                    <div
+                      key={sid}
+                      className="glass-soft flex items-center justify-between gap-2 rounded-2xl p-3"
+                    >
+                      <button
+                        onClick={() => {
+                          setOpenFolderId(null);
+                          openSubject(subj.id, pages[0]?.id);
+                        }}
+                        className="press-sm flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        <FileText className="size-4 flex-none text-muted-foreground" />
+                        <span className="truncate text-sm font-semibold">{subj.name}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          removeSubjectFromFolder(subj.id);
+                          toast.success("Catatan dikeluarkan dari folder");
+                        }}
+                        aria-label="Keluarkan dari folder"
+                        className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground active:scale-90"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
               <button
-                onClick={() => setOpenFolderId(null)}
-                aria-label="Tutup"
-                className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground"
+                onClick={() => {
+                  const count = openFolder.subjectIds.length;
+                  deleteFolder(openFolder.id);
+                  setOpenFolderId(null);
+                  toast.success(
+                    count > 0
+                      ? `Folder dihapus, ${count} catatan kembali ke dashboard utama`
+                      : "Folder dihapus",
+                  );
+                }}
+                className="press mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 py-3 text-sm font-semibold text-destructive active:scale-95"
               >
-                <X className="size-4" />
+                <Trash2 className="size-4" /> Hapus folder
               </button>
             </div>
-
-            <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto">
-              {openFolder.subjectIds.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Folder ini masih kosong. Tahan lalu seret catatan ke sini dari dashboard.
-                </p>
-              )}
-              {openFolder.subjectIds.map((sid) => {
-                const subj = subjects.find((s) => s.id === sid);
-                if (!subj) return null;
-                const pages = subjectPages(data, subj.id);
-                return (
-                  <div
-                    key={sid}
-                    className="glass-soft flex items-center justify-between gap-2 rounded-2xl p-3"
-                  >
-                    <button
-                      onClick={() => {
-                        setOpenFolderId(null);
-                        openSubject(subj.id, pages[0]?.id);
-                      }}
-                      className="press-sm flex min-w-0 flex-1 items-center gap-2 text-left"
-                    >
-                      <FileText className="size-4 flex-none text-muted-foreground" />
-                      <span className="truncate text-sm font-semibold">{subj.name}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        removeSubjectFromFolder(subj.id);
-                        toast.success("Catatan dikeluarkan dari folder");
-                      }}
-                      aria-label="Keluarkan dari folder"
-                      className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground active:scale-90"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => {
-                const count = openFolder.subjectIds.length;
-                deleteFolder(openFolder.id);
-                setOpenFolderId(null);
-                toast.success(
-                  count > 0
-                    ? `Folder dihapus, ${count} catatan kembali ke dashboard utama`
-                    : "Folder dihapus",
-                );
-              }}
-              className="press mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 py-3 text-sm font-semibold text-destructive active:scale-95"
-            >
-              <Trash2 className="size-4" /> Hapus folder
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       <BottomNav />
     </main>
