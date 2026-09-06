@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
@@ -23,7 +23,13 @@ import { HueSlider } from "@/components/HueSlider";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { createFolder, useFolders } from "@/lib/noteme/folderStore";
+import {
+  assignSubjectToFolder,
+  createFolder,
+  deleteFolder,
+  removeSubjectFromFolder,
+  useFolders,
+} from "@/lib/noteme/folderStore";
 import { exportBackupJson, exportBackupMarkdown, importBackupJson } from "@/lib/noteme/backup";
 import {
   activeSubjects,
@@ -75,7 +81,8 @@ export function Dashboard() {
   const profileNickname =
     typeof profileMeta["nickname"] === "string" ? (profileMeta["nickname"] as string) : "";
   const profileUsername = user?.email?.replace("@noteme.app", "") ?? "";
-  const profileInitial = (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "?";
+  const profileInitial =
+    (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "?";
   const [query, setQuery] = useState("");
   const [actionHubOpen, setActionHubOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<"note" | "folder" | null>(null);
@@ -89,7 +96,100 @@ export function Dashboard() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
 
+  const [openFolderId, setOpenFolderId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [hoverFolderId, setHoverFolderId] = useState<string | null>(null);
+  const dragStateRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    timer: number | null;
+    longPressed: boolean;
+  } | null>(null);
+
+  const LONG_PRESS_MS = 380;
+  const MOVE_CANCEL_PX = 10;
+
   const subjects = useMemo(() => activeSubjects(data), [data]);
+  const folderedIds = useMemo(() => new Set(folders.flatMap((f) => f.subjectIds)), [folders]);
+  const mainSubjects = useMemo(
+    () => subjects.filter((s) => !folderedIds.has(s.id)),
+    [subjects, folderedIds],
+  );
+  const openFolder = useMemo(
+    () => folders.find((f) => f.id === openFolderId) ?? null,
+    [folders, openFolderId],
+  );
+
+  const clearDragTimer = () => {
+    if (dragStateRef.current?.timer) window.clearTimeout(dragStateRef.current.timer);
+  };
+
+  const handleCardPointerDown = (e: ReactPointerEvent, subjectId: string) => {
+    if (selectMode || e.button === 2) return;
+    dragStateRef.current = {
+      id: subjectId,
+      startX: e.clientX,
+      startY: e.clientY,
+      timer: window.setTimeout(() => {
+        if (!dragStateRef.current || dragStateRef.current.id !== subjectId) return;
+        dragStateRef.current.longPressed = true;
+        setDraggingId(subjectId);
+        setDragPos({ x: dragStateRef.current.startX, y: dragStateRef.current.startY });
+        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
+      }, LONG_PRESS_MS),
+      longPressed: false,
+    };
+  };
+
+  const handleCardPointerMove = (e: ReactPointerEvent) => {
+    const state = dragStateRef.current;
+    if (!state) return;
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+    if (!state.longPressed) {
+      if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
+        clearDragTimer();
+        dragStateRef.current = null;
+      }
+      return;
+    }
+    setDragPos({ x: e.clientX, y: e.clientY });
+    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+    const folderEl = el?.closest("[data-folder-drop]") as HTMLElement | null;
+    setHoverFolderId(folderEl?.dataset["folderDrop"] ?? null);
+  };
+
+  const finishDrag = () => {
+    clearDragTimer();
+    dragStateRef.current = null;
+    setDraggingId(null);
+    setHoverFolderId(null);
+  };
+
+  const handleCardPointerUp = (
+    e: ReactPointerEvent,
+    subjectId: string,
+    firstPageId: string | undefined,
+  ) => {
+    const state = dragStateRef.current;
+    if (!state) return;
+    if (state.longPressed) {
+      if (hoverFolderId) {
+        assignSubjectToFolder(subjectId, hoverFolderId);
+        toast.success("Catatan dipindahkan ke folder");
+      }
+      finishDrag();
+    } else {
+      clearDragTimer();
+      dragStateRef.current = null;
+      if (selectMode) toggleSelected(subjectId);
+      else openSubject(subjectId, firstPageId);
+    }
+  };
+
+  const draggingSubject = draggingId ? subjects.find((s) => s.id === draggingId) : null;
 
   const openSubject = (subjectId: string, pageId: string | undefined) => {
     void navigate({
@@ -293,7 +393,11 @@ export function Dashboard() {
               className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
             />
             {query && (
-              <button onClick={() => setQuery("")} aria-label="Hapus pencarian" className="press-sm">
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Hapus pencarian"
+                className="press-sm"
+              >
                 <X className="size-4 text-muted-foreground" />
               </button>
             )}
@@ -403,7 +507,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            {subjects.length === 0 && folders.length === 0 && !composerMode && (
+            {mainSubjects.length === 0 && folders.length === 0 && !composerMode && (
               <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
                 <BookOpen className="mx-auto size-8 text-muted-foreground" />
                 <p className="mt-3 font-semibold">Belum ada mata kuliah</p>
@@ -477,26 +581,31 @@ export function Dashboard() {
 
             {/* Grid Card Mata Kuliah Presisi & Utuh */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {folders.map((folder) => (
-                <div
-                  key={folder.id}
-                  aria-disabled="true"
-                  title="Folder belum bisa dibuka"
-                  className="glass-soft spring-in relative flex min-h-[110px] cursor-not-allowed flex-col justify-between rounded-2xl p-4 opacity-80"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
-                      <FolderIcon className="size-4" />
-                    </span>
-                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      Segera hadir
-                    </span>
+              {folders.map((folder) => {
+                const isHover = hoverFolderId === folder.id;
+                return (
+                  <div
+                    key={folder.id}
+                    data-folder-drop={folder.id}
+                    onClick={() => setOpenFolderId(folder.id)}
+                    className={`glass-soft spring-in relative flex min-h-[110px] cursor-pointer flex-col justify-between rounded-2xl p-4 transition-all ${
+                      isHover ? "scale-[1.04] ring-2 ring-primary" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
+                        <FolderIcon className="size-4" />
+                      </span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {folder.subjectIds.length} catatan
+                      </span>
+                    </div>
+                    <p className="truncate text-sm font-semibold">{folder.name}</p>
                   </div>
-                  <p className="truncate text-sm font-semibold">{folder.name}</p>
-                </div>
-              ))}
+                );
+              })}
 
-              {subjects.map((subject) => {
+              {mainSubjects.map((subject) => {
                 const pages = subjectPages(data, subject.id);
                 const isSelected = selected.has(subject.id);
                 const lastModifiedIso = pages.reduce(
@@ -507,12 +616,14 @@ export function Dashboard() {
                 return (
                   <div
                     key={subject.id}
-                    onClick={() =>
-                      selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
-                    }
+                    onPointerDown={(e) => handleCardPointerDown(e, subject.id)}
+                    onPointerMove={handleCardPointerMove}
+                    onPointerUp={(e) => handleCardPointerUp(e, subject.id, pages[0]?.id)}
+                    onPointerCancel={finishDrag}
+                    style={{ touchAction: "none" }}
                     className={`press glass-soft spring-in group relative flex min-h-[110px] flex-col justify-between cursor-pointer rounded-2xl p-4 transition-all hover:border-slate-700 ${
                       isSelected ? "ring-2 ring-destructive" : ""
-                    }`}
+                    } ${draggingId === subject.id ? "opacity-30" : ""}`}
                   >
                     {selectMode && (
                       <div
@@ -559,6 +670,107 @@ export function Dashboard() {
           )}
         </div>
       </div>
+
+      {draggingSubject && (
+        <div
+          className="glass-card pointer-events-none fixed z-[100] w-56 rounded-2xl p-4 shadow-2xl"
+          style={{
+            left: dragPos.x,
+            top: dragPos.y,
+            transform: "translate(-50%, -125%) scale(1.05) rotate(-2deg)",
+            transition: "transform 0.15s var(--ease-spring)",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="size-4 flex-none text-muted-foreground" />
+            <h3 className="truncate text-sm font-bold text-foreground">{draggingSubject.name}</h3>
+          </div>
+        </div>
+      )}
+
+      {openFolder && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => setOpenFolderId(null)}
+        >
+          <div
+            className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
+                  <FolderIcon className="size-4" />
+                </span>
+                <p className="truncate text-base font-semibold">{openFolder.name}</p>
+              </div>
+              <button
+                onClick={() => setOpenFolderId(null)}
+                aria-label="Tutup"
+                className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto">
+              {openFolder.subjectIds.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Folder ini masih kosong. Tahan lalu seret catatan ke sini dari dashboard.
+                </p>
+              )}
+              {openFolder.subjectIds.map((sid) => {
+                const subj = subjects.find((s) => s.id === sid);
+                if (!subj) return null;
+                const pages = subjectPages(data, subj.id);
+                return (
+                  <div
+                    key={sid}
+                    className="glass-soft flex items-center justify-between gap-2 rounded-2xl p-3"
+                  >
+                    <button
+                      onClick={() => {
+                        setOpenFolderId(null);
+                        openSubject(subj.id, pages[0]?.id);
+                      }}
+                      className="press-sm flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
+                      <FileText className="size-4 flex-none text-muted-foreground" />
+                      <span className="truncate text-sm font-semibold">{subj.name}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        removeSubjectFromFolder(subj.id);
+                        toast.success("Catatan dikeluarkan dari folder");
+                      }}
+                      aria-label="Keluarkan dari folder"
+                      className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground active:scale-90"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                const count = openFolder.subjectIds.length;
+                deleteFolder(openFolder.id);
+                setOpenFolderId(null);
+                toast.success(
+                  count > 0
+                    ? `Folder dihapus, ${count} catatan kembali ke dashboard utama`
+                    : "Folder dihapus",
+                );
+              }}
+              className="press mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 py-3 text-sm font-semibold text-destructive active:scale-95"
+            >
+              <Trash2 className="size-4" /> Hapus folder
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </main>
