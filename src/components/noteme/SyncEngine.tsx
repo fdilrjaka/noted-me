@@ -68,7 +68,7 @@ export function SyncStatus() {
     };
   }, []);
 
-  const pending = dirtyCount() + dirtyTodoCount() + dirtyScheduleCount();
+  const pending = dirtyCount() + dirtyTodoCount() + dirtyScheduleCount(scheduleData);
 
   function clearRetry() {
     if (retryTimer.current) {
