@@ -22,9 +22,12 @@ const VELOCITY_WINDOW_MS = 120;
  * dipaksa collapse/expand lewat gesture scroll, jadi elemen fixed "nyangkut"
  * di posisi layout viewport lama, bukan visual viewport yang sebenarnya
  * terlihat. Melacak window.visualViewport secara langsung menghindari bug
- * ini sepenuhnya, terlepas dari apakah halaman scrollable atau tidak.
+ * ini sebagian besar, tapi kita juga perlu recompute setiap kali route
+ * berpindah (pathname berubah) dan mendengarkan scroll di `window` juga,
+ * karena visualViewport tidak selalu emit event saat konten halaman baru
+ * lebih pendek / posisi scroll sisa dari halaman sebelumnya belum settle.
  */
-function useVisualViewportOffset() {
+function useVisualViewportOffset(pathname: string) {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -36,16 +39,25 @@ function useVisualViewportOffset() {
       setOffset(Math.max(0, Math.round(bottomGap)));
     };
 
+    // Hitung langsung saat pathname berubah, lalu sekali lagi di frame
+    // berikutnya untuk menangkap layout yang belum settle (mis. browser
+    // masih menyesuaikan address bar / scroll restoration).
     update();
+    const raf = requestAnimationFrame(update);
+
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("orientationchange", update);
+
     return () => {
+      cancelAnimationFrame(raf);
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      window.removeEventListener("scroll", update);
       window.removeEventListener("orientationchange", update);
     };
-  }, []);
+  }, [pathname]);
 
   return offset;
 }
@@ -86,7 +98,7 @@ export function BottomNav({
 }: BottomNavProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const viewportOffset = useVisualViewportOffset();
+  const viewportOffset = useVisualViewportOffset(pathname);
 
   const isSubjectPage = pathname.startsWith("/subject");
 
