@@ -657,8 +657,16 @@ export function Dashboard() {
                     onPointerMove={handleCardPointerMove}
                     onPointerUp={(e) => handleCardPointerUp(e, subject.id, pages[0]?.id)}
                     onPointerCancel={finishDrag}
-                    style={{ touchAction: "none" }}
-                    className={`press glass-soft spring-in group relative flex min-h-[110px] flex-col justify-between cursor-pointer rounded-2xl p-4 transition-all hover:border-slate-700 ${
+                    style={{
+                      // "pan-y" (bukan "none"): browser tetap boleh scroll vertikal
+                      // secara native di atas card, tapi gesture horizontal/long-press
+                      // tetap kita yang urus lewat JS.
+                      touchAction: "pan-y",
+                      WebkitUserSelect: "none",
+                      userSelect: "none",
+                      WebkitTouchCallout: "none",
+                    }}
+                    className={`press glass-soft spring-in group relative flex min-h-[110px] flex-col justify-between cursor-pointer select-none rounded-2xl p-4 transition-all hover:border-slate-700 ${
                       isSelected ? "ring-2 ring-destructive" : ""
                     } ${draggingId === subject.id ? "opacity-30" : ""}`}
                   >
