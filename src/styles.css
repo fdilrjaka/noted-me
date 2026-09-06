@@ -2,6 +2,10 @@
 @source "../src";
 @import "tw-animate-css";
 
+/*
+ * NoteMe design system — Clean Dark Matte Glass
+ */
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 3px);
@@ -44,30 +48,29 @@
 :root {
   --radius: 1.125rem;
   
-  /* Latar belakang dasar: Dark Charcoal Netral & Slate */
-  --background: oklch(0.12 0.008 260);
-  --foreground: oklch(0.96 0.005 260);
+  /* Background Charcoal Matte Gelap persis gambar referensi */
+  --background: #1e1e20;
+  --foreground: #e4e4e7;
   
-  /* Card Surface dengan transparansi gelap yang halus */
-  --card: oklch(0.18 0.012 260 / 0.75);
-  --card-foreground: oklch(0.96 0.005 260);
-  --popover: oklch(0.16 0.012 260 / 0.9);
-  --popover-foreground: oklch(0.96 0.005 260);
+  /* Card Surface dengan kontras border & isi yang pas */
+  --card: rgba(24, 24, 27, 0.75);
+  --card-foreground: #f4f4f5;
+  --popover: rgba(24, 24, 27, 0.9);
+  --popover-foreground: #f4f4f5;
   
-  --primary: oklch(0.65 0.15 180); /* Aksen Cyan/Teal Profesional */
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.22 0.015 260 / 0.8);
-  --secondary-foreground: oklch(0.96 0.005 260);
-  --muted: oklch(0.22 0.01 260 / 0.6);
-  --muted-foreground: oklch(0.62 0.015 260);
-  --accent: oklch(0.6 0.15 260);
-  --accent-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 0.08);
-  --input: oklch(1 0 0 / 0.06);
+  --primary: #2dd4bf; /* Mint/Teal accent untuk tab aktif */
+  --primary-foreground: #09090b;
+  --secondary: rgba(39, 39, 42, 0.8);
+  --secondary-foreground: #f4f4f5;
+  --muted: rgba(39, 39, 42, 0.6);
+  --muted-foreground: #a1a1aa;
+  --accent: #2dd4bf;
+  --accent-foreground: #09090b;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.05);
 
-  /* Aksen Glow Halus (Natural & Muted Professional Tint) */
-  --glow-teal: oklch(0.45 0.08 180);
-  --glow-indigo: oklch(0.38 0.09 265);
+  /* Hint Glow Tipis & Muted di Kanan Atas */
+  --glow-hint: rgba(45, 212, 191, 0.08);
 }
 
 @layer base {
@@ -87,9 +90,10 @@
     font-family: var(--font-sans);
     min-height: 100vh;
     overflow-x: clip;
+    position: relative;
   }
 
-  /* Natural Ambient Background Blend */
+  /* Lighting hint halus di sudut kanan atas */
   body::before {
     content: "";
     position: fixed;
@@ -97,47 +101,44 @@
     z-index: -1;
     pointer-events: none;
     background:
-      /* Pendar Teal Halus Kanan Atas */
-      radial-gradient(55% 55% at 90% 10%, var(--glow-teal) 0%, transparent 80%),
-      /* Pendar Indigo Muted Kiri Bawah */
-      radial-gradient(60% 60% at 10% 90%, var(--glow-indigo) 0%, transparent 85%);
-    opacity: 0.15; /* Transparansi rendah agar menyatu alami tanpa bercak kasar */
-    filter: blur(100px);
+      radial-gradient(40% 40% at 85% 15%, var(--glow-hint) 0%, transparent 80%),
+      radial-gradient(50% 50% at 95% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 80%);
+    filter: blur(80px);
   }
 
   ::selection {
-    background: oklch(0.65 0.15 180 / 0.3);
+    background: rgba(45, 212, 191, 0.25);
   }
 }
 
-/* Glass Material Classes */
+/* Material Utilities */
 @utility glass {
   background: var(--card);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--border);
-  box-shadow: 0 4px 20px oklch(0 0 0 / 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 @utility glass-soft {
-  background: oklch(0.18 0.012 260 / 0.6);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  background: rgba(32, 32, 36, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border);
 }
 
 @utility glass-card {
   position: relative;
   background: var(--card);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s var(--ease-spring-soft), border-color 0.3s var(--ease-ios);
 
   @media (hover: hover) {
     &:hover {
-      border-color: oklch(1 0 0 / 0.15);
+      border-color: rgba(255, 255, 255, 0.15);
       transform: translateY(-2px);
     }
   }
