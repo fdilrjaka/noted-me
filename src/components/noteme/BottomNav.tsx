@@ -232,32 +232,32 @@ export function BottomNav({
   if (isSubjectPage) {
     return (
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden">
-        <nav className="glass-navigation pointer-events-auto flex items-center justify-between gap-1 rounded-full p-1.5 shadow-2xl backdrop-blur-xl">
+        <nav className="glass-navigation pointer-events-auto flex items-center justify-between gap-1 rounded-full p-1.5">
           <button
             type="button"
             onClick={() => void navigate({ to: "/" })}
             aria-label="Kembali ke Dashboard"
-            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground/80 hover:bg-muted active:scale-90"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-white/10 active:bg-white/15"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-5" strokeWidth={2.25} />
           </button>
 
           <button
             type="button"
             onClick={onToggleHueSlider}
             aria-label="Ubah Warna Latar"
-            className="press-sm flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
+            className="press-sm flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(45,212,191,0.45)]"
           >
-            <Paintbrush className="size-4" />
+            <Paintbrush className="size-4" strokeWidth={2.25} />
           </button>
 
           <button
             type="button"
             onClick={onInsertTable}
             aria-label="Tambah Tabel"
-            className="press-sm flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted active:scale-95"
+            className="press-sm flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-white/10 active:bg-white/15"
           >
-            <Table className="size-4 text-primary" />
+            <Table className="size-4 text-primary" strokeWidth={2.25} />
             <span>Table</span>
           </button>
 
@@ -265,18 +265,18 @@ export function BottomNav({
             type="button"
             onClick={onFormatText}
             aria-label="Format Teks"
-            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-muted active:scale-95"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-white/10 active:bg-white/15"
           >
-            <Type className="size-4" />
+            <Type className="size-4" strokeWidth={2.25} />
           </button>
 
           <button
             type="button"
             onClick={onAddMedia}
             aria-label="Tambah Foto / Media"
-            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-muted active:scale-95"
+            className="press-sm flex size-9 items-center justify-center rounded-full text-foreground hover:bg-white/10 active:bg-white/15"
           >
-            <Camera className="size-4" />
+            <Camera className="size-4" strokeWidth={2.25} />
           </button>
         </nav>
       </div>
@@ -316,14 +316,25 @@ export function BottomNav({
                   }
                   if (!active) void navigate({ to });
                 }}
-                className={`relative z-10 flex flex-1 flex-col items-center gap-0.5 rounded-full px-5 py-1.5 text-[11px] transition-colors duration-300 ${
-                  active ? "text-foreground" : "text-muted-foreground"
+                className={`press-sm relative z-10 flex flex-1 flex-col items-center gap-0.5 rounded-full px-5 py-1.5 text-[11px] transition-colors duration-300 ${
+                  active ? "font-semibold text-white" : "text-foreground/55 hover:text-foreground/80"
                 }`}
               >
                 <Icon
-                  className={`size-5 transition-colors duration-300 ${active ? "text-primary" : ""}`}
+                  className={`size-5 transition-all duration-300 ${
+                    active
+                      ? "text-primary drop-shadow-[0_0_6px_rgba(45,212,191,0.65)]"
+                      : ""
+                  }`}
+                  strokeWidth={active ? 2.4 : 2}
                 />
                 {label}
+                <span
+                  aria-hidden="true"
+                  className={`absolute -bottom-0.5 h-1 w-1 rounded-full bg-primary shadow-[0_0_6px_rgba(45,212,191,0.9)] transition-all duration-300 ${
+                    active ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                  }`}
+                />
               </button>
             );
           })}
