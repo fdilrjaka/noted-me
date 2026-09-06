@@ -92,6 +92,7 @@ export type Database = {
           deadline: string | null
           deleted: boolean
           id: string
+          lecturer: string
           lms_links: Json
           position: number
           room: string
@@ -108,6 +109,7 @@ export type Database = {
           deadline?: string | null
           deleted?: boolean
           id: string
+          lecturer?: string
           lms_links?: Json
           position?: number
           room?: string
@@ -124,6 +126,7 @@ export type Database = {
           deadline?: string | null
           deleted?: boolean
           id?: string
+          lecturer?: string
           lms_links?: Json
           position?: number
           room?: string

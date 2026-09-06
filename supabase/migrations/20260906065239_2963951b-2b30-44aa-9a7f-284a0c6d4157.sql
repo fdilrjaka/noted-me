@@ -1,0 +1,1 @@
+ALTER TABLE public.schedule_classes ADD COLUMN IF NOT EXISTS lecturer text NOT NULL DEFAULT ''::text;
