@@ -58,7 +58,9 @@
 
 :root {
   --radius: 1.125rem;
-  --background: oklch(0.16 0.035 285);
+  /* Latar dasar netral & tetap (tidak ikut slider warna) — abu-abu gelap
+     seperti pada referensi, supaya slider hanya mengendalikan cahaya/aksen. */
+  --background: oklch(0.16 0.006 285);
   --foreground: oklch(0.97 0.006 285);
   --card: oklch(0.24 0.04 285 / 0.55);
   --card-foreground: oklch(0.97 0.006 285);
@@ -132,7 +134,7 @@
       radial-gradient(58% 52% at 90% 6%, var(--glow-pink) 0%, transparent 70%),
       radial-gradient(50% 46% at 52% 46%, var(--glow-purple) 0%, transparent 78%),
       radial-gradient(36% 30% at 16% 20%, var(--glow-blue) 0%, transparent 74%);
-    opacity: 0.42;
+    opacity: 0.28;
     filter: blur(90px) saturate(135%);
     animation: aurora 42s var(--ease-ios) infinite alternate;
   }
