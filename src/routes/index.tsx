@@ -6,6 +6,8 @@ import {
   Check,
   Download,
   FileText,
+  Folder as FolderIcon,
+  NotebookPen,
   Palette,
   Plus,
   Search,
@@ -21,6 +23,7 @@ import { HueSlider } from "@/components/HueSlider";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
+import { createFolder, useFolders } from "@/lib/noteme/folderStore";
 import { exportBackupJson, exportBackupMarkdown, importBackupJson } from "@/lib/noteme/backup";
 import {
   activeSubjects,
@@ -74,8 +77,10 @@ export function Dashboard() {
   const profileUsername = user?.email?.replace("@noteme.app", "") ?? "";
   const profileInitial = (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "?";
   const [query, setQuery] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [actionHubOpen, setActionHubOpen] = useState(false);
+  const [composerMode, setComposerMode] = useState<"note" | "folder" | null>(null);
   const [name, setName] = useState("");
+  const folders = useFolders();
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
@@ -309,54 +314,135 @@ export function Dashboard() {
                   </button>
                 )}
                 {!selectMode && (
-                  <button
-                    onClick={() => setAdding(true)}
-                    aria-label="Tambah mata kuliah"
-                    className="press glass-floating flex size-9 items-center justify-center rounded-full text-foreground active:scale-90"
-                  >
-                    <Plus className="size-5" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setActionHubOpen((v) => !v)}
+                      aria-label="Tambah baru"
+                      aria-expanded={actionHubOpen}
+                      className={`press glass-floating flex size-9 items-center justify-center rounded-full text-foreground active:scale-90 ${
+                        actionHubOpen ? "rotate-45" : ""
+                      } transition-transform duration-300`}
+                    >
+                      <Plus className="size-5" />
+                    </button>
+
+                    {actionHubOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-30"
+                          onClick={() => setActionHubOpen(false)}
+                        />
+                        {/* Action hub bercabang ala tree — dua opsi menjulur dari tombol + */}
+                        <div className="absolute right-3 top-full z-40 pt-3">
+                          <svg
+                            aria-hidden="true"
+                            width="88"
+                            height="56"
+                            viewBox="0 0 88 56"
+                            className="pointer-events-none absolute -top-3 right-2 text-border"
+                          >
+                            <path
+                              d="M 74 0 V 14 Q 74 20 68 20 H 44"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M 44 20 H 20 Q 14 20 14 26 V 40"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M 44 20 H 68 Q 74 20 74 26 V 40"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                          </svg>
+                          <div className="spring-in flex flex-col items-end gap-2">
+                            <button
+                              onClick={() => {
+                                setActionHubOpen(false);
+                                setComposerMode("folder");
+                              }}
+                              className="press glass-card flex items-center gap-2.5 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-medium"
+                            >
+                              <span className="flex size-7 items-center justify-center rounded-full bg-amber-400/15 text-amber-400">
+                                <FolderIcon className="size-3.5" />
+                              </span>
+                              Buat Folder
+                            </button>
+                            <button
+                              onClick={() => {
+                                setActionHubOpen(false);
+                                setComposerMode("note");
+                              }}
+                              className="press glass-card flex items-center gap-2.5 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-medium"
+                            >
+                              <span className="flex size-7 items-center justify-center rounded-full bg-primary/15 text-primary">
+                                <NotebookPen className="size-3.5" />
+                              </span>
+                              Buat Catatan
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
 
-            {subjects.length === 0 && !adding && (
+            {subjects.length === 0 && folders.length === 0 && !composerMode && (
               <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
                 <BookOpen className="mx-auto size-8 text-muted-foreground" />
                 <p className="mt-3 font-semibold">Belum ada mata kuliah</p>
               </div>
             )}
 
-            {adding && (
+            {composerMode && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-                onClick={() => setAdding(false)}
+                onClick={() => setComposerMode(null)}
               >
                 <div
                   className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <p className="mb-3 text-base font-semibold">Mata kuliah baru</p>
+                  <p className="mb-3 text-base font-semibold">
+                    {composerMode === "folder" ? "Folder baru" : "Mata kuliah baru"}
+                  </p>
                   <input
                     autoFocus
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        if (name.trim()) createSubject(name);
+                        if (name.trim()) {
+                          if (composerMode === "folder") createFolder(name);
+                          else createSubject(name);
+                        }
                         setName("");
-                        setAdding(false);
+                        setComposerMode(null);
                       }
-                      if (e.key === "Escape") setAdding(false);
+                      if (e.key === "Escape") setComposerMode(null);
                     }}
-                    placeholder="Contoh: Manajemen Risiko"
+                    placeholder={
+                      composerMode === "folder" ? "Contoh: Semester 5" : "Contoh: Manajemen Risiko"
+                    }
                     className="glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground"
                   />
+                  {composerMode === "folder" && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Folder belum bisa dibuka — masih tampilan awal.
+                    </p>
+                  )}
                   <div className="mt-4 flex justify-end gap-2">
                     <button
                       onClick={() => {
                         setName("");
-                        setAdding(false);
+                        setComposerMode(null);
                       }}
                       className="press rounded-full px-4 py-2 text-sm font-medium text-muted-foreground active:scale-95"
                     >
@@ -364,9 +450,12 @@ export function Dashboard() {
                     </button>
                     <button
                       onClick={() => {
-                        if (name.trim()) createSubject(name);
+                        if (name.trim()) {
+                          if (composerMode === "folder") createFolder(name);
+                          else createSubject(name);
+                        }
                         setName("");
-                        setAdding(false);
+                        setComposerMode(null);
                       }}
                       className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
                     >
@@ -379,6 +468,25 @@ export function Dashboard() {
 
             {/* Grid Card Mata Kuliah Presisi & Utuh */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {folders.map((folder) => (
+                <div
+                  key={folder.id}
+                  aria-disabled="true"
+                  title="Folder belum bisa dibuka"
+                  className="glass-soft spring-in relative flex min-h-[110px] cursor-not-allowed flex-col justify-between rounded-2xl p-4 opacity-80"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
+                      <FolderIcon className="size-4" />
+                    </span>
+                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      Segera hadir
+                    </span>
+                  </div>
+                  <p className="truncate text-sm font-semibold">{folder.name}</p>
+                </div>
+              ))}
+
               {subjects.map((subject) => {
                 const pages = subjectPages(data, subject.id);
                 const isSelected = selected.has(subject.id);
