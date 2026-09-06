@@ -27,6 +27,13 @@ const VELOCITY_WINDOW_MS = 120;
  * karena visualViewport tidak selalu emit event saat konten halaman baru
  * lebih pendek / posisi scroll sisa dari halaman sebelumnya belum settle.
  */
+// Browser chrome (address bar) yang collapse/expand saat scroll juga
+// menggeser bottomGap sedikit (biasanya < KEYBOARD_GAP_THRESHOLD_PX), dan
+// itu bikin bottomnav ikut naik-turun padahal bukan keyboard yang muncul.
+// Kita anggap itu bukan keyboard kalau gap-nya masih kecil, supaya nav
+// tetap diam di posisi normalnya saat cuma scroll biasa.
+const KEYBOARD_GAP_THRESHOLD_PX = 120;
+
 function useVisualViewportOffset(pathname: string) {
   const [offset, setOffset] = useState(0);
 
@@ -36,7 +43,8 @@ function useVisualViewportOffset(pathname: string) {
 
     const update = () => {
       const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
-      setOffset(Math.max(0, Math.round(bottomGap)));
+      const rounded = Math.max(0, Math.round(bottomGap));
+      setOffset(rounded < KEYBOARD_GAP_THRESHOLD_PX ? 0 : rounded);
     };
 
     // Hitung langsung saat pathname berubah, lalu sekali lagi di frame
