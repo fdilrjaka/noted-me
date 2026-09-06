@@ -2,10 +2,6 @@
 @source "../src";
 @import "tw-animate-css";
 
-/*
- * NoteMe design system — "Liquid Glass"
- */
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 3px);
@@ -33,73 +29,51 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-glow-blue: var(--glow-blue);
-  --color-glow-purple: var(--glow-purple);
-  --color-glow-pink: var(--glow-pink);
 
   --font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue",
     system-ui, sans-serif;
 
   --shadow-glass: 0 8px 32px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.08);
-  --shadow-glow: 0 0 40px oklch(0.62 0.22 285 / 0.35);
 
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-spring-soft: cubic-bezier(0.22, 1.12, 0.36, 1);
   --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-rubber: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
   --radius: 1.125rem;
   
-  /* Latar belakang dasar gelap netral */
-  --background: oklch(0.14 0.005 285);
-  --foreground: oklch(0.97 0.006 285);
+  /* Latar belakang dasar: Dark Charcoal Netral & Slate */
+  --background: oklch(0.12 0.008 260);
+  --foreground: oklch(0.96 0.005 260);
   
-  /* Nilai card & popover dikembalikan agar card punya warna isi */
-  --card: oklch(0.24 0.04 285 / 0.55);
-  --card-foreground: oklch(0.97 0.006 285);
-  --popover: oklch(0.2 0.04 285 / 0.85);
-  --popover-foreground: oklch(0.97 0.006 285);
+  /* Card Surface dengan transparansi gelap yang halus */
+  --card: oklch(0.18 0.012 260 / 0.75);
+  --card-foreground: oklch(0.96 0.005 260);
+  --popover: oklch(0.16 0.012 260 / 0.9);
+  --popover-foreground: oklch(0.96 0.005 260);
   
-  --primary: oklch(0.68 0.19 275);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.3 0.045 285 / 0.7);
-  --secondary-foreground: oklch(0.97 0.006 285);
-  --muted: oklch(0.28 0.035 285 / 0.6);
-  --muted-foreground: oklch(0.72 0.03 285);
-  --accent: oklch(0.66 0.22 330);
+  --primary: oklch(0.65 0.15 180); /* Aksen Cyan/Teal Profesional */
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.22 0.015 260 / 0.8);
+  --secondary-foreground: oklch(0.96 0.005 260);
+  --muted: oklch(0.22 0.01 260 / 0.6);
+  --muted-foreground: oklch(0.62 0.015 260);
+  --accent: oklch(0.6 0.15 260);
   --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.62 0.23 20);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 0.12);
-  --input: oklch(1 0 0 / 0.08);
-  --ring: oklch(0.7 0.19 285);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.06);
 
-  /* Aksen Warna Pendar Glow */
-  --glow-blue: oklch(0.55 0.18 240);
-  --glow-purple: oklch(0.5 0.2 300);
-  --glow-pink: oklch(0.55 0.2 350);
-  --glow-green: oklch(0.55 0.19 165);
-
-  /* Glass primitives */
-  --glass-highlight: oklch(1 0 0 / 0.14);
-  --glass-highlight-soft: oklch(1 0 0 / 0.07);
-  --glass-specular: oklch(1 0 0 / 0.5);
-  --glass-shadow-ambient: 0 1px 1px oklch(0 0 0 / 0.2), 0 18px 44px -12px oklch(0 0 0 / 0.55);
-  --glass-shadow-soft: 0 1px 1px oklch(0 0 0 / 0.14), 0 10px 26px -10px oklch(0 0 0 / 0.4);
-  --glass-shadow-floating: 0 10px 30px -6px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.3);
+  /* Aksen Glow Halus (Natural & Muted Professional Tint) */
+  --glow-teal: oklch(0.45 0.08 180);
+  --glow-indigo: oklch(0.38 0.09 265);
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
     -webkit-tap-highlight-color: transparent;
-  }
-
-  #lovable-badge {
-    display: none !important;
   }
 
   html {
@@ -115,185 +89,63 @@
     overflow-x: clip;
   }
 
-  /* Glow ambient di ujung-ujung layar */
+  /* Natural Ambient Background Blend */
   body::before {
     content: "";
     position: fixed;
-    inset: -10%;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(45% 45% at 92% 15%, var(--glow-green) 0%, transparent 75%),
-      radial-gradient(40% 40% at 88% 70%, oklch(0.48 0.15 45) 0%, transparent 80%),
-      radial-gradient(50% 50% at 8% 85%, var(--glow-blue) 0%, transparent 80%),
-      radial-gradient(40% 40% at 50% 50%, var(--glow-purple) 0%, transparent 85%);
-    opacity: 0.3;
-    filter: blur(85px) saturate(140%);
+      /* Pendar Teal Halus Kanan Atas */
+      radial-gradient(55% 55% at 90% 10%, var(--glow-teal) 0%, transparent 80%),
+      /* Pendar Indigo Muted Kiri Bawah */
+      radial-gradient(60% 60% at 10% 90%, var(--glow-indigo) 0%, transparent 85%);
+    opacity: 0.15; /* Transparansi rendah agar menyatu alami tanpa bercak kasar */
+    filter: blur(100px);
   }
 
   ::selection {
-    background: oklch(0.68 0.19 275 / 0.4);
-  }
-
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: oklch(1 0 0 / 0.14);
-    border-radius: 999px;
+    background: oklch(0.65 0.15 180 / 0.3);
   }
 }
 
-/* ---------- Liquid Glass Utilities ---------- */
-
+/* Glass Material Classes */
 @utility glass {
   background: var(--card);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-glass);
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.35);
 }
 
 @utility glass-soft {
-  background: oklch(0.25 0.03 285 / 0.45);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  background: oklch(0.18 0.012 260 / 0.6);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
   border: 1px solid var(--border);
-}
-
-@utility glass-bar {
-  background: oklch(0.18 0.035 285 / 0.72);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-color: var(--border);
 }
 
 @utility glass-card {
   position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(
-      140% 100% at var(--px, 50%) var(--py, 0%),
-      var(--glass-highlight-soft),
-      transparent 60%
-    ),
-    var(--card);
-  backdrop-filter: blur(22px) saturate(170%);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  background: var(--card);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--border);
-  border-top-color: oklch(1 0 0 / 0.16);
-  box-shadow: var(--glass-shadow-soft), inset 0 1px 0 oklch(1 0 0 / 0.06);
-  transition:
-    transform 0.5s var(--ease-spring-soft),
-    box-shadow 0.4s var(--ease-ios),
-    border-color 0.4s var(--ease-ios);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.25);
+  transition: transform 0.3s var(--ease-spring-soft), border-color 0.3s var(--ease-ios);
 
-  @media (hover: hover) and (pointer: fine) {
+  @media (hover: hover) {
     &:hover {
-      transform: translate3d(0, -3px, 0);
-      box-shadow: var(--glass-shadow-ambient), inset 0 1px 0 oklch(1 0 0 / 0.08);
+      border-color: oklch(1 0 0 / 0.15);
+      transform: translateY(-2px);
     }
   }
-}
-
-@utility glass-card-press {
-  transition: transform 0.4s var(--ease-spring);
-  &:active {
-    transform: scale(0.975);
-  }
-}
-
-@utility glass-navigation {
-  background: oklch(0.19 0.035 285 / 0.66);
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
-  border: 1px solid oklch(1 0 0 / 0.1);
-  border-top-color: oklch(1 0 0 / 0.18);
-  box-shadow: var(--glass-shadow-floating), inset 0 1px 0 oklch(1 0 0 / 0.09);
-}
-
-@utility glass-toolbar {
-  background: oklch(0.2 0.035 285 / 0.5);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
-  border: 1px solid oklch(1 0 0 / 0.08);
-  box-shadow: 0 6px 20px -10px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.08);
-}
-
-@utility glass-sheet {
-  background: oklch(0.21 0.038 285 / 0.82);
-  backdrop-filter: blur(38px) saturate(190%);
-  -webkit-backdrop-filter: blur(38px) saturate(190%);
-  border: 1px solid oklch(1 0 0 / 0.12);
-  border-top-color: oklch(1 0 0 / 0.22);
-  box-shadow: 0 -4px 0 oklch(1 0 0 / 0.02) inset, 0 24px 60px -14px oklch(0 0 0 / 0.65);
-}
-
-@utility glass-floating {
-  background: oklch(0.26 0.045 285 / 0.6);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid oklch(1 0 0 / 0.14);
-  box-shadow: var(--glass-shadow-floating), inset 0 1px 0 oklch(1 0 0 / 0.12);
-}
-
-@utility glass-fab {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(120% 130% at 28% 18%, oklch(1 0 0 / 0.3), transparent 52%),
-    radial-gradient(100% 100% at 72% 88%, oklch(1 0 0 / 0.06), transparent 60%),
-    oklch(0.32 0.015 285 / 0.5);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid oklch(1 0 0 / 0.14);
-  border-top-color: oklch(1 0 0 / 0.4);
-  box-shadow:
-    var(--glass-shadow-floating),
-    inset 0 1px 1px oklch(1 0 0 / 0.3),
-    inset 0 -3px 5px oklch(0 0 0 / 0.4),
-    inset 0 0 0 1px oklch(0 0 0 / 0.08);
-  transition:
-    transform 0.42s var(--ease-spring),
-    box-shadow 0.35s var(--ease-ios);
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      box-shadow:
-        var(--glass-shadow-ambient),
-        inset 0 1px 1px oklch(1 0 0 / 0.36),
-        inset 0 -3px 5px oklch(0 0 0 / 0.4);
-    }
-  }
-}
-
-@utility glass-input {
-  background: oklch(0.14 0.03 285 / 0.4);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid oklch(1 0 0 / 0.1);
-  box-shadow:
-    inset 0 1px 3px oklch(0 0 0 / 0.35),
-    inset 0 1px 0 oklch(1 0 0 / 0.04);
 }
 
 @utility press {
-  transition:
-    transform 0.42s var(--ease-spring),
-    background-color 0.25s var(--ease-ios),
-    box-shadow 0.35s var(--ease-ios),
-    opacity 0.25s var(--ease-ios);
+  transition: transform 0.3s var(--ease-spring), opacity 0.2s var(--ease-ios);
   will-change: transform;
-}
-
-@utility press-sm {
-  transition: transform 0.34s var(--ease-spring);
-  will-change: transform;
-}
-
-@utility safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
 }
 
 @utility safe-bottom-lg {
