@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Home, Compass, User, ChevronLeft, Paintbrush, Table, Type, Camera } from "lucide-react";
 import { resetNavDragProgress, setNavDragProgress } from "@/lib/noteme/navDrag";
@@ -14,6 +14,41 @@ const SWITCH_DISTANCE_FRACTION = 0.35;
 const SWITCH_VELOCITY_PX_MS = 0.55;
 const RUBBER_BAND_DAMP = 0.32;
 const VELOCITY_WINDOW_MS = 120;
+
+/**
+ * Beberapa browser mobile (terutama Chrome/Android) tidak langsung
+ * menyesuaikan ulang elemen `position: fixed` terhadap `dvh` ketika halaman
+ * tidak butuh discroll (kontennya pas/pendek) — address bar tidak pernah
+ * dipaksa collapse/expand lewat gesture scroll, jadi elemen fixed "nyangkut"
+ * di posisi layout viewport lama, bukan visual viewport yang sebenarnya
+ * terlihat. Melacak window.visualViewport secara langsung menghindari bug
+ * ini sepenuhnya, terlepas dari apakah halaman scrollable atau tidak.
+ */
+function useVisualViewportOffset() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
+      setOffset(Math.max(0, Math.round(bottomGap)));
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  return offset;
+}
 
 function rubberBand(value: number, min: number, max: number, damp: number) {
   if (value < min) return min - (min - value) * damp;
@@ -51,6 +86,7 @@ export function BottomNav({
 }: BottomNavProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const viewportOffset = useVisualViewportOffset();
 
   const isSubjectPage = pathname.startsWith("/subject");
 
@@ -231,7 +267,10 @@ export function BottomNav({
   // Tampilan 1: Mode Toolbar ala iOS (Muncul saat membuka Halaman Catatan / Subject)
   if (isSubjectPage) {
     return (
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden"
+        style={{ transform: `translate3d(0, -${viewportOffset}px, 0)` }}
+      >
         <nav className="glass-navigation pointer-events-auto flex items-center justify-between gap-1 rounded-full p-1.5">
           <button
             type="button"
@@ -285,7 +324,10 @@ export function BottomNav({
 
   // Tampilan 2: Mode Main Navigation (Muncul saat di Halaman Utama / Home / Trash / Profile)
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden">
+    <div
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:hidden"
+      style={{ transform: `translate3d(0, -${viewportOffset}px, 0)` }}
+    >
       <nav
         className="glass-navigation pointer-events-auto relative select-none rounded-full p-2"
         aria-label="Navigasi utama"
