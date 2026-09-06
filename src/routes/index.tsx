@@ -2,16 +2,17 @@ import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Bell,
   BookOpen,
   Check,
   Download,
   FileText,
+  Palette,
   Pin,
   PinOff,
   Plus,
   Search,
   Trash2,
-  User,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -65,12 +66,24 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useSession();
   const { hue, setHue } = useBackgroundHue();
+  const profileMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const profileAvatarUrl =
+    typeof profileMeta["avatar_url"] === "string" ? (profileMeta["avatar_url"] as string) : null;
+  const profileAvatarColor =
+    typeof profileMeta["avatar_color"] === "string"
+      ? (profileMeta["avatar_color"] as string)
+      : "#7c3aed";
+  const profileNickname =
+    typeof profileMeta["nickname"] === "string" ? (profileMeta["nickname"] as string) : "";
+  const profileUsername = user?.email?.replace("@noteme.app", "") ?? "";
+  const profileInitial = (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "?";
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -146,7 +159,23 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <HueSlider hue={hue} onChange={setHue} />
+              <div className="relative">
+                <button
+                  onClick={() => setColorPickerOpen((v) => !v)}
+                  aria-label="Ganti warna latar"
+                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
+                >
+                  <Palette className="size-4" />
+                </button>
+                {colorPickerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setColorPickerOpen(false)} />
+                    <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-64 rounded-2xl p-4">
+                      <HueSlider hue={hue} onChange={setHue} />
+                    </div>
+                  </>
+                )}
+              </div>
 
               <div className="relative">
                 <button
@@ -207,19 +236,49 @@ export function Dashboard() {
               </div>
 
               <div className="hidden items-center gap-2 md:flex">
-                <Link
-                  to="/trash"
-                  aria-label="Trash"
+                {subjects.length > 0 && (
+                  <button
+                    onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+                    aria-label="Hapus mata kuliah"
+                    className={`press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90 ${
+                      selectMode ? "text-destructive" : ""
+                    }`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
+                <button
+                  aria-label="Cari"
                   className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
                 >
-                  <Trash2 className="size-4" />
-                </Link>
+                  <Search className="size-4" />
+                </button>
+                <button
+                  aria-label="Notifikasi"
+                  className="press glass-floating relative flex size-10 items-center justify-center rounded-full active:scale-90"
+                >
+                  <Bell className="size-4" />
+                  <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
+                </button>
                 <Link
                   to="/auth"
                   aria-label="Akun"
-                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
+                  className="press flex size-10 items-center justify-center overflow-hidden rounded-full active:scale-90"
                 >
-                  <User className="size-4" />
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt="Foto profil"
+                      className="size-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="flex size-full items-center justify-center rounded-full text-sm font-semibold text-white"
+                      style={{ backgroundColor: profileAvatarColor }}
+                    >
+                      {profileInitial}
+                    </span>
+                  )}
                 </Link>
               </div>
             </div>
@@ -246,23 +305,13 @@ export function Dashboard() {
                 {selectMode ? `${selected.size} dipilih` : "Mata Kuliah"}
               </h2>
               <div className="flex items-center gap-2">
-                {selectMode ? (
+                {selectMode && (
                   <button
                     onClick={exitSelectMode}
                     className="press flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium active:scale-95"
                   >
                     Batal
                   </button>
-                ) : (
-                  subjects.length > 0 && (
-                    <button
-                      onClick={() => setSelectMode(true)}
-                      aria-label="Pilih untuk dihapus"
-                      className="press glass-floating flex size-9 items-center justify-center rounded-full text-destructive active:scale-90"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  )
                 )}
                 {!selectMode && (
                   <button
