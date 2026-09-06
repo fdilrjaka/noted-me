@@ -6,8 +6,8 @@ import { Sidebar } from "@/components/noteme/Sidebar";
 import { ScheduleHeader } from "@/components/schedule/ScheduleHeader";
 import { DayTabs, SCHEDULE_DAYS, type ScheduleDayId } from "@/components/schedule/DayTabs";
 import { ClassCard } from "@/components/schedule/ClassCard";
-import type { ClassType, ClassStatus } from "@/components/schedule/scheduleData";
-import { classesForDay, createClass, deleteClass, loadScheduleLocal, useScheduleData } from "@/lib/noteme/scheduleStore";
+import type { ClassType, ClassStatus, ScheduleClass } from "@/components/schedule/scheduleData";
+import { classesForDay, createClass, updateClass, deleteClass, loadScheduleLocal, useScheduleData } from "@/lib/noteme/scheduleStore";
 
 export const Route = createFileRoute("/schedule")({
   component: SchedulePage,
@@ -17,10 +17,11 @@ function SchedulePage() {
   const [activeDay, setActiveDay] = useState<ScheduleDayId>("jumat");
   const scheduleData = useScheduleData();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form States
   const [courseName, setCourseName] = useState("");
-  const [lecturer, setLecturer] = useState(""); // State Nama Dosen
+  const [lecturer, setLecturer] = useState("");
   const [day, setDay] = useState<ScheduleDayId>("jumat");
   const [time, setTime] = useState("");
   const [room, setRoom] = useState("");
@@ -33,21 +34,68 @@ function SchedulePage() {
     loadScheduleLocal();
   }, []);
 
-  const handleAddClass = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEditingId(null);
+    setCourseName("");
+    setLecturer("");
+    setDay(activeDay);
+    setTime("");
+    setRoom("");
+    setClassType("offline");
+    setStatus("upcoming");
+    setLmsLabel("");
+    setLmsUrl("");
+  };
+
+  const handleOpenCreate = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: ScheduleClass) => {
+    setEditingId(item.id);
+    setCourseName(item.courseName);
+    setLecturer(item.lecturer || "");
+    setDay(item.day);
+    setTime(item.time);
+    setRoom(item.room);
+    setClassType(item.classType);
+    setStatus(item.status);
+    setLmsLabel(item.lmsLinks[0]?.label || "");
+    setLmsUrl(item.lmsLinks[0]?.url || "");
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createClass({
-      day,
-      courseName,
-      lecturer: lecturer || "Dr. Andi Wijaya",
-      time,
-      room,
-      classType,
-      status,
-      lmsLinks: lmsUrl ? [{ label: lmsLabel || "Live Unpad", url: lmsUrl }] : [],
-    });
+    const lmsLinks = lmsUrl ? [{ label: lmsLabel || "Live Unpad", url: lmsUrl }] : [];
+
+    if (editingId) {
+      updateClass(editingId, {
+        day,
+        courseName,
+        lecturer,
+        time,
+        room,
+        classType,
+        status,
+        lmsLinks,
+      });
+    } else {
+      createClass({
+        day,
+        courseName,
+        lecturer,
+        time,
+        room,
+        classType,
+        status,
+        lmsLinks,
+      });
+    }
+
     setIsModalOpen(false);
-    // Reset Form
-    setCourseName(""); setLecturer(""); setTime(""); setRoom(""); setLmsLabel(""); setLmsUrl("");
+    resetForm();
   };
 
   const handleDelete = (id: string) => {
@@ -60,17 +108,17 @@ function SchedulePage() {
   );
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem] bg-[#121417] text-slate-200">
+    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem] text-foreground">
       <Sidebar />
       
       {/* Top Search Bar */}
       <div className="pt-4 pb-2">
         <div className="relative w-full max-w-xl">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search..."
-            className="w-full rounded-full bg-slate-800/50 py-2 pl-10 pr-4 text-xs border border-slate-700/50 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-slate-600"
+            placeholder="Search Search..."
+            className="glass-soft w-full rounded-full py-2 pl-10 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
       </div>
@@ -80,9 +128,9 @@ function SchedulePage() {
       <div className="flex items-center justify-between my-4 gap-2">
         <DayTabs active={activeDay} onChange={setActiveDay} />
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreate}
           aria-label="Tambah Jadwal"
-          className="flex size-9 flex-none items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-200 transition-all hover:bg-slate-700 active:scale-95"
+          className="press glass-soft flex size-9 flex-none items-center justify-center rounded-full text-foreground hover:bg-accent active:scale-90"
         >
           <Plus className="size-5" strokeWidth={2} />
         </button>
@@ -90,68 +138,70 @@ function SchedulePage() {
 
       <div className="flex flex-col gap-3 pb-28">
         {filteredClasses.length === 0 && (
-          <p className="px-1 py-12 text-center text-sm text-slate-500">
+          <p className="px-1 py-12 text-center text-sm text-muted-foreground">
             Belum ada jadwal. Klik tombol <strong>+</strong> untuk menambahkan.
           </p>
         )}
         {filteredClasses.map((item) => (
-          <ClassCard key={item.id} item={item} onDelete={handleDelete} />
+          <ClassCard key={item.id} item={item} onEdit={handleOpenEdit} onDelete={handleDelete} />
         ))}
       </div>
 
-      {/* Pop-up Modal Input */}
+      {/* Pop-up Modal Input / Edit */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl bg-[#1a1d21] border border-slate-800 text-slate-200">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-100">Tambah Jadwal Baru</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+          <div className="glass-soft w-full max-w-md rounded-2xl p-6 shadow-2xl text-foreground">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h2 className="text-base font-bold">
+                {editingId ? "Edit Jadwal Kuliah" : "Tambah Jadwal Baru"}
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="size-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddClass} className="space-y-3.5 mt-4 text-xs">
+            <form onSubmit={handleSubmit} className="space-y-3.5 mt-4 text-xs">
               <div>
-                <label className="text-slate-400 font-medium">Nama Mata Kuliah</label>
+                <label className="text-muted-foreground font-medium">Nama Mata Kuliah</label>
                 <input
                   required
                   value={courseName}
                   onChange={(e) => setCourseName(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                  className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="contoh: Pengembangan Produk"
                 />
               </div>
 
               <div>
-                <label className="text-slate-400 font-medium">Nama Dosen Pengampu</label>
+                <label className="text-muted-foreground font-medium">Nama Dosen Pengampu</label>
                 <input
                   value={lecturer}
                   onChange={(e) => setLecturer(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                  className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="contoh: Dr. Andi Wijaya"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-slate-400 font-medium">Hari</label>
+                  <label className="text-muted-foreground font-medium">Hari</label>
                   <select
                     value={day}
                     onChange={(e) => setDay(e.target.value as ScheduleDayId)}
-                    className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white focus:outline-none focus:border-slate-500"
+                    className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground focus:outline-none"
                   >
                     {SCHEDULE_DAYS.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-slate-900 text-white">{d.label}</option>
+                      <option key={d.id} value={d.id} className="bg-background text-foreground">{d.label}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 font-medium">Jam Kuliah</label>
+                  <label className="text-muted-foreground font-medium">Jam Kuliah</label>
                   <input
                     required
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                    className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground placeholder:text-muted-foreground focus:outline-none"
                     placeholder="07:00 - 09:30"
                   />
                 </div>
@@ -159,62 +209,62 @@ function SchedulePage() {
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-slate-400 font-medium">Ruangan / Lokasi</label>
+                  <label className="text-muted-foreground font-medium">Ruangan / Lokasi</label>
                   <input
                     required
                     value={room}
                     onChange={(e) => setRoom(e.target.value)}
-                    className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                    className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground placeholder:text-muted-foreground focus:outline-none"
                     placeholder="LAMBDA 0715-0204"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 font-medium">Tipe Kelas</label>
+                  <label className="text-muted-foreground font-medium">Tipe Kelas</label>
                   <select
                     value={classType}
                     onChange={(e) => setClassType(e.target.value as ClassType)}
-                    className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white focus:outline-none focus:border-slate-500"
+                    className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground focus:outline-none"
                   >
-                    <option value="offline" className="bg-slate-900 text-white">Offline Class</option>
-                    <option value="online" className="bg-slate-900 text-white">Online Class</option>
+                    <option value="offline" className="bg-background text-foreground">Offline Class</option>
+                    <option value="online" className="bg-background text-foreground">Online Class</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-400 font-medium">Status Pertemuan</label>
+                <label className="text-muted-foreground font-medium">Status Pertemuan</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ClassStatus)}
-                  className="w-full rounded-xl bg-slate-800/80 p-2.5 mt-1 border border-slate-700/80 text-white focus:outline-none focus:border-slate-500"
+                  className="glass-soft w-full rounded-xl p-2.5 mt-1 text-foreground focus:outline-none"
                 >
-                  <option value="upcoming" className="bg-slate-900 text-white">Upcoming</option>
-                  <option value="ongoing" className="bg-slate-900 text-white">Ongoing</option>
-                  <option value="done" className="bg-slate-900 text-white">Done</option>
+                  <option value="upcoming" className="bg-background text-foreground">Upcoming</option>
+                  <option value="ongoing" className="bg-background text-foreground">Ongoing</option>
+                  <option value="done" className="bg-background text-foreground">Done</option>
                 </select>
               </div>
 
-              <div className="pt-2 border-t border-slate-800/80 space-y-2">
-                <label className="text-xs font-semibold text-teal-400">Tautan LMS (Opsional)</label>
+              <div className="pt-2 border-t border-border space-y-2">
+                <label className="text-xs font-semibold text-primary">Tautan LMS (Opsional)</label>
                 <input
                   value={lmsLabel}
                   onChange={(e) => setLmsLabel(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800/80 p-2.5 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                  className="glass-soft w-full rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="Label (misal: Live Unpad)"
                 />
                 <input
                   value={lmsUrl}
                   onChange={(e) => setLmsUrl(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800/80 p-2.5 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-500"
+                  className="glass-soft w-full rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none"
                   placeholder="URL (https://...)"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full mt-4 rounded-xl bg-teal-500 p-3 font-bold text-slate-950 transition-all hover:bg-teal-400 active:scale-98"
+                className="press w-full mt-4 rounded-xl bg-primary p-3 font-bold text-primary-foreground active:scale-98"
               >
-                Simpan Jadwal
+                {editingId ? "Simpan Perubahan" : "Simpan Jadwal"}
               </button>
             </form>
           </div>
