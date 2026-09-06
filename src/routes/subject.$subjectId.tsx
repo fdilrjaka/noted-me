@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  Check,
+  CheckSquare,
   ChevronLeft,
   Download,
   Images,
@@ -61,6 +63,8 @@ function SubjectView() {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const subject = data.subjects.find((s) => s.id === subjectId && !s.deleted);
@@ -129,6 +133,34 @@ function SubjectView() {
     if (next) goto(next.id);
   };
 
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
+  const deleteSelectedPages = () => {
+    const count = selected.size;
+    const deletedIds = new Set(selected);
+    selected.forEach((id) => deletePage(id));
+    toast.success(
+      count > 1 ? `${count} pertemuan dipindahkan ke trash` : "Pertemuan dipindahkan ke trash",
+    );
+    exitSelectMode();
+    if (activeId && deletedIds.has(activeId)) {
+      const rest = pages.filter((p) => !deletedIds.has(p.id));
+      if (rest[0]) goto(rest[0].id);
+    }
+  };
+
   const images = active ? extractImages(active.content) : [];
 
   return (
@@ -157,6 +189,15 @@ function SubjectView() {
           <SyncStatus />
         </div>
         <button
+          onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+          aria-label={selectMode ? "Batal pilih" : "Pilih pertemuan"}
+          className={`press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90 ${
+            selectMode ? "text-destructive" : ""
+          }`}
+        >
+          {selectMode ? <X className="size-4" /> : <CheckSquare className="size-4" />}
+        </button>
+        <button
           onClick={() => setGallery(true)}
           aria-label="Galeri gambar"
           className="press glass-floating flex size-10 flex-none items-center justify-center rounded-full active:scale-90"
@@ -165,33 +206,61 @@ function SubjectView() {
         </button>
       </header>
 
+      {selectMode && (
+        <div className="mb-2 flex items-center justify-between rounded-2xl bg-input px-4 py-2 text-sm">
+          <span className="font-medium">{selected.size} dipilih</span>
+          <button onClick={exitSelectMode} className="press-sm text-muted-foreground">
+            Batal
+          </button>
+        </div>
+      )}
+
       {/* Laptop: horizontal tabs — tahan lalu geser kanan/kiri untuk mengubah urutan */}
       <div className="hidden items-center gap-1.5 overflow-x-auto pb-2 md:flex">
-        {tabReorder.order.map((p) => (
+        {tabReorder.order.map((p) => {
+          const isSelected = selected.has(p.id);
+          return (
+            <button
+              key={p.id}
+              {...(selectMode ? {} : tabReorder.itemProps(p.id))}
+              onClick={
+                selectMode
+                  ? () => toggleSelected(p.id)
+                  : tabReorder.guardClick(() => goto(p.id))
+              }
+              title={selectMode ? undefined : "Tahan lalu geser untuk mengubah urutan"}
+              className={`press flex flex-none select-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
+                !selectMode && tabReorder.isGhost(p.id) ? "invisible" : ""
+              } ${
+                selectMode
+                  ? isSelected
+                    ? "bg-destructive font-medium text-destructive-foreground ring-2 ring-destructive"
+                    : "glass-soft text-muted-foreground hover:text-foreground"
+                  : p.id === activeId
+                    ? "bg-primary font-medium text-primary-foreground glow-ring"
+                    : "glass-soft text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {selectMode &&
+                (isSelected ? (
+                  <Check className="size-3" />
+                ) : (
+                  <span className="size-3 flex-none rounded-full border border-current" />
+                ))}
+              {p.pinned && <Pin className="size-3" />}
+              {p.title}
+            </button>
+          );
+        })}
+        {!selectMode && (
           <button
-            key={p.id}
-            {...tabReorder.itemProps(p.id)}
-            onClick={tabReorder.guardClick(() => goto(p.id))}
-            title="Tahan lalu geser untuk mengubah urutan"
-            className={`press flex flex-none select-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
-              tabReorder.isGhost(p.id) ? "invisible" : ""
-            } ${
-              p.id === activeId
-                ? "bg-primary font-medium text-primary-foreground glow-ring"
-                : "glass-soft text-muted-foreground hover:text-foreground"
-            }`}
+            onClick={() => goto(createPage(subjectId))}
+            aria-label="Tambah pertemuan"
+            className="press glass-soft flex size-9 flex-none items-center justify-center rounded-full active:scale-90"
           >
-            {p.pinned && <Pin className="size-3" />}
-            {p.title}
+            <Plus className="size-4" />
           </button>
-        ))}
-        <button
-          onClick={() => goto(createPage(subjectId))}
-          aria-label="Tambah pertemuan"
-          className="press glass-soft flex size-9 flex-none items-center justify-center rounded-full active:scale-90"
-        >
-          <Plus className="size-4" />
-        </button>
+        )}
         {draggedTabPage && (
           <div
             style={tabReorder.overlayStyle}
@@ -203,7 +272,18 @@ function SubjectView() {
         )}
       </div>
 
-      {active && (
+      {selectMode && selected.size > 0 && (
+        <div className="mb-2 hidden md:flex">
+          <button
+            onClick={deleteSelectedPages}
+            className="press flex items-center gap-1.5 rounded-full bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground active:scale-95"
+          >
+            <Trash2 className="size-4" /> Hapus {selected.size} pertemuan
+          </button>
+        </div>
+      )}
+
+      {active && !selectMode && (
         <section
           className="glass-card spring-in mt-2 flex min-h-0 flex-1 flex-col rounded-3xl px-4 py-3 md:px-7 md:py-5"
           onTouchStart={(e) => {
@@ -363,25 +443,57 @@ function SubjectView() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <p className="font-semibold">Pertemuan</p>
-              <button onClick={() => setSidebar(false)} aria-label="Tutup" className="press-sm">
-                <X className="size-4" />
-              </button>
+              <p className="font-semibold">
+                {selectMode ? `${selected.size} dipilih` : "Pertemuan"}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+                  aria-label={selectMode ? "Batal pilih" : "Pilih pertemuan"}
+                  className={`press-sm text-xs font-medium ${selectMode ? "text-destructive" : "text-muted-foreground"}`}
+                >
+                  {selectMode ? "Batal" : "Pilih"}
+                </button>
+                <button onClick={() => setSidebar(false)} aria-label="Tutup" className="press-sm">
+                  <X className="size-4" />
+                </button>
+              </div>
             </div>
             <div className="relative mt-4 space-y-1.5">
-              {sidebarReorder.order.map((p) => (
-                <button
-                  key={p.id}
-                  {...sidebarReorder.itemProps(p.id)}
-                  onClick={sidebarReorder.guardClick(() => goto(p.id))}
-                  className={`press flex w-full select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
-                    sidebarReorder.isGhost(p.id) ? "invisible" : ""
-                  } ${p.id === activeId ? "bg-primary text-primary-foreground" : "bg-input"}`}
-                >
-                  {p.pinned && <Pin className="size-3 flex-none" />}
-                  <span className="truncate">{p.title}</span>
-                </button>
-              ))}
+              {sidebarReorder.order.map((p) => {
+                const isSelected = selected.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    {...(selectMode ? {} : sidebarReorder.itemProps(p.id))}
+                    onClick={
+                      selectMode
+                        ? () => toggleSelected(p.id)
+                        : sidebarReorder.guardClick(() => goto(p.id))
+                    }
+                    className={`press flex w-full select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
+                      !selectMode && sidebarReorder.isGhost(p.id) ? "invisible" : ""
+                    } ${
+                      selectMode
+                        ? isSelected
+                          ? "bg-destructive text-destructive-foreground ring-2 ring-destructive"
+                          : "bg-input"
+                        : p.id === activeId
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-input"
+                    }`}
+                  >
+                    {selectMode &&
+                      (isSelected ? (
+                        <Check className="size-3.5 flex-none" />
+                      ) : (
+                        <span className="size-3.5 flex-none rounded-full border border-current" />
+                      ))}
+                    {p.pinned && <Pin className="size-3 flex-none" />}
+                    <span className="truncate">{p.title}</span>
+                  </button>
+                );
+              })}
               {draggedSidebarPage && (
                 <div
                   style={sidebarReorder.overlayStyle}
@@ -392,12 +504,22 @@ function SubjectView() {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => goto(createPage(subjectId))}
-              className="press mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-border py-2.5 text-sm active:scale-95"
-            >
-              <Plus className="size-4" /> Pertemuan baru
-            </button>
+            {!selectMode && (
+              <button
+                onClick={() => goto(createPage(subjectId))}
+                className="press mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-border py-2.5 text-sm active:scale-95"
+              >
+                <Plus className="size-4" /> Pertemuan baru
+              </button>
+            )}
+            {selectMode && selected.size > 0 && (
+              <button
+                onClick={deleteSelectedPages}
+                className="press mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-destructive py-2.5 text-sm font-medium text-destructive-foreground active:scale-95"
+              >
+                <Trash2 className="size-4" /> Hapus {selected.size} pertemuan
+              </button>
+            )}
           </aside>
         </div>
       )}
