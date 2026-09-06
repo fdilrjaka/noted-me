@@ -349,7 +349,7 @@ export function Dashboard() {
                 onClick={() =>
                   selectMode ? toggleSelected(subject.id) : openSubject(subject.id, pages[0]?.id)
                 }
-                className={`press glass-card spring-in group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-2xl p-3 sm:rounded-3xl sm:p-4 ${
+                className={`press glass-card spring-in group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-2xl p-3 sm:aspect-auto sm:rounded-3xl sm:p-4 ${
                   isSelected ? "ring-2 ring-destructive" : ""
                 }`}
               >
