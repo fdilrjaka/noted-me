@@ -12,7 +12,13 @@ import { PageSidebarMobile } from "./components/PageSidebarMobile";
 import { PageEditorPanel } from "./components/PageEditorPanel";
 import { ImageGalleryModal } from "./components/ImageGalleryModal";
 
-export function SubjectView({ subjectId, pageParam }: { subjectId: string; pageParam?: string }) {
+export function SubjectView({
+  subjectId,
+  pageParam,
+}: {
+  subjectId: string;
+  pageParam?: string | undefined;
+}) {
   const navigate = useNavigate();
   const data = useData();
   const [sidebar, setSidebar] = useState(false);
