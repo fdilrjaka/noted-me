@@ -182,6 +182,19 @@ export function enhanceImages(root: HTMLElement) {
     handle.className = "img-resize-handle";
     handle.contentEditable = "false";
     wrap.appendChild(handle);
+    // Tombol hapus terpisah dari resize handle — sebelumnya satu-satunya cara
+    // menghapus gambar adalah lewat tombol Backspace/Delete di keyboard, yang
+    // ternyata gak konsisten kejadiannya di semua browser desktop (kadang gak
+    // ke-trigger sama sekali kalau elemen yang "dipilih" cuma lewat class CSS,
+    // bukan Selection/Range asli milik browser). Tombol eksplisit ini jalan sama
+    // di HP maupun laptop.
+    const del = document.createElement("span");
+    del.className = "img-resize-delete";
+    del.contentEditable = "false";
+    del.setAttribute("role", "button");
+    del.setAttribute("aria-label", "Hapus gambar");
+    del.textContent = "×";
+    wrap.appendChild(del);
   });
 }
 
