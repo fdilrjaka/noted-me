@@ -277,3 +277,123 @@
   background: transparent;
   border: none;
 }
+
+/* Area editor catatan (contenteditable) — hilangkan outline biru/putih bawaan
+   browser saat elemen sedang fokus/diketik. Border fokus custom (kalau ada)
+   ditangani lewat wrapper glass-input, bukan di sini. */
+.note-content {
+  outline: none;
+}
+
+.note-content table {
+  outline: none;
+}
+
+/* Wrapper gambar yang bisa di-resize. inline-block + max-width supaya gambar
+   tetap proporsional dan gak keluar dari lebar editor, tapi bisa dikecilin
+   lewat width inline style yang di-set pas drag handle. */
+.img-resize-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: bottom;
+  line-height: 0;
+}
+
+.img-resize-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  pointer-events: none; /* klik ditangkap wrapper, bukan img, biar konsisten di semua browser */
+}
+
+/* Cincin seleksi cuma muncul kalau gambar sedang diklik/dipilih, biar gak
+   ganggu tampilan pas lagi gak diapa-apain. */
+.img-resize-wrap.is-selected img {
+  outline: 2px solid var(--primary, #2dd4bf);
+  outline-offset: 2px;
+}
+
+.img-resize-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--primary, #2dd4bf);
+  border: 2px solid var(--background, #0a0a0a);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: nwse-resize;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  touch-action: none;
+}
+
+.img-resize-wrap.is-selected .img-resize-handle {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.img-resize-handle.is-resizing {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.img-resize-delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: rgba(20, 20, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.img-resize-wrap.is-selected .img-resize-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (hover: hover) {
+  .img-resize-wrap:hover .img-resize-handle,
+  .img-resize-wrap:hover .img-resize-delete {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Handle resize kolom tabel — garis tipis di sisi kanan tiap kolom (kecuali
+   kolom terakhir), bisa di-drag buat atur lebar. */
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.col-resize-handle:hover,
+.col-resize-handle.is-resizing {
+  background: rgba(45, 212, 191, 0.35);
+}
+
+.note-content table td,
+.note-content table th {
+  position: relative;
+}
