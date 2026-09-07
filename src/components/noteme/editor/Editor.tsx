@@ -312,6 +312,15 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         return;
       }
 
+      if (target.classList.contains("img-resize-delete")) {
+        const wrap = target.closest(".img-resize-wrap") as HTMLElement | null;
+        if (!wrap) return;
+        e.preventDefault();
+        wrap.remove();
+        handleInput();
+        return;
+      }
+
       // Drag handle di pojok gambar yang lagi dipilih — resize proporsional (cuma lebar
       // yang diatur, tinggi ngikut otomatis karena img di dalam wrap-nya width:100%/height:auto).
       if (target.classList.contains("img-resize-handle")) {
@@ -521,12 +530,20 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           if (ref.current && !resizingImage.current) deselectImages(ref.current);
         }}
         onPaste={handlePaste}
+        onKeyDown={(e) => {
+          if (e.key !== "Backspace" && e.key !== "Delete") return;
+          const wrap = ref.current?.querySelector(".img-resize-wrap.is-selected");
+          if (!wrap) return;
+          e.preventDefault();
+          wrap.remove();
+          handleInput();
+        }}
         onFocus={() => {
           setPanel("none");
           setFormatSheetOpen(false);
         }}
         data-placeholder="Mulai menulis catatan…"
-        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32 outline-none focus:outline-none focus-visible:outline-none"
+        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32"
       />
 
       <TypingIndicator typists={typists} />
