@@ -49,8 +49,26 @@ export function useConflicts(): PageConflict[] {
   );
 }
 
+/** Cek apakah `needle` (secara isi teks, bukan HTML mentah) udah ada di dalam `haystack`. */
+function contentIncludes(haystack: string, needle: string): boolean {
+  const n = stripHtml(needle).trim();
+  if (!n) return true;
+  const h = stripHtml(haystack).trim();
+  return h.includes(n);
+}
+
 export function mergePageContent(local: Page, remote: Page): string {
   if (local.content.trim() === remote.content.trim()) return local.content;
+
+  // Kalau salah satu versi udah nyakup penuh isi versi lainnya — misalnya karena
+  // ini bukan konflik baru, tapi echo dari hasil "gabung" sebelumnya yang balik
+  // lagi lewat sync — jangan digabung ulang. Dulu ini gak dicek, jadi tiap kali
+  // conflict muncul lagi (walau isinya sebenernya udah pernah digabung), header
+  // "— Versi dari perangkat lain/ini —" dan seluruh isinya numpuk lagi di atas
+  // hasil gabungan sebelumnya, bikin catatan keulang-ulang makin panjang.
+  if (contentIncludes(local.content, remote.content)) return local.content;
+  if (contentIncludes(remote.content, local.content)) return remote.content;
+
   return (
     `<p><strong>— Versi dari perangkat lain —</strong></p>` +
     remote.content +
