@@ -22,9 +22,9 @@ import {
 } from "lucide-react";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { TypingIndicator } from "./TypingIndicator";
-import { putImage } from "@/lib/noteme/imageStore";
+import { putImage } from "@/storage/local/imageStore";
 import { revokeAllResolved } from "@/lib/noteme/imageResolver";
-import { registerLocalImage } from "@/lib/noteme/store";
+import { registerLocalImage } from "@/storage/local/imageMetaStore";
 import { useTypingPresence } from "@/lib/noteme/presence";
 import { useSession } from "@/hooks/useSession";
 import {

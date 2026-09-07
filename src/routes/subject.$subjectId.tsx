@@ -17,17 +17,11 @@ import {
 import { toast } from "sonner";
 import { Editor } from "@/components/noteme/editor/Editor";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
-import { exportPageJson, exportPageMarkdown, exportPagePdf } from "@/lib/noteme/backup";
-import {
-  createPage,
-  deletePage,
-  extractImages,
-  patchPage,
-  patchSubject,
-  reorderPages,
-  subjectPages,
-  useData,
-} from "@/lib/noteme/store";
+import { exportPageJson, exportPageMarkdown } from "@/import-export/backupExport";
+import { exportPagePdf } from "@/import-export/formatConverters";
+import { extractImages, subjectPages, useData } from "@/storage/local/dataCore";
+import { createPage, deletePage, patchPage, reorderPages } from "@/storage/local/pageStore";
+import { patchSubject } from "@/storage/local/subjectStore";
 import { useDragReorder } from "@/lib/noteme/reorder";
 
 export const Route = createFileRoute("/subject/$subjectId")({

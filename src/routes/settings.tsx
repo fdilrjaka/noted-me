@@ -26,7 +26,8 @@ import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
-import { exportBackupJson, exportBackupMarkdown, importBackupJson } from "@/lib/noteme/backup";
+import { exportBackupJson, exportBackupMarkdown } from "@/import-export/backupExport";
+import { importBackupJson } from "@/import-export/backupImport";
 import { useNotifPrefs, setNotifPref } from "@/lib/noteme/notifPrefs";
 
 export const Route = createFileRoute("/settings")({

@@ -3,8 +3,8 @@
 // IndexedDB lokal (imageStore) atau, kalau belum ada lokal, download on-demand dari
 // Supabase Storage (untuk gambar hasil sync dari device lain) lalu di-cache lokal.
 import { supabase } from "@/integrations/supabase/client";
-import { getImageBlob, putImage } from "./imageStore";
-import { getData } from "./store";
+import { getImageBlob, putImage } from "@/storage/local/imageStore";
+import { getData } from "@/storage/local/dataCore";
 
 // Cache in-memory object URL per id, supaya createObjectURL gak dipanggil berkali-kali
 // untuk id yang sama dalam satu sesi — createObjectURL yang menumpuk tanpa di-revoke
