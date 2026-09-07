@@ -526,7 +526,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           setFormatSheetOpen(false);
         }}
         data-placeholder="Mulai menulis catatan…"
-        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32"
+        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32 outline-none focus:outline-none focus-visible:outline-none"
       />
 
       <TypingIndicator typists={typists} />
