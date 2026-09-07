@@ -442,10 +442,13 @@ export function Dashboard() {
                       onPointerUp={(e) => handlePointerUp(e, subject.id, pages[0]?.id)}
                       onPointerCancel={finishDrag}
                       style={{
-                        // "pan-y" (bukan "none"): browser tetap boleh scroll vertikal
-                        // secara native di atas card, tapi gesture horizontal/long-press
-                        // tetap kita yang urus lewat JS.
-                        touchAction: "pan-y",
+                        // "none": browser TIDAK boleh ambil alih gesture apa pun di
+                        // atas card (dulu "pan-y" bikin browser rebutan sama timer
+                        // long-press kita, jadi kalau jari sedikit goyang, browser
+                        // menang duluan dan scroll native jalan sebelum drag sempat
+                        // kepicu). Scroll vertikal sekarang dihandle manual di
+                        // useDragAndDrop saat gerakan sebelum long-press terdeteksi.
+                        touchAction: "none",
                         WebkitUserSelect: "none",
                         userSelect: "none",
                         WebkitTouchCallout: "none",
