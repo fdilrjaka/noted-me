@@ -10,8 +10,10 @@ type DragState = {
   pointerId: number;
   startX: number;
   startY: number;
+  lastY: number;
   timer: number | null;
   longPressed: boolean;
+  scrolling: boolean;
   hoverFolderId: string | null;
 };
 
@@ -50,6 +52,8 @@ export function useDragAndDrop(opts: {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
+      lastY: e.clientY,
+      scrolling: false,
       timer: selectMode
         ? null
         : window.setTimeout(() => {
@@ -67,22 +71,38 @@ export function useDragAndDrop(opts: {
   const handlePointerMove = (e: ReactPointerEvent) => {
     const state = dragStateRef.current;
     if (!state) return;
-    const dx = e.clientX - state.startX;
-    const dy = e.clientY - state.startY;
-    if (!state.longPressed) {
-      if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
-        clearDragTimer();
-        dragStateRef.current = null;
-      }
+
+    if (state.longPressed) {
+      e.preventDefault();
+      setDragPos({ x: e.clientX, y: e.clientY });
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const folderEl = el?.closest("[data-folder-drop]") as HTMLElement | null;
+      const nextHover = folderEl?.dataset["folderDrop"] ?? null;
+      state.hoverFolderId = nextHover;
+      setHoverFolderId(nextHover);
       return;
     }
-    e.preventDefault();
-    setDragPos({ x: e.clientX, y: e.clientY });
-    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-    const folderEl = el?.closest("[data-folder-drop]") as HTMLElement | null;
-    const nextHover = folderEl?.dataset["folderDrop"] ?? null;
-    state.hoverFolderId = nextHover;
-    setHoverFolderId(nextHover);
+
+    // Card pakai touchAction:"none" (lihat index.tsx) supaya browser gak
+    // rebutan gesture sama timer long-press kita — jadi begitu gerakan
+    // jari melewati threshold SEBELUM long-press kepicu, itu tandanya niat
+    // scroll (bukan drag), dan karena native scroll diblokir touch-action:
+    // none, kita yang gulung layarnya manual di sini.
+    if (state.scrolling) {
+      const deltaY = state.lastY - e.clientY;
+      window.scrollBy(0, deltaY);
+      state.lastY = e.clientY;
+      return;
+    }
+
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+    if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
+      clearDragTimer();
+      state.scrolling = true;
+      state.lastY = e.clientY;
+      window.scrollBy(0, state.startY - e.clientY);
+    }
   };
 
   const finishDrag = (e?: ReactPointerEvent) => {
@@ -108,6 +128,10 @@ export function useDragAndDrop(opts: {
         assignSubjectToFolder(subjectId, state.hoverFolderId);
         toast.success("Catatan dipindahkan ke folder");
       }
+      finishDrag(e);
+    } else if (state.scrolling) {
+      // Ini akhir dari gesture scroll manual (bukan tap, bukan drag) —
+      // jangan buka subject atau toggle select.
       finishDrag(e);
     } else {
       clearDragTimer();
