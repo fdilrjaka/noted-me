@@ -123,6 +123,44 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Versi HP: ikon kecil trash (buka mode hapus) + profil, tampil di sebelah
+                  ikon Settings. Sengaja dibikin lebih kecil (size-8) dari ikon lain biar
+                  gak terlalu mencolok di header yang sempit. Disembunyikan di desktop
+                  karena aksi yang sama sudah ada di grup ikon md:flex sebelah kanan. */}
+              <div className="flex items-center gap-2 md:hidden">
+                {subjects.length > 0 && (
+                  <button
+                    onClick={toggleSelectMode}
+                    aria-label="Hapus mata kuliah"
+                    className={`press glass-floating flex size-8 items-center justify-center rounded-full active:scale-90 ${
+                      selectMode ? "text-destructive" : ""
+                    }`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
+                <Link
+                  to="/auth"
+                  aria-label="Akun"
+                  className="press flex size-8 items-center justify-center overflow-hidden rounded-full active:scale-90"
+                >
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt="Foto profil"
+                      className="size-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="flex size-full items-center justify-center rounded-full text-xs font-semibold text-white"
+                      style={{ backgroundColor: profileAvatarColor }}
+                    >
+                      {profileInitial}
+                    </span>
+                  )}
+                </Link>
+              </div>
+
               <Link
                 to="/settings"
                 aria-label="Pengaturan"
