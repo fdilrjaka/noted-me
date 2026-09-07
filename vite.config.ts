@@ -28,6 +28,8 @@ export default defineConfig({
     optimizeDeps: {
       include: [
         "react",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
         "react-dom",
         "react-dom/client",
         "@tanstack/react-router",
@@ -40,7 +42,7 @@ export default defineConfig({
       ],
     },
     resolve: {
-      dedupe: ["@tanstack/react-router"],
+      dedupe: ["react", "react-dom", "@tanstack/react-router"],
     },
     server: {
       warmup: {
