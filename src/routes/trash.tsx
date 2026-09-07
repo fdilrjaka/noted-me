@@ -4,15 +4,9 @@ import { toast } from "sonner";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import {
-  emptyTrash,
-  purgePage,
-  purgeSubject,
-  restorePage,
-  restoreSubject,
-  trashItems,
-  useData,
-} from "@/lib/noteme/store";
+import { trashItems, useData } from "@/storage/local/dataCore";
+import { emptyTrash, purgePage, restorePage } from "@/storage/local/pageStore";
+import { purgeSubject, restoreSubject } from "@/storage/local/subjectStore";
 
 export const Route = createFileRoute("/trash")({
   head: () => ({

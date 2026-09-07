@@ -7,8 +7,8 @@ import { Sidebar } from "@/components/noteme/Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession, usernameToEmail } from "@/hooks/useSession";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { dirtyCount, useData } from "@/lib/noteme/store";
-import { syncNow } from "@/lib/noteme/sync";
+import { dirtyCount, useData } from "@/storage/local/dataCore";
+import { syncNow } from "@/storage/sync-engine/syncNow";
 
 // Warna fallback avatar kalau user belum (atau gak mau) pasang foto profil.
 const AVATAR_COLORS = ["#7c3aed", "#be185d", "#0369a1", "#047857", "#c2410c", "#525252"];

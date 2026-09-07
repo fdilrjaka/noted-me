@@ -3,8 +3,9 @@ import { Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
-import { dirtyCount, loadLocal, useData } from "@/lib/noteme/store";
-import { resolveConflict, syncNow, useConflicts, diffPageContent } from "@/lib/noteme/sync";
+import { dirtyCount, loadLocal, useData } from "@/storage/local/dataCore";
+import { resolveConflict, useConflicts, diffPageContent } from "@/storage/remote/conflictResolver";
+import { syncNow } from "@/storage/sync-engine/syncNow";
 import { dirtyTodoCount, loadTodoLocal, useTodoData } from "@/lib/noteme/todoStore";
 import { syncTodoNow } from "@/lib/noteme/todoSync";
 import { dirtyScheduleCount, loadScheduleLocal, useScheduleData } from "@/lib/noteme/scheduleStore";
@@ -172,7 +173,12 @@ export function SyncStatus() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "schedule_classes", filter: `user_id=eq.${user.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "schedule_classes",
+          filter: `user_id=eq.${user.id}`,
+        },
         scheduleRealtimeSync,
       )
       .subscribe();
@@ -231,7 +237,7 @@ export function SyncStatus() {
 
 /**
  * Muncul kalau ada note yang lagi diedit lokal TAPI ternyata udah diubah duluan di
- * device lain (lihat doSync di lib/noteme/sync.ts). Nunjukin satu konflik pertama di
+ * device lain (lihat doSync di storage/sync-engine/syncNow.ts). Nunjukin satu konflik pertama di
  * antrean; sengaja gak diam-diam milih salah satu — user yang mutusin timpa atau gabung.
  */
 export function ConflictDialog() {

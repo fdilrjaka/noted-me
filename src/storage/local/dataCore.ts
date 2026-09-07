@@ -1,6 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { deleteImage as deleteLocalImage } from "./imageStore";
+
+/**
+ * dataCore.ts — mesin data inti (single source of truth di localStorage).
+ *
+ * File ini SENGAJA jadi satu-satunya tempat yang pegang variabel `data` module-level
+ * dan fungsi persist/emit-nya. subjectStore.ts, pageStore.ts, dan imageMetaStore.ts
+ * semua nyambung ke sini lewat `getData()` / `updateData()` — bukan punya salinan state
+ * sendiri-sendiri. Ini penting: kalau tiap file punya `data` sendiri, perubahan di satu
+ * file gak bakal keliatan di file lain (bug klasik "kenapa gak sinkron").
+ */
 
 export type Subject = {
   id: string;
@@ -66,7 +75,7 @@ export function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function now() {
+export function now() {
   return new Date().toISOString();
 }
 
@@ -90,9 +99,9 @@ function persist() {
   } catch (err) {
     // Data was NOT saved — surface this instead of silently dropping the user's changes.
     // Throttled so a burst of edits (e.g. typing) doesn't spam toasts.
-    const now = Date.now();
-    if (now - lastStorageWarningAt > 15000) {
-      lastStorageWarningAt = now;
+    const nowMs = Date.now();
+    if (nowMs - lastStorageWarningAt > 15000) {
+      lastStorageWarningAt = nowMs;
       toast.error(
         isQuotaExceeded(err)
           ? "Penyimpanan lokal penuh — perubahan terakhir (kemungkinan termasuk gambar) belum tersimpan. Hapus beberapa gambar/catatan lama, lalu coba lagi."
@@ -136,7 +145,11 @@ export function getData() {
   return data;
 }
 
-function update(fn: (d: Data) => Data) {
+/**
+ * Satu-satunya cara "resmi" buat domain store lain (subjectStore, pageStore, dst)
+ * mengubah data. Dipakai supaya persist+emit selalu konsisten di semua tempat.
+ */
+export function updateData(fn: (d: Data) => Data) {
   setData(fn(data));
 }
 
@@ -172,7 +185,7 @@ export function trashItems(d: Data) {
   };
 }
 
-function isSubjectDeleted(d: Data, subjectId: string) {
+export function isSubjectDeleted(d: Data, subjectId: string) {
   return d.subjects.find((s) => s.id === subjectId)?.deleted ?? false;
 }
 
@@ -228,193 +241,6 @@ export function extractLocalImageIds(html: string): string[] {
   return extractImages(html)
     .filter((src) => src.startsWith(IDB_SRC_PREFIX))
     .map((src) => src.slice(IDB_SRC_PREFIX.length));
-}
-
-/* ---------------- mutations ---------------- */
-
-export function createSubject(name: string) {
-  const id = uid();
-  const position = (data.subjects.reduce((max, s) => Math.max(max, s.position), 0) || 0) + 1;
-  const color = SUBJECT_COLORS[data.subjects.length % SUBJECT_COLORS.length] ?? "blue";
-  const subject: Subject = {
-    id,
-    name: name.trim() || "Mata Kuliah",
-    color,
-    pinned: false,
-    position,
-    deleted: false,
-    updated_at: now(),
-    dirty: true,
-  };
-  update((d) => ({ ...d, subjects: [...d.subjects, subject] }));
-  createPage(id, "Pertemuan 1");
-  return id;
-}
-
-export function patchSubject(id: string, patch: Partial<Subject>) {
-  update((d) => ({
-    ...d,
-    subjects: d.subjects.map((s) =>
-      s.id === id ? { ...s, ...patch, updated_at: now(), dirty: true } : s,
-    ),
-  }));
-}
-
-export function createPage(subjectId: string, title?: string) {
-  const siblings = data.pages.filter((p) => p.subject_id === subjectId && !p.deleted);
-  const id = uid();
-  const page: Page = {
-    id,
-    subject_id: subjectId,
-    title: title?.trim() || `Pertemuan ${siblings.length + 1}`,
-    content: "",
-    pinned: false,
-    position: siblings.reduce((max, p) => Math.max(max, p.position), 0) + 1,
-    deleted: false,
-    updated_at: now(),
-    dirty: true,
-    editedOffline: typeof navigator !== "undefined" && !navigator.onLine,
-  };
-  update((d) => ({ ...d, pages: [...d.pages, page] }));
-  return id;
-}
-
-export function patchPage(id: string, patch: Partial<Page>) {
-  const offlineNow = typeof navigator !== "undefined" && !navigator.onLine;
-  update((d) => ({
-    ...d,
-    pages: d.pages.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            ...patch,
-            updated_at: now(),
-            dirty: true,
-            // Sticky sampai berhasil sync: sekali edit ini kesentuh offline, tetap dianggap
-            // "edit offline" walau sisa ketikan berikutnya terjadi pas udah online lagi.
-            editedOffline: p.editedOffline || offlineNow,
-          }
-        : p,
-    ),
-  }));
-}
-
-/**
- * Dipanggil setelah `imageStore.putImage` berhasil nyimpen blob baru secara lokal —
- * bikin row metadata `NoteImage` yang dirty, biar `sync.ts` tahu ada gambar baru yang
- * perlu diupload ke Supabase Storage begitu online.
- */
-export function registerLocalImage(id: string, pageId: string) {
-  const image: NoteImage = {
-    id,
-    page_id: pageId,
-    storage_path: null,
-    deleted: false,
-    updated_at: now(),
-    dirty: true,
-  };
-  update((d) => ({ ...d, images: [...d.images, image] }));
-}
-
-/** Dipanggil sync.ts setelah blob sukses keupload ke Storage. */
-export function markImageUploaded(id: string, storagePath: string) {
-  update((d) => ({
-    ...d,
-    images: d.images.map((img) =>
-      img.id === id ? { ...img, storage_path: storagePath, updated_at: now(), dirty: true } : img,
-    ),
-  }));
-}
-
-/** Catat row metadata gambar yang datang dari sync (device lain) tapi belum pernah tercatat lokal — dipakai imageResolver saat lazy-download. */
-export function upsertImageMeta(image: NoteImage) {
-  update((d) => {
-    const exists = d.images.some((img) => img.id === image.id);
-    return {
-      ...d,
-      images: exists
-        ? d.images.map((img) => (img.id === image.id ? image : img))
-        : [...d.images, image],
-    };
-  });
-}
-
-export function deleteSubject(id: string) {
-  patchSubject(id, { deleted: true });
-}
-
-export function restoreSubject(id: string) {
-  patchSubject(id, { deleted: false });
-}
-
-export function reorderPages(subjectId: string, orderedIds: string[]) {
-  const positionOf = new Map(orderedIds.map((id, i) => [id, i]));
-  update((d) => ({
-    ...d,
-    pages: d.pages.map((p) =>
-      p.subject_id === subjectId && positionOf.has(p.id)
-        ? { ...p, position: positionOf.get(p.id)!, updated_at: now(), dirty: true }
-        : p,
-    ),
-  }));
-}
-
-export function deletePage(id: string) {
-  patchPage(id, { deleted: true });
-}
-
-export function restorePage(id: string) {
-  patchPage(id, { deleted: false });
-}
-
-// Hapus blob lokal (IndexedDB) buat tiap gambar `idb:` di halaman-halaman yang beneran
-// dihapus permanen, dan tandai row NoteImage terkait `deleted: true, dirty: true` biar
-// object-nya ikut kehapus dari Supabase Storage lewat sync.ts. Best-effort & async —
-// tidak memblokir/menunggu penghapusan lokal selesai (purge/emptyTrash tetap sinkron
-// dari sudut pandang caller).
-function purgeImagesForPages(pages: Page[]) {
-  const imageIds = new Set<string>();
-  for (const page of pages) {
-    for (const id of extractLocalImageIds(page.content)) imageIds.add(id);
-  }
-  if (imageIds.size === 0) return;
-  for (const id of imageIds) void deleteLocalImage(id);
-  update((d) => ({
-    ...d,
-    images: d.images.map((img) =>
-      imageIds.has(img.id) ? { ...img, deleted: true, updated_at: now(), dirty: true } : img,
-    ),
-  }));
-}
-
-export function purgeSubject(id: string) {
-  const removedPages = data.pages.filter((p) => p.subject_id === id);
-  update((d) => ({
-    ...d,
-    subjects: d.subjects.filter((s) => s.id !== id),
-    pages: d.pages.filter((p) => p.subject_id !== id),
-  }));
-  purgeImagesForPages(removedPages);
-}
-
-export function purgePage(id: string) {
-  const removedPage = data.pages.find((p) => p.id === id);
-  update((d) => ({ ...d, pages: d.pages.filter((p) => p.id !== id) }));
-  if (removedPage) purgeImagesForPages([removedPage]);
-}
-
-export function emptyTrash() {
-  const goneSubjects = data.subjects.filter((s) => s.deleted).map((s) => s.id);
-  const removedPages = data.pages.filter((p) => p.deleted || goneSubjects.includes(p.subject_id));
-  update((d) => {
-    const goneSubjectIds = d.subjects.filter((s) => s.deleted).map((s) => s.id);
-    return {
-      ...d,
-      subjects: d.subjects.filter((s) => !s.deleted),
-      pages: d.pages.filter((p) => !p.deleted && !goneSubjectIds.includes(p.subject_id)),
-    };
-  });
-  purgeImagesForPages(removedPages);
 }
 
 export function dirtyCount() {

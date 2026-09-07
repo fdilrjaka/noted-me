@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { parseNaturalDate, toDateInputValue, toTimeInputValue } from "@/lib/noteme/naturalDate";
+import { parseNaturalDate, toDateInputValue, toTimeInputValue } from "@/shared/utils/naturalDate";
 
 type Props = {
   value: string;
