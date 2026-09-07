@@ -77,27 +77,20 @@ export function mergePageContent(local: Page, remote: Page): string {
   );
 }
 
-const DIFF_WORD_LIMIT = 4000; // batas kata per sisi biar DP diff-nya gak berat di note yang kepanjangan
+const PARAGRAPH_LIMIT = 4000; // batas paragraf per sisi — jaring pengaman terakhir, praktis nggak pernah kena
+const WORD_PAIR_LIMIT = 800; // batas kata per paragraf saat turun ke diff level-kata
 const DIFF_PHRASE_LIMIT = 4; // maksimal berapa potongan beda yang ditampilin per sisi
 const DIFF_PHRASE_MAX_CHARS = 90; // potong tampilannya kalau kepanjangan
 
 /**
- * Diff kata sederhana (berbasis LCS) buat nunjukin bagian mana yang bener-bener beda
- * di dua versi note, biar dialog konflik gak cuma bilang "beda" doang tapi nunjukin
- * kata/kalimatnya. "removed" = potongan yang cuma ada di versi lokal, "added" = yang
- * cuma ada di versi lain.
+ * LCS diff generik atas array token (bisa paragraf atau kata). O(n*m) waktu & memori —
+ * makanya dipakai dua kali secara HIERARKIS di diffPageContent, bukan sekali di seluruh
+ * teks: sekali di level paragraf (n,m kecil walau note-nya panjang), lalu cuma di level
+ * kata untuk paragraf yang benar-benar beda (n,m kecil juga, karena per-paragraf).
+ * Kalau dipakai sekali langsung di seluruh kata note yang panjang, n*m bisa meledak
+ * (note 20rb kata vs 20rb kata = 400 juta sel) — itu bug lama yang diperbaiki di sini.
  */
-export function diffPageContent(
-  local: Page,
-  remote: Page,
-): { removed: string[]; added: string[]; truncated: boolean } {
-  const a = stripHtml(local.content).split(" ").filter(Boolean);
-  const b = stripHtml(remote.content).split(" ").filter(Boolean);
-
-  if (a.length > DIFF_WORD_LIMIT || b.length > DIFF_WORD_LIMIT) {
-    return { removed: [], added: [], truncated: true };
-  }
-
+function lcsRuns<T>(a: T[], b: T[]): { removed: T[][]; added: T[][] } {
   const n = a.length;
   const m = b.length;
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
@@ -107,17 +100,17 @@ export function diffPageContent(
     }
   }
 
-  const removed: string[] = [];
-  const added: string[] = [];
-  let removedRun: string[] = [];
-  let addedRun: string[] = [];
+  const removed: T[][] = [];
+  const added: T[][] = [];
+  let removedRun: T[] = [];
+  let addedRun: T[] = [];
   const flush = () => {
     if (removedRun.length) {
-      removed.push(removedRun.join(" "));
+      removed.push(removedRun);
       removedRun = [];
     }
     if (addedRun.length) {
-      added.push(addedRun.join(" "));
+      added.push(addedRun);
       addedRun = [];
     }
   };
@@ -147,12 +140,81 @@ export function diffPageContent(
   }
   flush();
 
+  return { removed, added };
+}
+
+/**
+ * Pecah HTML jadi array paragraf teks polos. Beda dari stripHtml biasa: batas blok
+ * (</p>, </div>, </li>, <br>, heading, blockquote) dijadikan pemisah baris DULU,
+ * sebelum sisa tag lain dibuang — supaya paragraf-paragraf note tetap kepisah,
+ * gak numpuk jadi satu string panjang.
+ */
+function htmlToParagraphs(html: string): string[] {
+  return html
+    .replace(/<(p|div|li|h[1-6]|blockquote|br)(\s[^>]*)?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote)>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean);
+}
+
+/**
+ * Diff sederhana buat nunjukin bagian mana yang bener-bener beda di dua versi note,
+ * biar dialog konflik gak cuma bilang "beda" doang tapi nunjukin kata/kalimatnya.
+ * "removed" = potongan yang cuma ada di versi lokal, "added" = yang cuma ada di
+ * versi lain.
+ *
+ * Strategi dua tingkat (lihat lcsRuns di atas untuk alasannya): diff paragraf dulu,
+ * lalu untuk tiap pasang "satu paragraf lama ↔ satu paragraf baru" yang ke-swap
+ * (kasus paling umum: satu baris diedit dikit), turun ke diff kata supaya yang
+ * ditampilkan cuma kata yang beda, bukan seluruh paragraf. Note sepanjang apa pun
+ * jadi aman karena kerja beratnya sebanding jumlah paragraf, bukan jumlah kata.
+ */
+export function diffPageContent(
+  local: Page,
+  remote: Page,
+): { removed: string[]; added: string[]; truncated: boolean } {
+  const pa = htmlToParagraphs(local.content);
+  const pb = htmlToParagraphs(remote.content);
+
+  if (pa.length > PARAGRAPH_LIMIT || pb.length > PARAGRAPH_LIMIT) {
+    return { removed: [], added: [], truncated: true };
+  }
+
+  const { removed: removedParas, added: addedParas } = lcsRuns(pa, pb);
+
+  const removedPhrases: string[] = [];
+  const addedPhrases: string[] = [];
+
+  const runCount = Math.max(removedParas.length, addedParas.length);
+  for (let k = 0; k < runCount; k++) {
+    const rParas = removedParas[k] ?? [];
+    const aParas = addedParas[k] ?? [];
+
+    if (rParas.length === 1 && aParas.length === 1) {
+      const wa = rParas[0]!.split(" ").filter(Boolean);
+      const wb = aParas[0]!.split(" ").filter(Boolean);
+      if (wa.length <= WORD_PAIR_LIMIT && wb.length <= WORD_PAIR_LIMIT) {
+        const { removed: rw, added: aw } = lcsRuns(wa, wb);
+        rw.forEach((run) => removedPhrases.push(run.join(" ")));
+        aw.forEach((run) => addedPhrases.push(run.join(" ")));
+        continue;
+      }
+    }
+
+    rParas.forEach((p) => removedPhrases.push(p));
+    aParas.forEach((p) => addedPhrases.push(p));
+  }
+
   const truncatePhrase = (s: string) =>
     s.length > DIFF_PHRASE_MAX_CHARS ? `${s.slice(0, DIFF_PHRASE_MAX_CHARS)}…` : s;
 
   return {
-    removed: removed.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
-    added: added.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
+    removed: removedPhrases.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
+    added: addedPhrases.slice(0, DIFF_PHRASE_LIMIT).map(truncatePhrase),
     truncated: false,
   };
 }
