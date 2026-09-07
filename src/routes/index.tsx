@@ -6,7 +6,6 @@ import {
   BookOpen,
   CalendarClock,
   Check,
-  Download,
   FileText,
   Folder as FolderIcon,
   ListTodo,
@@ -31,7 +30,6 @@ import {
   removeSubjectFromFolder,
   useFolders,
 } from "@/lib/noteme/folderStore";
-import { exportBackupJson, exportBackupMarkdown, importBackupJson } from "@/lib/noteme/backup";
 import {
   activeSubjects,
   createSubject,
@@ -94,13 +92,10 @@ export function Dashboard() {
   const folders = useFolders();
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [exportOpen, setExportOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const todoData = useTodoData();
   const scheduleData = useScheduleData();
   const notifPrefs = useNotifPrefs();
-  const [importBusy, setImportBusy] = useState(false);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
 
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -318,24 +313,6 @@ export function Dashboard() {
     exitSelectMode();
   };
 
-  const handleImportFile = async (file: File | undefined) => {
-    if (!file) return;
-    setImportBusy(true);
-    try {
-      const result = await importBackupJson(file);
-      toast.success(
-        `Dipulihkan: ${result.subjects} mata kuliah, ${result.pages} catatan${
-          result.images ? `, ${result.images} gambar` : ""
-        }`,
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal memulihkan cadangan");
-    } finally {
-      setImportBusy(false);
-      if (importInputRef.current) importInputRef.current.value = "";
-    }
-  };
-
   return (
     <main
       ref={(el) => {
@@ -355,64 +332,6 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <button
-                  onClick={() => setExportOpen((v) => !v)}
-                  aria-label="Ekspor cadangan"
-                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-                >
-                  <Download className="size-4" />
-                </button>
-                {exportOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                    <div className="glass-card spring-in absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl p-1">
-                      <button
-                        onClick={() => {
-                          void exportBackupJson().then(() => {
-                            toast.success("Cadangan JSON diunduh");
-                          });
-                          setExportOpen(false);
-                        }}
-                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
-                      >
-                        <p className="font-medium">Cadangan JSON</p>
-                      </button>
-                      <button
-                        onClick={() => {
-                          exportBackupMarkdown();
-                          toast.success("Cadangan Markdown diunduh");
-                          setExportOpen(false);
-                        }}
-                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input"
-                      >
-                        <p className="font-medium">Cadangan Markdown</p>
-                      </button>
-                      <div className="my-1 border-t border-border" />
-                      <button
-                        disabled={importBusy}
-                        onClick={() => {
-                          setExportOpen(false);
-                          importInputRef.current?.click();
-                        }}
-                        className="press-sm w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-input disabled:opacity-60"
-                      >
-                        <p className="font-medium">
-                          {importBusy ? "Memulihkan…" : "Impor cadangan JSON"}
-                        </p>
-                      </button>
-                    </div>
-                  </>
-                )}
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={(e) => void handleImportFile(e.target.files?.[0])}
-                />
-              </div>
-
               <Link
                 to="/settings"
                 aria-label="Pengaturan"
