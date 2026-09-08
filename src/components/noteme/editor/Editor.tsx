@@ -183,19 +183,40 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   // itu, bikin konflik baru terus-menerus. Di sini kita follow perubahan itu, tapi cuma
   // kalau bukan gaung dari flush kita sendiri, dan cuma kalau gak ada ketikan lokal yang
   // masih nunggu di-flush (`timer.current`) — biar gak nimpa huruf yang lagi diketik.
+  // Kalau user sedang aktif nulis (fokus di editor / baru banget ngetik), rewrite innerHTML
+  // bikin caret lompat ke paling atas dan teks yang baru di-paste keliatan "hilang".
+  // Jadi update dari luar ditahan di pending, baru dipasang pas editor gak lagi dipakai.
+  const isEditing = useRef(false);
+  const lastTypedAt = useRef(0);
+  const pendingRemote = useRef<string | null>(null);
+
+  const applyRemoteContent = useCallback(
+    (html: string) => {
+      if (!ref.current) return;
+      lastKnownContent.current = html;
+      ref.current.innerHTML = html || "";
+      updateCounts();
+      enhanceTables(ref.current);
+      enhanceImages(ref.current);
+      resolvePendingImages(ref.current);
+      setSaved(true);
+    },
+    [updateCounts],
+  );
+
   useEffect(() => {
     if (initialContent === lastKnownContent.current) return;
     if (timer.current) return;
     if (!ref.current) return;
-    lastKnownContent.current = initialContent;
-    ref.current.innerHTML = initialContent || "";
-    updateCounts();
-    enhanceTables(ref.current);
-    enhanceImages(ref.current);
-    resolvePendingImages(ref.current);
-    setSaved(true);
+    if (isEditing.current || Date.now() - lastTypedAt.current < 3000) {
+      pendingRemote.current = initialContent;
+      return;
+    }
+    pendingRemote.current = null;
+    applyRemoteContent(initialContent);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContent]);
+
 
   const flush = () => {
     timer.current = null;
