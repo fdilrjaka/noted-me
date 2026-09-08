@@ -124,9 +124,16 @@ async function doSync(userId: string, full: boolean) {
   }
 
   const pushableSubjects = dirtySubjects;
+  // PENTING: jangan push konten dari `dirtyPages` (snapshot SEBELUM await pull di atas).
+  // Kalau user lanjut ngetik selama pull nunggu network, snapshot itu sudah basi — push versi
+  // basi ini bikin server sempat punya konten lama, yang lalu ketarik balik di sync berikutnya
+  // dan dikira "edit dari device lain" (padahal cuma diri sendiri, ketinggalan cepat). Ambil
+  // ulang versi ter-update dari store SEKARANG, tepat sebelum push, biar yang terkirim benar2
+  // yang terbaru.
+  const freshPagesById = new Map(getData().pages.map((p) => [p.id, p]));
   const pushablePages = dirtyPages
     .filter((p) => !conflictIds.has(p.id))
-    .map((p) => autoMerged.get(p.id) ?? p);
+    .map((p) => autoMerged.get(p.id) ?? freshPagesById.get(p.id) ?? p);
 
   if (pushableSubjects.length) {
     const { error } = await supabase
