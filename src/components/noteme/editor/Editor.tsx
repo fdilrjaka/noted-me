@@ -233,6 +233,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     setSaved(false);
     updateCounts();
     notifyTyping();
+    lastTypedAt.current = Date.now();
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, 600);
   };
@@ -546,9 +547,17 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         data-bg={bg}
         onInput={handleInput}
         onBlur={() => {
+          isEditing.current = false;
           flush();
           hideSelectionToolbar();
           if (ref.current && !resizingImage.current) deselectImages(ref.current);
+          // Kalau ada update dari luar yang sempat ditahan selagi kita ngetik/fokus,
+          // baru sekarang aman buat dipasang ke DOM (caret gak lagi dipakai user).
+          if (pendingRemote.current !== null) {
+            const html = pendingRemote.current;
+            pendingRemote.current = null;
+            applyRemoteContent(html);
+          }
         }}
         onPaste={handlePaste}
         onKeyDown={(e) => {
@@ -560,6 +569,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           handleInput();
         }}
         onFocus={() => {
+          isEditing.current = true;
           setPanel("none");
           setFormatSheetOpen(false);
         }}
