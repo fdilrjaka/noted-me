@@ -24,6 +24,29 @@ import {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// Bandingin timestamp lewat epoch-ms, BUKAN string mentah. Di koneksi mobile yang
+// kurang stabil, `updated_at` yang balik dari Supabase kadang beda presisi/format
+// string-nya dibanding yang kita kirim (mis. trailing zero beda), walau detik/ms-nya
+// SAMA PERSIS. Kalau dibandingin sebagai string, itu keanggep "beda" → dikira remote
+// berubah dari device lain → picu auto-merge palsu ke diri sendiri berulang-ulang tiap
+// sync (inilah yang bikin catatan numpuk "— Versi dari perangkat ini —" terus-terusan
+// di hp walau cuma satu device yang ngetik). Bandingin sebagai angka epoch biar aman
+// dari perbedaan format string yang gak relevan.
+function sameInstant(a: string, b: string): boolean {
+  if (a === b) return true;
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  return Number.isFinite(ta) && Number.isFinite(tb) && ta === tb;
+}
+
+function isAtLeast(a: string, b: string): boolean {
+  if (a === b) return true;
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return a >= b;
+  return ta >= tb;
+}
+
 function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean }>(
   local: T[],
   remote: Array<Record<string, unknown>>,
@@ -38,7 +61,7 @@ function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean 
       continue;
     }
     // Never overwrite un-synced local edits that are newer than the server copy.
-    if (existing.dirty && existing.updated_at >= incoming.updated_at) continue;
+    if (existing.dirty && isAtLeast(existing.updated_at, incoming.updated_at)) continue;
     byId.set(incoming.id, incoming);
   }
   return [...byId.values()];
@@ -92,10 +115,11 @@ async function doSync(userId: string, full: boolean) {
     const row = remotePagesById.get(local.id);
     if (!row) continue;
     const remote = buildPage(row);
-    if (remote.updated_at === local.updated_at) continue;
+    if (sameInstant(remote.updated_at, local.updated_at)) continue;
     // Remote persis sama dengan versi yang KITA sendiri terakhir push berhasil →
     // itu cuma gaung dari overlap window `since`, bukan edit dari device lain.
-    if (remote.updated_at === getSyncedVersion(local.id)) continue;
+    const synced = getSyncedVersion(local.id);
+    if (synced != null && sameInstant(remote.updated_at, synced)) continue;
     if (local.editedOffline) {
       conflictIds.add(local.id);
       newConflicts.push({ id: local.id, local, remote });
@@ -198,12 +222,14 @@ async function doSync(userId: string, full: boolean) {
   const current = getData();
   // Clear dirty flags only for rows unchanged since we pushed them. Page-page yang lagi
   // konflik (conflictIds) sengaja gak masuk pushedPages di atas, jadi tetap dirty di sini.
-  const subjects = current.subjects.map((s) =>
-    pushedSubjects.get(s.id) === s.updated_at ? { ...s, dirty: false } : s,
-  );
-  const pages = current.pages.map((p) =>
-    pushedPages.get(p.id) === p.updated_at ? { ...p, dirty: false } : p,
-  );
+  const subjects = current.subjects.map((s) => {
+    const pushedAt = pushedSubjects.get(s.id);
+    return pushedAt != null && sameInstant(pushedAt, s.updated_at) ? { ...s, dirty: false } : s;
+  });
+  const pages = current.pages.map((p) => {
+    const pushedAt = pushedPages.get(p.id);
+    return pushedAt != null && sameInstant(pushedAt, p.updated_at) ? { ...p, dirty: false } : p;
+  });
   const images = current.images.map((i) =>
     pushedImages.has(i.id) && !skippedImageIds.has(i.id)
       ? { ...i, storage_path: pushedImages.get(i.id) ?? i.storage_path, dirty: false }
