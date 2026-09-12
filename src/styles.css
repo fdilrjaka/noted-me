@@ -287,6 +287,12 @@
 
 .note-content table {
   outline: none;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 0.75rem);
+  overflow: hidden; /* biar sudut membulat ikut kepotong rapi sama border-nya */
 }
 
 /* Wrapper gambar yang bisa di-resize. inline-block + max-width supaya gambar
@@ -396,4 +402,17 @@
 .note-content table td,
 .note-content table th {
   position: relative;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.note-content table th {
+  background: var(--secondary, rgba(39, 39, 42, 0.8));
+  font-weight: 600;
+}
+
+.note-content table tbody tr:nth-child(even) td {
+  background: var(--muted, rgba(39, 39, 42, 0.3));
 }
