@@ -31,6 +31,7 @@ import {
   BG_OPTIONS,
   HIGHLIGHT_COLORS,
   buildTableHtml,
+  dataUrlToCompressedBlob,
   deselectImages,
   enhanceImages,
   enhanceTables,
@@ -38,7 +39,7 @@ import {
   fileToCompressedBlob,
   insertHtmlAtCursor,
   resolvePendingImages,
-  sanitizeTableHtml,
+  sanitizePastedHtml,
   serializeContent,
 } from "./domHelpers";
 
@@ -387,15 +388,56 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     return () => container.removeEventListener("pointerdown", onPointerDown);
   }, [pageId]);
 
+  // Convert tiap <img src="data:..."> (screenshot, atau rumus matematika dari Google
+  // Docs/Word — keduanya selalu masuk clipboard sebagai gambar raster, tidak ada cara
+  // lain buat "menulis" rumus langsung di NoteMe) supaya tidak ikut tersimpan sebagai
+  // data URI raksasa di dalam content, sama seperti gambar yang diupload lewat tombol
+  // galeri: dikompres dulu, disimpan ke IndexedDB, lalu src-nya diganti jadi "idb:<id>".
+  const persistPastedImages = async (root: ParentNode) => {
+    const dataImages = Array.from(root.querySelectorAll<HTMLImageElement>('img[src^="data:"]'));
+    await Promise.all(
+      dataImages.map(async (img) => {
+        try {
+          const blob = await dataUrlToCompressedBlob(img.getAttribute("src") ?? "");
+          const id = await putImage(blob, pageId);
+          registerLocalImage(id, pageId);
+          img.setAttribute("src", `idb:${id}`);
+          img.setAttribute("data-idb-id", id);
+        } catch (err) {
+          console.error("Gagal menyimpan gambar hasil paste", err);
+          img.remove();
+        }
+      }),
+    );
+  };
+
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     const html = e.clipboardData.getData("text/html");
-    if (html && /<table/i.test(html)) {
-      const cleaned = sanitizeTableHtml(html);
-      if (cleaned) {
+
+    // Paste tanpa HTML clipboard (mis. screenshot yang di-copy langsung dari OS) muncul
+    // sebagai file gambar mentah, bukan teks/HTML — tanpa ini gambar itu akan diam-diam
+    // tidak masuk sama sekali.
+    if (!html) {
+      const imageFile = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+      if (imageFile) {
         e.preventDefault();
-        insertHtml(cleaned);
+        void insertImage(imageFile);
       }
+      return; // teks polos tanpa HTML: biarkan perilaku paste bawaan browser (sudah benar).
     }
+
+    // Sanitize SELURUH html yang ke-paste (teks + tabel + gambar sekaligus), bukan cuma
+    // ambil tabelnya doang — sebelumnya kalau ada tabel di dalam paste, semua teks lain
+    // di sekitarnya dibuang; sekarang semuanya dipertahankan dalam satu paste yang sama.
+    const cleaned = sanitizePastedHtml(html);
+    if (!cleaned.trim()) return;
+    e.preventDefault();
+
+    const template = document.createElement("template");
+    template.innerHTML = cleaned;
+    void persistPastedImages(template.content).then(() => {
+      insertHtml(template.innerHTML);
+    });
   };
 
   const primaryTools = [
