@@ -160,17 +160,65 @@ export function sanitizeTableHtml(html: string): string | null {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const table = doc.querySelector("table");
   if (!table) return null;
-  table.querySelectorAll("colgroup, col").forEach((n) => n.remove());
-  table.querySelectorAll("*").forEach((node) => {
-    node.removeAttribute("style");
-    node.removeAttribute("class");
-    node.removeAttribute("width");
-    node.removeAttribute("height");
-    node.removeAttribute("bgcolor");
-  });
-  table.removeAttribute("style");
-  table.removeAttribute("class");
-  return `${table.outerHTML}<p><br></p>`;
+  const rebuilt = rebuildTableAsTemplate(table);
+  return rebuilt ? `${rebuilt.outerHTML}<p><br></p>` : null;
+}
+
+// Bikin ulang tabel apapun sumbernya (web, Google Docs, Word — yang masing-masing bawa
+// struktur & inline style sendiri yang beda-beda dan gampang bikin error/berantakan kalau
+// dipertahankan apa adanya) jadi tabel dengan struktur template NoteMe sendiri: cuma teks
+// isi tiap sel yang diambil, sisanya (colspan/rowspan/border/warna/merge) sengaja DIBUANG
+// dan digantikan grid biasa. Baris pertama otomatis jadi header (<th>), sisanya <td> biasa
+// — konsisten dengan bentuk tabel yang dibikin lewat tombol "Sisipkan tabel" di toolbar.
+function rebuildTableAsTemplate(table: Element): HTMLTableElement | null {
+  const rows = Array.from(table.querySelectorAll("tr"));
+  if (rows.length === 0) return null;
+
+  const rowTexts = rows.map((row) =>
+    Array.from(row.querySelectorAll("td, th")).map((cell) =>
+      (cell.textContent ?? "").replace(/\s+/g, " ").trim(),
+    ),
+  );
+  const cols = Math.max(...rowTexts.map((r) => r.length));
+  if (cols === 0) return null;
+
+  const makeCell = (tag: "th" | "td", text: string) => {
+    const cell = document.createElement(tag);
+    if (text) {
+      cell.textContent = text;
+    } else {
+      cell.appendChild(document.createElement("br"));
+    }
+    return cell;
+  };
+
+  const newTable = document.createElement("table");
+  const colgroup = document.createElement("colgroup");
+  for (let i = 0; i < cols; i++) colgroup.appendChild(document.createElement("col"));
+  newTable.appendChild(colgroup);
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (let i = 0; i < cols; i++) headRow.appendChild(makeCell("th", rowTexts[0]?.[i] ?? ""));
+  thead.appendChild(headRow);
+  newTable.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (let r = 1; r < rowTexts.length; r++) {
+    const tr = document.createElement("tr");
+    for (let i = 0; i < cols; i++) tr.appendChild(makeCell("td", rowTexts[r]?.[i] ?? ""));
+    tbody.appendChild(tr);
+  }
+  // Tabel sumber cuma satu baris (cuma header, tanpa body) — tetap kasih satu baris
+  // kosong biar strukturnya konsisten sama tabel yang dibikin lewat toolbar.
+  if (tbody.children.length === 0) {
+    const tr = document.createElement("tr");
+    for (let i = 0; i < cols; i++) tr.appendChild(makeCell("td", ""));
+    tbody.appendChild(tr);
+  }
+  newTable.appendChild(tbody);
+
+  return newTable;
 }
 
 // Tag yang boleh selamat dari hasil paste (dari web, Google Docs, Word, dll). Semua tag
@@ -283,6 +331,15 @@ export function sanitizePastedHtml(html: string): string {
       }
     });
   };
+
+  // Bangun ulang SEMUA tabel jadi struktur template NoteMe dulu (lihat komentar
+  // rebuildTableAsTemplate) — sebelum cleanElement, karena elemen tabel baru ini sudah
+  // pasti bersih duluan.
+  Array.from(doc.body.querySelectorAll("table")).forEach((table) => {
+    const rebuilt = rebuildTableAsTemplate(table);
+    if (rebuilt) table.replaceWith(rebuilt);
+    else table.remove();
+  });
 
   cleanElement(doc.body);
   return doc.body.innerHTML;
