@@ -65,25 +65,33 @@ export async function fileToCompressedBlob(file: File): Promise<Blob> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+  return dataUrlToCompressedBlob(bitmapUrl);
+}
+
+// Sama seperti fileToCompressedBlob, tapi input-nya sudah berupa data URL (dipakai buat
+// gambar hasil paste — misalnya rumus matematika dari Google Docs/Word yang selalu masuk
+// ke clipboard sebagai <img src="data:..."> raster, bukan file terpisah). Dipisah dari
+// fileToCompressedBlob supaya keduanya bisa saling pakai tanpa muter balik ke File dulu.
+export async function dataUrlToCompressedBlob(dataUrl: string): Promise<Blob> {
   return new Promise<Blob>((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const max = 1400;
       const scale = Math.min(1, max / Math.max(img.width, img.height));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
+      canvas.width = Math.round(img.width * scale) || img.width;
+      canvas.height = Math.round(img.height * scale) || img.height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("canvas unsupported"));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error("gagal kompres gambar"))),
-        "image/jpeg",
-        0.82,
+        "image/png", // PNG, bukan JPEG — rumus/tabel screenshot punya teks tipis & latar
+        // transparan yang gampang rusak/blur kena kompresi lossy JPEG.
       );
     };
     img.onerror = () => reject(new Error("gagal membaca gambar"));
-    img.src = bitmapUrl;
+    img.src = dataUrl;
   });
 }
 
@@ -163,6 +171,121 @@ export function sanitizeTableHtml(html: string): string | null {
   table.removeAttribute("style");
   table.removeAttribute("class");
   return `${table.outerHTML}<p><br></p>`;
+}
+
+// Tag yang boleh selamat dari hasil paste (dari web, Google Docs, Word, dll). Semua tag
+// lain di-"unwrap" (dibuang tag-nya, isinya tetap dipertahankan) kecuali tag berbahaya/
+// tidak berguna di DANGEROUS_TAGS, yang dibuang beserta isinya.
+const ALLOWED_PASTE_TAGS = new Set([
+  "p",
+  "br",
+  "div",
+  "span",
+  "b",
+  "strong",
+  "i",
+  "em",
+  "u",
+  "s",
+  "strike",
+  "sub",
+  "sup",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "code",
+  "pre",
+  "a",
+  "img",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "td",
+  "th",
+]);
+
+const DANGEROUS_TAGS = new Set(["script", "style", "meta", "link", "iframe", "object", "embed"]);
+
+// Attribute yang dipertahankan per tag — semua attribute lain (style, class, id, on*,
+// data-* bawaan Word/Google Docs, dsb) dibuang. Ini yang bikin hasil paste konsisten
+// dengan tampilan NoteMe sendiri, bukan ikut gaya visual dari sumbernya.
+const ALLOWED_ATTRS: Record<string, string[]> = {
+  a: ["href"],
+  img: ["src", "alt"],
+  td: ["colspan", "rowspan"],
+  th: ["colspan", "rowspan"],
+};
+
+// Bersihkan HTML hasil copy-paste (dari web, Google Docs, Word, dsb) TANPA membuang
+// konten di luar elemen yang jadi fokus (tabel/gambar) — beda dari sanitizeTableHtml
+// yang cuma ambil <table>-nya doang dan buang semua teks lain di sekitarnya. Semua
+// jenis konten (paragraf, heading, list, tabel, gambar termasuk gambar rumus
+// matematika) dipertahankan dalam satu paste, cuma dibersihkan dari style/class/atribut
+// berbahaya dan tag yang tidak relevan.
+export function sanitizePastedHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // Buang node komentar (termasuk komentar kondisional MSO/Word yang suka nyelip HTML
+  // sampah kayak "<!--[if gte mso 9]>...<![endif]-->").
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT);
+  const comments: Comment[] = [];
+  let node: Node | null;
+  while ((node = walker.nextNode())) comments.push(node as Comment);
+  comments.forEach((c) => c.remove());
+
+  const cleanElement = (el: Element) => {
+    // querySelectorAll('*') dievaluasi sekali di awal, jadi aman diiterasi walau kita
+    // mengubah tree-nya (unwrap/remove) di tengah jalan.
+    Array.from(el.querySelectorAll("*")).forEach((node) => {
+      const tag = node.tagName.toLowerCase();
+
+      if (DANGEROUS_TAGS.has(tag) || tag.includes(":")) {
+        // tag.includes(":") menangkap elemen ber-namespace ala Word (o:p, w:sdt, dst).
+        node.remove();
+        return;
+      }
+
+      if (!ALLOWED_PASTE_TAGS.has(tag)) {
+        // Tag tidak dikenal (mis. <font>, custom web component) — buang tag-nya saja,
+        // pertahankan isinya supaya teks tidak ikut hilang.
+        node.replaceWith(...Array.from(node.childNodes));
+        return;
+      }
+
+      if (tag === "colgroup" || tag === "col") {
+        node.remove();
+        return;
+      }
+
+      const keep = new Set(ALLOWED_ATTRS[tag] ?? []);
+      Array.from(node.attributes).forEach((attr) => {
+        if (!keep.has(attr.name)) node.removeAttribute(attr.name);
+      });
+
+      // <img> tanpa src valid (http/https/data) tidak berguna dan bisa jadi request
+      // pelacakan (tracking pixel) — buang.
+      if (tag === "img") {
+        const src = node.getAttribute("src") ?? "";
+        if (!/^(https?:|data:image\/)/i.test(src)) node.remove();
+      }
+      if (tag === "a") {
+        const href = node.getAttribute("href") ?? "";
+        if (/^javascript:/i.test(href)) node.removeAttribute("href");
+      }
+    });
+  };
+
+  cleanElement(doc.body);
+  return doc.body.innerHTML;
 }
 
 // Bungkus tiap <img> yang belum punya wrapper dengan <span class="img-resize-wrap"> +
