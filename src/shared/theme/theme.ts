@@ -1,51 +1,26 @@
 export const THEME_STORAGE_KEY = "noteme.theme";
 
-export const THEME_PRESETS = [
-  { label: "Anggur", value: "#7c3aed" },
-  { label: "Beri", value: "#be185d" },
-  { label: "Laut", value: "#0369a1" },
-  { label: "Hutan", value: "#047857" },
-  { label: "Senja", value: "#c2410c" },
-] as const;
+export type ThemeMode = "light" | "dark";
 
-export type ThemePreference = {
-  color: string;
-  intensity: number;
-};
+export const DEFAULT_THEME_MODE: ThemeMode = "light";
 
-export const DEFAULT_THEME: ThemePreference = {
-  color: THEME_PRESETS[0].value,
-  intensity: 38,
-};
-
-export function readTheme(): ThemePreference {
-  if (typeof window === "undefined") return DEFAULT_THEME;
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(THEME_STORAGE_KEY) ?? "null") as
-      | Partial<ThemePreference>
-      | null;
-    return {
-      color: typeof saved?.color === "string" ? saved.color : DEFAULT_THEME.color,
-      intensity:
-        typeof saved?.intensity === "number" ? saved.intensity : DEFAULT_THEME.intensity,
-    };
-  } catch {
-    return DEFAULT_THEME;
-  }
+export function readThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return DEFAULT_THEME_MODE;
+  const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return saved === "dark" ? "dark" : "light";
 }
 
-export function applyTheme(theme: ThemePreference) {
+export function applyThemeMode(mode: ThemeMode) {
   if (typeof document === "undefined") return;
-  const intensity = Math.min(70, Math.max(18, theme.intensity));
-  document.documentElement.style.setProperty("--user-theme-color", theme.color);
-  document.documentElement.style.setProperty("--user-theme-intensity", `${intensity}%`);
+  document.documentElement.dataset.theme = mode;
+  document.documentElement.style.colorScheme = mode;
 }
 
-export function saveTheme(theme: ThemePreference) {
-  applyTheme(theme);
+export function saveThemeMode(mode: ThemeMode) {
+  applyThemeMode(mode);
   try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(theme));
+    window.localStorage.setItem(THEME_STORAGE_KEY, mode);
   } catch {
-    // The current session still uses the selected theme when storage is unavailable.
+    // ignore
   }
 }
