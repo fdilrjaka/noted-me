@@ -2,7 +2,7 @@
 
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-bold tracking-tight text-slate-800 ${className}`}>
+    <span className={`font-bold tracking-tight text-foreground ${className}`}>
       NoteMe
     </span>
   );
@@ -10,7 +10,7 @@ export function BrandMark({ className = "" }: { className?: string }) {
 
 export function BrandMarkSm({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-semibold tracking-tight text-slate-700 ${className}`}>
+    <span className={`font-semibold tracking-tight text-foreground ${className}`}>
       NoteMe
     </span>
   );
