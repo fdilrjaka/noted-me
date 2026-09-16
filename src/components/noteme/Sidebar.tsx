@@ -25,41 +25,45 @@ export function Sidebar() {
               <Link
                 key={to}
                 to={to}
-                className={`press-sm flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+                className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                   active
-                    ? "bg-[#80e5d4]/70 text-slate-800 shadow-sm border border-white/60"
-                    : "text-slate-600 hover:bg-white/40"
+                    ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15 hover:translate-x-0.5"
                 }`}
               >
-                <Icon className="size-4.5" />
+                <Icon className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
                 <span className="flex-1">{label}</span>
-                {active && <ChevronRight className="size-4 flex-none opacity-60" />}
+                <ChevronRight
+                  className={`size-4 flex-none opacity-60 transition-all duration-200 ${
+                    active ? "translate-x-0" : "opacity-0 group-hover:opacity-70 group-hover:translate-x-0.5"
+                  }`}
+                />
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto flex flex-col gap-1.5 border-t border-slate-200/50 pt-3">
+        <div className="mt-auto flex flex-col gap-1.5 border-t border-border/60 pt-3">
           <Link
             to="/trash"
-            className={`press-sm flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+            className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
               pathname === "/trash"
-                ? "bg-[#80e5d4]/70 text-slate-800 shadow-sm border border-white/60"
-                : "text-slate-600 hover:bg-white/40"
+                ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15"
             }`}
           >
-            <Trash2 className="size-4.5" />
+            <Trash2 className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
             Trash
           </Link>
           <Link
             to="/auth"
-            className={`press-sm flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+            className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
               pathname === "/auth"
-                ? "bg-[#80e5d4]/70 text-slate-800 shadow-sm border border-white/60"
-                : "text-slate-600 hover:bg-white/40"
+                ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15"
             }`}
           >
-            <User className="size-4.5" />
+            <User className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
             Profile
           </Link>
         </div>
