@@ -285,6 +285,15 @@
   outline: none;
 }
 
+/* Latar catatan "Putih": dipicu lewat atribut data-bg (bukan class), diset
+   dari state React `bg` di Editor.tsx. Teks otomatis jadi hitam supaya tetap
+   kebaca di atas latar putih, terlepas dari tema gelap/terang aplikasi. */
+.note-content[data-bg="white"] {
+  background: #ffffff;
+  color: #000000;
+  border-radius: 1rem;
+}
+
 .note-content table {
   outline: none;
   width: 100%;
