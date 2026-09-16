@@ -291,6 +291,7 @@
 .note-content[data-bg="white"] {
   background: #ffffff;
   color: #000000;
+  caret-color: #000000;
   border-radius: 1rem;
 }
 
