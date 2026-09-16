@@ -13,7 +13,6 @@ import {
   List,
   ListOrdered,
   MoreHorizontal,
-  Palette,
   PenTool,
   Pipette,
   Plus,
@@ -30,7 +29,6 @@ import { registerLocalImage } from "@/storage/local/imageMetaStore";
 import { useTypingPresence } from "@/lib/noteme/presence";
 import { useSession } from "@/hooks/useSession";
 import {
-  BG_OPTIONS,
   HIGHLIGHT_COLOR_GRID,
   buildTableHtml,
   dataUrlToCompressedBlob,
@@ -70,12 +68,11 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const [saved, setSaved] = useState(true);
   const [counts, setCounts] = useState({ words: 0, chars: 0 });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [panel, setPanel] = useState<"none" | "highlight" | "bg" | "table">("none");
+  const [panel, setPanel] = useState<"none" | "highlight" | "table">("none");
   const [formatSheetOpen, setFormatSheetOpen] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
-  const [bg, setBg] = useState<"default" | "white">("default");
   const [customHighlights, setCustomHighlights] = useState<string[]>([]);
   const customColorInputRef = useRef<HTMLInputElement>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<{ top: number; left: number } | null>(
@@ -166,12 +163,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     setPanel("none");
     setSelectionToolbar(null);
     updateCounts();
-    try {
-      const savedBg = window.localStorage.getItem(`noteme.bg.${pageId}`);
-      setBg(savedBg === "white" ? "white" : "default");
-    } catch {
-      setBg("default");
-    }
     if (ref.current) {
       enhanceTables(ref.current);
       enhanceImages(ref.current);
@@ -272,16 +263,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       console.error(err);
       window.alert("Gagal menyimpan gambar. Coba lagi.");
     }
-  };
-
-  const changeBg = (next: "default" | "white") => {
-    setBg(next);
-    try {
-      window.localStorage.setItem(`noteme.bg.${pageId}`, next);
-    } catch {
-      //
-    }
-    setPanel("none");
   };
 
   const applyHighlight = (color: string | null) => {
@@ -634,7 +615,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         ref={ref}
         contentEditable
         suppressContentEditableWarning
-        data-bg={bg}
         onInput={handleInput}
         onBlur={() => {
           isEditing.current = false;
@@ -778,18 +758,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setFormatSheetOpen(false);
-                    setPanel("bg");
-                  }}
-                  className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
-                >
-                  <Palette className="size-4" />
-                  Warna latar catatan
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setFormatSheetOpen(false);
                     setPanel("table");
                   }}
                   className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
@@ -891,31 +859,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
                       className="sr-only"
                       onChange={(e) => addCustomHighlight(e.target.value)}
                     />
-                  </div>
-                </>
-              )}
-
-              {panel === "bg" && (
-                <>
-                  <p className="mb-3 text-sm font-medium">Warna latar catatan</p>
-                  <div className="flex flex-col gap-1.5">
-                    {BG_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => changeBg(opt.value)}
-                        className={`press-sm flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm ${
-                          bg === opt.value ? "bg-input text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        <span
-                          className="size-5 flex-none rounded-full border border-white/15"
-                          style={{ background: opt.value === "white" ? "#ffffff" : "var(--card)" }}
-                        />
-                        {opt.label}
-                      </button>
-                    ))}
                   </div>
                 </>
               )}
