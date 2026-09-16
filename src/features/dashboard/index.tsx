@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
   Check,
+  ClipboardList,
   FileText,
   Folder as FolderIcon,
   NotebookPen,
@@ -21,6 +22,7 @@ import { registerNavDragTarget } from "@/lib/noteme/navDrag";
 import { activeSubjects, search, subjectPages, useData } from "@/storage/local/dataCore";
 import { SearchBar } from "./components/SearchBar";
 import { NotificationPanel } from "./components/NotificationPanel";
+import { GreetingBanner } from "./components/GreetingBanner";
 import { useSelection } from "./hooks/useSelection";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import { useComposer } from "./hooks/useComposer";
@@ -39,6 +41,16 @@ function formatLastModified(iso: string) {
   return lastModifiedFormatter.format(d);
 }
 
+// Preset warna border pastel halus untuk kartu mata kuliah
+const CARD_ACCENTS = [
+  "border-[#80e5d4] bg-emerald-50/20",
+  "border-slate-200 bg-white/60",
+  "border-slate-200 bg-white/60",
+  "border-slate-200 bg-white/60",
+  "border-[#80e5d4] bg-teal-50/20",
+  "border-[#80e5d4] bg-[#80e5d4]/10",
+];
+
 export function Dashboard() {
   const data = useData();
   const navigate = useNavigate();
@@ -49,12 +61,12 @@ export function Dashboard() {
   const profileAvatarColor =
     typeof profileMeta["avatar_color"] === "string"
       ? (profileMeta["avatar_color"] as string)
-      : "#7c3aed";
+      : "#ff9b85";
   const profileNickname =
     typeof profileMeta["nickname"] === "string" ? (profileMeta["nickname"] as string) : "";
   const profileUsername = user?.email?.replace("@noteme.app", "") ?? "";
   const profileInitial =
-    (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "?";
+    (profileNickname.trim() || profileUsername.trim())[0]?.toUpperCase() ?? "F";
 
   const [query, setQuery] = useState("");
   const [actionHubOpen, setActionHubOpen] = useState(false);
@@ -115,6 +127,7 @@ export function Dashboard() {
       <Sidebar />
       <div className="md:ml-[16.5rem]">
         <div className="mx-auto w-full max-w-5xl px-4">
+          {/* Header Top Bar */}
           <header className="flex items-center justify-between gap-3 py-4">
             <div>
               <BrandMark className="text-2xl" />
@@ -122,102 +135,58 @@ export function Dashboard() {
                 <SyncStatus />
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Versi HP: ikon trash (buka mode hapus) + Settings + profil, urut dari kiri
-                  ke kanan dengan profil paling kanan. Semua disamakan size-10 biar konsisten
-                  dengan ikon Settings (sebelumnya trash & profil size-8, lebih kecil dari
-                  Settings size-10 — sekarang diseragamkan). Disembunyikan di desktop karena
-                  aksi yang sama sudah ada di grup ikon md:flex sebelah kanan. */}
-              <div className="flex items-center gap-3 md:hidden">
-                {subjects.length > 0 && (
-                  <button
-                    onClick={toggleSelectMode}
-                    aria-label="Hapus mata kuliah"
-                    className={`press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90 ${
-                      selectMode ? "text-destructive" : ""
-                    }`}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                )}
-                <Link
-                  to="/settings"
-                  aria-label="Pengaturan"
-                  className="press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90"
-                >
-                  <Settings className="size-4" />
-                </Link>
-                <Link
-                  to="/auth"
-                  aria-label="Akun"
-                  className="press flex size-10 items-center justify-center overflow-hidden rounded-full active:scale-90"
-                >
-                  {profileAvatarUrl ? (
-                    <img
-                      src={profileAvatarUrl}
-                      alt="Foto profil"
-                      className="size-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="flex size-full items-center justify-center rounded-full text-sm font-semibold text-white"
-                      style={{ backgroundColor: profileAvatarColor }}
-                    >
-                      {profileInitial}
-                    </span>
-                  )}
-                </Link>
-              </div>
 
+            {/* Top Right Action Group - Soft Orange Glass Capsule */}
+            <div className="flex items-center gap-1.5 rounded-full bg-[#ffdac6]/40 p-1 border border-[#ffdac6]/60 backdrop-blur-md shadow-sm">
               <Link
                 to="/settings"
                 aria-label="Pengaturan"
-                className="hidden press glass-floating md:flex size-10 items-center justify-center rounded-full active:scale-90"
+                className="press flex size-9 items-center justify-center rounded-full text-slate-700 hover:bg-white/50 active:scale-90"
               >
                 <Settings className="size-4" />
               </Link>
 
-              <div className="hidden items-center gap-2 md:flex">
-                {subjects.length > 0 && (
-                  <button
-                    onClick={toggleSelectMode}
-                    aria-label="Hapus mata kuliah"
-                    className={`press glass-floating flex size-10 items-center justify-center rounded-full active:scale-90 ${
-                      selectMode ? "text-destructive" : ""
-                    }`}
+              <Link
+                to="/todo"
+                aria-label="To Do List"
+                className="press flex size-9 items-center justify-center rounded-full text-slate-700 hover:bg-white/50 active:scale-90"
+              >
+                <ClipboardList className="size-4" />
+              </Link>
+
+              <NotificationPanel
+                notifications={notifications}
+                open={notifOpen}
+                onToggle={() => setNotifOpen((v) => !v)}
+                onClose={() => setNotifOpen(false)}
+              />
+
+              <Link
+                to="/auth"
+                aria-label="Akun"
+                className="press flex size-9 items-center justify-center overflow-hidden rounded-full active:scale-90"
+              >
+                {profileAvatarUrl ? (
+                  <img
+                    src={profileAvatarUrl}
+                    alt="Foto profil"
+                    className="size-full rounded-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="flex size-full items-center justify-center rounded-full text-xs font-bold text-slate-700 bg-[#ffb7a1]"
                   >
-                    <Trash2 className="size-4" />
-                  </button>
+                    {profileInitial}
+                  </span>
                 )}
-                <NotificationPanel
-                  notifications={notifications}
-                  open={notifOpen}
-                  onToggle={() => setNotifOpen((v) => !v)}
-                  onClose={() => setNotifOpen(false)}
-                />
-                <Link
-                  to="/auth"
-                  aria-label="Akun"
-                  className="press flex size-10 items-center justify-center overflow-hidden rounded-full active:scale-90"
-                >
-                  {profileAvatarUrl ? (
-                    <img
-                      src={profileAvatarUrl}
-                      alt="Foto profil"
-                      className="size-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="flex size-full items-center justify-center rounded-full text-sm font-semibold text-white"
-                      style={{ backgroundColor: profileAvatarColor }}
-                    >
-                      {profileInitial}
-                    </span>
-                  )}
-                </Link>
-              </div>
+              </Link>
             </div>
           </header>
+
+          {/* Hero Greeting Banner */}
+          <div className="mb-5">
+            <GreetingBanner name={profileNickname || "Fadhil"} />
+          </div>
 
           <SearchBar
             query={query}
@@ -231,15 +200,15 @@ export function Dashboard() {
 
           {!query.trim() && (
             <section className="mt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xs font-bold tracking-wider text-slate-500 uppercase">
                   {selectMode ? `${selected.size} dipilih` : "MATA KULIAH"}
                 </h2>
                 <div className="flex items-center gap-2">
                   {selectMode && (
                     <button
                       onClick={exitSelectMode}
-                      className="press flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-medium active:scale-95"
+                      className="press flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/70 px-4 py-1.5 text-xs font-semibold text-slate-700 active:scale-95"
                     >
                       Batal
                     </button>
@@ -250,8 +219,8 @@ export function Dashboard() {
                         onClick={() => setActionHubOpen((v) => !v)}
                         aria-label="Tambah baru"
                         aria-expanded={actionHubOpen}
-                        className={`press glass-floating relative flex size-9 items-center justify-center overflow-hidden rounded-full text-foreground active:scale-90 ${
-                          actionHubOpen ? "bg-white/10" : ""
+                        className={`press glass-floating relative flex size-9 items-center justify-center overflow-hidden rounded-full text-slate-700 active:scale-90 ${
+                          actionHubOpen ? "bg-white/90" : ""
                         }`}
                         style={{ transition: "background-color 0.3s var(--ease-ios)" }}
                       >
@@ -272,43 +241,16 @@ export function Dashboard() {
                             className="fixed inset-0 z-30"
                             onClick={() => setActionHubOpen(false)}
                           />
-                          {/* Action hub bercabang ala tree — dua opsi menjulur dari tombol + */}
-                          <div className="absolute right-3 top-full z-40 pt-3">
-                            <svg
-                              aria-hidden="true"
-                              width="88"
-                              height="56"
-                              viewBox="0 0 88 56"
-                              className="pointer-events-none absolute -top-3 right-2 text-border"
-                            >
-                              <path
-                                d="M 74 0 V 14 Q 74 20 68 20 H 44"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                              />
-                              <path
-                                d="M 44 20 H 20 Q 14 20 14 26 V 40"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                              />
-                              <path
-                                d="M 44 20 H 68 Q 74 20 74 26 V 40"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                              />
-                            </svg>
+                          <div className="absolute right-0 top-full z-40 pt-2">
                             <div className="spring-in flex flex-col items-end gap-2">
                               <button
                                 onClick={() => {
                                   setActionHubOpen(false);
                                   composer.open("folder");
                                 }}
-                                className="press glass-card flex items-center gap-2.5 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-medium"
+                                className="press glass-card flex items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 text-xs font-semibold text-slate-700 shadow-md"
                               >
-                                <span className="flex size-7 items-center justify-center rounded-full bg-amber-400/15 text-amber-400">
+                                <span className="flex size-6 items-center justify-center rounded-full bg-amber-400/20 text-amber-600">
                                   <FolderIcon className="size-3.5" />
                                 </span>
                                 Buat Folder
@@ -318,9 +260,9 @@ export function Dashboard() {
                                   setActionHubOpen(false);
                                   composer.open("note");
                                 }}
-                                className="press glass-card flex items-center gap-2.5 rounded-2xl py-2.5 pl-3 pr-4 text-sm font-medium"
+                                className="press glass-card flex items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 text-xs font-semibold text-slate-700 shadow-md"
                               >
-                                <span className="flex size-7 items-center justify-center rounded-full bg-primary/15 text-primary">
+                                <span className="flex size-6 items-center justify-center rounded-full bg-teal-400/20 text-teal-600">
                                   <NotebookPen className="size-3.5" />
                                 </span>
                                 Buat Catatan
@@ -336,21 +278,21 @@ export function Dashboard() {
 
               {mainSubjects.length === 0 && folders.length === 0 && !composer.composerMode && (
                 <div className="glass-card spring-in mt-6 rounded-3xl p-10 text-center">
-                  <BookOpen className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-3 font-semibold">Belum ada mata kuliah</p>
+                  <BookOpen className="mx-auto size-8 text-slate-400" />
+                  <p className="mt-3 font-semibold text-slate-600">Belum ada mata kuliah</p>
                 </div>
               )}
 
               {composer.composerMode && (
                 <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm"
                   onClick={composer.close}
                 >
                   <div
-                    className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
+                    className="glass-card spring-in w-full max-w-sm rounded-3xl p-5 border border-white"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <p className="mb-3 text-base font-semibold">
+                    <p className="mb-3 text-base font-semibold text-slate-800">
                       {composer.composerMode === "folder" ? "Folder baru" : "Mata kuliah baru"}
                     </p>
                     <input
@@ -366,23 +308,18 @@ export function Dashboard() {
                           ? "Contoh: Semester 5"
                           : "Contoh: Manajemen Risiko"
                       }
-                      className="glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground"
+                      className="glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-slate-400 text-slate-800"
                     />
-                    {composer.composerMode === "folder" && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Folder belum bisa dibuka — masih tampilan awal.
-                      </p>
-                    )}
                     <div className="mt-4 flex justify-end gap-2">
                       <button
                         onClick={composer.close}
-                        className="press rounded-full px-4 py-2 text-sm font-medium text-muted-foreground active:scale-95"
+                        className="press rounded-full px-4 py-2 text-sm font-semibold text-slate-500 active:scale-95"
                       >
                         Batal
                       </button>
                       <button
                         onClick={composer.submit}
-                        className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground active:scale-95"
+                        className="press rounded-full bg-[#46c7ad] px-4 py-2 text-sm font-semibold text-white shadow-sm active:scale-95"
                       >
                         Simpan
                       </button>
@@ -391,8 +328,8 @@ export function Dashboard() {
                 </div>
               )}
 
-              {/* Grid Card Mata Kuliah Presisi & Utuh */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Grid Card Mata Kuliah Style Light Glass */}
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                 {folders.map((folder) => {
                   const isHover = hoverFolderId === folder.id;
                   return (
@@ -400,39 +337,31 @@ export function Dashboard() {
                       key={folder.id}
                       data-folder-drop={folder.id}
                       onClick={() => setOpenFolderId(folder.id)}
-                      className={`glass-soft spring-in relative flex min-h-[110px] cursor-pointer flex-col justify-between rounded-2xl p-4 ${
-                        isHover ? "ring-2 ring-primary" : ""
+                      className={`glass-card spring-in relative flex min-h-[115px] cursor-pointer flex-col justify-between rounded-2xl p-4 border border-white/90 shadow-sm ${
+                        isHover ? "ring-2 ring-teal-400" : ""
                       }`}
-                      style={{
-                        transition: "transform 0.18s var(--ease-spring), box-shadow 0.18s ease",
-                        transform: isHover
-                          ? "translateY(-6px) scale(1.04)"
-                          : "translateY(0) scale(1)",
-                        boxShadow: isHover
-                          ? "0 0 0 4px hsl(var(--primary) / 0.18), 0 18px 30px -12px hsl(var(--primary) / 0.45)"
-                          : undefined,
-                      }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
-                          <FolderIcon className="size-4" />
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-amber-400/20 text-amber-600">
+                          <FolderIcon className="size-4.5" />
                         </span>
-                        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="rounded-full bg-slate-100/80 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500">
                           {folder.subjectIds.length} catatan
                         </span>
                       </div>
-                      <p className="truncate text-sm font-semibold">{folder.name}</p>
+                      <p className="truncate text-sm font-bold text-slate-800">{folder.name}</p>
                     </div>
                   );
                 })}
 
-                {mainSubjects.map((subject) => {
+                {mainSubjects.map((subject, idx) => {
                   const pages = subjectPages(data, subject.id);
                   const isSelected = selected.has(subject.id);
                   const lastModifiedIso = pages.reduce(
                     (latest, p) => (p.updated_at > latest ? p.updated_at : latest),
                     subject.updated_at,
                   );
+                  const accentClass = CARD_ACCENTS[idx % CARD_ACCENTS.length];
 
                   return (
                     <div
@@ -442,27 +371,20 @@ export function Dashboard() {
                       onPointerUp={(e) => handlePointerUp(e, subject.id, pages[0]?.id)}
                       onPointerCancel={finishDrag}
                       style={{
-                        // "none": browser TIDAK boleh ambil alih gesture apa pun di
-                        // atas card (dulu "pan-y" bikin browser rebutan sama timer
-                        // long-press kita, jadi kalau jari sedikit goyang, browser
-                        // menang duluan dan scroll native jalan sebelum drag sempat
-                        // kepicu). Scroll vertikal sekarang dihandle manual di
-                        // useDragAndDrop saat gerakan sebelum long-press terdeteksi.
                         touchAction: "none",
                         WebkitUserSelect: "none",
                         userSelect: "none",
-                        WebkitTouchCallout: "none",
                       }}
-                      className={`press glass-soft spring-in group relative flex min-h-[110px] flex-col justify-between cursor-pointer select-none rounded-2xl p-4 transition-all hover:border-slate-700 ${
-                        isSelected ? "ring-2 ring-destructive" : ""
+                      className={`press glass-card spring-in group relative flex min-h-[115px] flex-col justify-between cursor-pointer select-none rounded-2xl p-4 transition-all border ${accentClass} ${
+                        isSelected ? "ring-2 ring-red-500" : ""
                       } ${draggingId === subject.id ? "opacity-30" : ""}`}
                     >
                       {selectMode && (
                         <div
                           className={`absolute right-3 top-3 flex size-5 items-center justify-center rounded-full border-2 ${
                             isSelected
-                              ? "border-destructive bg-destructive text-destructive-foreground"
-                              : "border-border bg-background/50"
+                              ? "border-red-500 bg-red-500 text-white"
+                              : "border-slate-300 bg-white/50"
                           }`}
                         >
                           {isSelected && <Check className="size-3" />}
@@ -471,17 +393,17 @@ export function Dashboard() {
 
                       <div>
                         <div className="flex items-start gap-2">
-                          <FileText className="mt-0.5 size-4 flex-none text-muted-foreground" />
-                          <h3 className="font-bold text-sm text-foreground leading-snug">
+                          <FileText className="mt-0.5 size-4 flex-none text-slate-400" />
+                          <h3 className="font-bold text-sm text-slate-800 leading-snug">
                             {subject.name}
                           </h3>
                         </div>
-                        <p className="mt-1 pl-6 text-xs text-muted-foreground">
+                        <p className="mt-1 pl-6 text-xs font-medium text-slate-500">
                           {pages.length} pertemuan
                         </p>
                       </div>
 
-                      <div className="mt-3 pl-6 text-[11px] text-muted-foreground/70">
+                      <div className="mt-3 pl-6 text-[11px] font-medium text-slate-400">
                         Last modified: {formatLastModified(lastModifiedIso)}
                       </div>
                     </div>
@@ -495,7 +417,7 @@ export function Dashboard() {
             <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)]">
               <button
                 onClick={deleteSelected}
-                className="press glass-floating flex items-center gap-2 rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground shadow-2xl active:scale-95"
+                className="press glass-floating flex items-center gap-2 rounded-full bg-red-500 px-6 py-3 text-sm font-bold text-white shadow-xl active:scale-95"
               >
                 <Trash2 className="size-4" /> Hapus {selected.size} mata kuliah
               </button>
@@ -508,7 +430,7 @@ export function Dashboard() {
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="glass-card pointer-events-none fixed z-[100] w-56 rounded-2xl p-4 shadow-2xl"
+            className="glass-card pointer-events-none fixed z-[100] w-56 rounded-2xl p-4 shadow-xl border border-white"
             style={{
               left: dragPos.x,
               top: dragPos.y,
@@ -516,8 +438,8 @@ export function Dashboard() {
             }}
           >
             <div className="flex items-center gap-2">
-              <FileText className="size-4 flex-none text-muted-foreground" />
-              <h3 className="truncate text-sm font-bold text-foreground">{draggingSubject.name}</h3>
+              <FileText className="size-4 flex-none text-slate-400" />
+              <h3 className="truncate text-sm font-bold text-slate-800">{draggingSubject.name}</h3>
             </div>
           </div>,
           document.body,
@@ -527,24 +449,24 @@ export function Dashboard() {
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 p-4 backdrop-blur-sm sm:items-center"
             onClick={closeFolder}
           >
             <div
-              className="glass-card spring-in w-full max-w-sm rounded-3xl p-5"
+              className="glass-card spring-in w-full max-w-sm rounded-3xl p-5 border border-white"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-amber-400/15 text-amber-400">
+                  <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-amber-400/20 text-amber-600">
                     <FolderIcon className="size-4" />
                   </span>
-                  <p className="truncate text-base font-semibold">{openFolder.name}</p>
+                  <p className="truncate text-base font-bold text-slate-800">{openFolder.name}</p>
                 </div>
                 <button
                   onClick={closeFolder}
                   aria-label="Tutup"
-                  className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground"
+                  className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
                 >
                   <X className="size-4" />
                 </button>
@@ -552,8 +474,8 @@ export function Dashboard() {
 
               <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto">
                 {openFolder.subjectIds.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    Folder ini masih kosong. Tahan lalu seret catatan ke sini dari dashboard.
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    Folder ini masih kosong. Seret catatan ke sini dari dashboard.
                   </p>
                 )}
                 {openFolder.subjectIds.map((sid) => {
@@ -563,7 +485,7 @@ export function Dashboard() {
                   return (
                     <div
                       key={sid}
-                      className="glass-soft flex items-center justify-between gap-2 rounded-2xl p-3"
+                      className="glass-soft flex items-center justify-between gap-2 rounded-2xl p-3 border border-white/80"
                     >
                       <button
                         onClick={() => {
@@ -572,13 +494,13 @@ export function Dashboard() {
                         }}
                         className="press-sm flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
-                        <FileText className="size-4 flex-none text-muted-foreground" />
-                        <span className="truncate text-sm font-semibold">{subj.name}</span>
+                        <FileText className="size-4 flex-none text-slate-400" />
+                        <span className="truncate text-sm font-semibold text-slate-800">{subj.name}</span>
                       </button>
                       <button
                         onClick={() => handleRemoveFromFolder(subj.id)}
                         aria-label="Keluarkan dari folder"
-                        className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-muted-foreground active:scale-90"
+                        className="press-sm flex size-7 flex-none items-center justify-center rounded-full text-slate-400 hover:bg-slate-200/50"
                       >
                         <X className="size-3.5" />
                       </button>
@@ -589,7 +511,7 @@ export function Dashboard() {
 
               <button
                 onClick={() => handleDeleteFolder(openFolder)}
-                className="press mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 py-3 text-sm font-semibold text-destructive active:scale-95"
+                className="press mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500/10 py-2.5 text-sm font-bold text-red-600 active:scale-95"
               >
                 <Trash2 className="size-4" /> Hapus folder
               </button>
