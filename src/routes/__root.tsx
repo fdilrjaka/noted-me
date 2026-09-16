@@ -15,7 +15,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ConflictDialog, ServiceWorkerRegistrar } from "@/components/noteme/SyncEngine";
 import { SplashIntro } from "@/components/noteme/SplashIntro";
-import { useBackgroundHue } from "@/hooks/use-background-hue"; // <-- Import Hook
+import { useBackgroundHue } from "@/hooks/use-background-hue";
+import { applyThemeMode, readThemeMode } from "@/shared/theme/theme";
 
 function NotFoundComponent() {
   return (
@@ -122,9 +123,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  
-  // Panggil hook di sini agar warna latar global selalu aktif di semua route/halaman
+
   useBackgroundHue();
+
+  useEffect(() => {
+    applyThemeMode(readThemeMode());
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -132,7 +136,7 @@ function RootComponent() {
       <ServiceWorkerRegistrar />
       <RouteTransition />
       <ConflictDialog />
-      <Toaster theme="dark" position="top-center" />
+      <Toaster theme="system" position="top-center" />
     </QueryClientProvider>
   );
 }
