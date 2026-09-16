@@ -20,9 +20,8 @@ import { toast } from "sonner";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
-import { HueSlider } from "@/components/HueSlider";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { useBackgroundHue } from "@/hooks/use-background-hue";
+import { readThemeMode, saveThemeMode } from "@/shared/theme/theme";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { exportBackupJson, exportBackupMarkdown } from "@/import-export/backupExport";
@@ -34,8 +33,9 @@ import { useAccountSettings } from "./hooks/useAccountSettings";
 
 export function SettingsPage() {
   const { user } = useSession();
-  const { hue, setHue } = useBackgroundHue();
+  const themeMode = readThemeMode();
   const notifPrefs = useNotifPrefs();
+
   const {
     newPassword,
     setNewPassword,
@@ -72,7 +72,6 @@ export function SettingsPage() {
           </header>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            {/* Kolom kiri: akun */}
             <div className="flex flex-col gap-4 lg:col-span-1">
               <SettingCard icon={User} title="Akun">
                 <p className="text-sm font-medium">{nickname || usernameLabel || "Belum login"}</p>
@@ -136,22 +135,35 @@ export function SettingsPage() {
               </SettingCard>
             </div>
 
-            {/* Kolom kanan: tampilan, keamanan, impor/ekspor, tentang */}
             <div className="flex flex-col gap-4 lg:col-span-2">
               <SettingCard icon={Palette} title="Tampilan Aplikasi">
                 <div className="flex flex-col gap-4">
                   <div>
                     <p className="mb-2 text-sm font-medium">Mode Tampilan</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-                        Night Mode
-                      </div>
-                      <div className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground">
+                      <button
+                        onClick={() => saveThemeMode("light")}
+                        className={`press-sm rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
+                          themeMode === "light"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                        }`}
+                      >
                         Light Mode
-                      </div>
+                      </button>
+                      <button
+                        onClick={() => saveThemeMode("dark")}
+                        className={`press-sm rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
+                          themeMode === "dark"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                        }`}
+                      >
+                        Night Mode
+                      </button>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Keduanya mengikuti tema utama aplikasi, jadi background catatan tidak perlu diatur manual.
+                      Tema mengikuti setting utama aplikasi. Background catatan tidak perlu diatur manual lagi.
                     </p>
                   </div>
                 </div>
