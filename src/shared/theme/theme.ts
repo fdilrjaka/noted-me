@@ -13,7 +13,14 @@ export function readThemeMode(): ThemeMode {
 
 export function applyThemeMode(mode: ThemeMode) {
   if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = mode;
+
+  const html = document.documentElement;
+  html.dataset.theme = mode;
+
+  // HOTFIX: sinkronkan dengan Tailwind dark: yang memakai class
+  if (mode === "dark") html.classList.add("dark");
+  else html.classList.remove("dark");
+
   document.documentElement.style.colorScheme = mode;
 }
 
