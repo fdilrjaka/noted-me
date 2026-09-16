@@ -30,6 +30,9 @@
   --glow-purple: oklch(0.88 0.14 300);
   --glow-pink: oklch(0.9 0.13 340);
   --glow-green: oklch(0.88 0.14 170);
+
+  --glass-soft-bg: rgba(255, 255, 255, 0.7);
+  --glass-soft-border: rgba(255, 255, 255, 0.85);
 }
 
 html[data-theme="dark"] {
@@ -52,6 +55,9 @@ html[data-theme="dark"] {
   --accent-foreground: #04110f;
   --border: rgba(148, 163, 184, 0.18);
   --input: rgba(15, 23, 42, 0.7);
+
+  --glass-soft-bg: rgba(30, 41, 59, 0.55);
+  --glass-soft-border: rgba(148, 163, 184, 0.16);
 }
 
 @theme inline {
@@ -105,7 +111,7 @@ html[data-theme="dark"] {
 }
 
 @utility glass { background: var(--card); backdrop-filter: blur(25px) saturate(160%); -webkit-backdrop-filter: blur(25px) saturate(160%); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04); }
-@utility glass-soft { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.85); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02); }
+@utility glass-soft { background: var(--glass-soft-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-soft-border); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02); }
 @utility glass-card { position: relative; background: var(--card); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); border: 1px solid var(--border); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.01); transition: transform 0.3s cubic-bezier(0.22, 1.12, 0.36, 1), box-shadow 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 @utility glass-input { background: var(--input); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02); transition: border-color 0.2s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1); }
 @utility glass-navigation { background: var(--card); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); }
