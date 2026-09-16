@@ -23,6 +23,57 @@ export function exec(command: string, value?: string) {
   }
 }
 
+const ORDERED_LIST_MARKER = /^(\d{1,3})\.$/;
+
+// Auto-list ala Google Docs/Notion: kalau isi baris sejauh ini PERSIS "1." atau
+// "-" (gak ada teks lain sebelumnya) dan user nekan spasi, baris itu diubah
+// jadi list beneran (bukan cuma teks), marker-nya dibuang, dan untuk angka
+// selain "1." start number-nya ikut disesuaikan (mis. "3. " mulai dari 3).
+// Dipanggil dari onKeyDown saat key === " ", SEBELUM spasinya ke-insert —
+// return true berarti pemanggil harus preventDefault() spasi tsb.
+export function tryAutoConvertLineToList(container: HTMLElement): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== Node.TEXT_NODE) return false;
+
+  const textBefore = (node.textContent ?? "").slice(0, range.startOffset);
+  const orderedMatch = ORDERED_LIST_MARKER.exec(textBefore);
+  const isBulletMarker = textBefore === "-";
+  if (!orderedMatch && !isBulletMarker) return false;
+
+  // Marker harus satu-satunya isi blok sejauh ini — kalau ada teks lain
+  // sebelum "1."/"-" (mis. "abc-"), biarin, jangan diubah jadi list.
+  const block = (node.parentElement?.closest("p, div, li, h1, h2, blockquote, td, th") ??
+    container) as HTMLElement;
+  if (block === container || block.textContent !== textBefore) return false;
+
+  const markerRange = document.createRange();
+  markerRange.setStart(node, 0);
+  markerRange.setEnd(node, range.startOffset);
+  markerRange.deleteContents();
+
+  container.focus();
+  document.execCommand(orderedMatch ? "insertOrderedList" : "insertUnorderedList");
+
+  if (orderedMatch) {
+    const startNum = Number(orderedMatch[1]);
+    if (startNum > 1) {
+      const activeSel = window.getSelection();
+      const anchor = activeSel?.anchorNode ?? null;
+      const anchorEl = anchor
+        ? ((anchor.nodeType === Node.TEXT_NODE ? anchor.parentElement : (anchor as HTMLElement)) ??
+          null)
+        : null;
+      const ol = anchorEl?.closest("ol");
+      if (ol) ol.setAttribute("start", String(startNum));
+    }
+  }
+
+  return true;
+}
+
 // document.execCommand("insertHTML", ...) is notoriously unreliable on Safari/mobile Safari
 // (silently no-ops or drops formatting). Insert nodes directly via the Range API instead, which
 // works consistently across browsers and doesn't depend on a deprecated command.
