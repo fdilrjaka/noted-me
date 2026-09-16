@@ -14,9 +14,9 @@ export function SettingCard({
     <div className={`glass-card rounded-3xl p-5 ${className}`}>
       <div className="mb-4 flex items-center gap-2.5">
         <Icon className="size-4.5 text-primary" />
-        <h2 className="text-sm font-bold tracking-wide uppercase">{title}</h2>
+        <h2 className="text-sm font-bold tracking-wide uppercase text-foreground">{title}</h2>
       </div>
-      {children}
+      <div className="text-foreground">{children}</div>
     </div>
   );
 }
