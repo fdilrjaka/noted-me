@@ -141,11 +141,18 @@ export function SettingsPage() {
               <SettingCard icon={Palette} title="Tampilan Aplikasi">
                 <div className="flex flex-col gap-4">
                   <div>
-                    <p className="mb-2 text-sm font-medium">Warna Latar</p>
-                    <HueSlider hue={hue} onChange={setHue} />
-                  </div>
-                  <div className="border-t border-border pt-3">
-                    <ComingSoonRow label="Tema Terang" sublabel="Saat ini NoteMe gelap saja" />
+                    <p className="mb-2 text-sm font-medium">Mode Tampilan</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                        Night Mode
+                      </div>
+                      <div className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground">
+                        Light Mode
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Keduanya mengikuti tema utama aplikasi, jadi background catatan tidak perlu diatur manual.
+                    </p>
                   </div>
                 </div>
               </SettingCard>
