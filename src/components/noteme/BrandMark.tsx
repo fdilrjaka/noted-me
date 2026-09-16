@@ -1,9 +1,17 @@
-/** iOS 26-style "NoteMe" wordmark: SF Pro Display, tight tracking, glassy gradient. */
+/** Fresh Light-style "NoteMe" wordmark */
 
 export function BrandMark({ className = "" }: { className?: string }) {
-  return <span className={`brand-ios26 ${className}`}>NoteMe</span>;
+  return (
+    <span className={`font-bold tracking-tight text-slate-800 ${className}`}>
+      NoteMe
+    </span>
+  );
 }
 
 export function BrandMarkSm({ className = "" }: { className?: string }) {
-  return <span className={`brand-ios26-sm ${className}`}>NoteMe</span>;
+  return (
+    <span className={`font-semibold tracking-tight text-slate-700 ${className}`}>
+      NoteMe
+    </span>
+  );
 }
