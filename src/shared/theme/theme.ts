@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 export const THEME_STORAGE_KEY = "noteme.theme";
 
 export type ThemeMode = "light" | "dark";
@@ -23,4 +25,21 @@ export function saveThemeMode(mode: ThemeMode) {
   } catch {
     // ignore
   }
+}
+
+export function useThemeMode() {
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE);
+
+  useEffect(() => {
+    const initial = readThemeMode();
+    setThemeModeState(initial);
+    applyThemeMode(initial);
+  }, []);
+
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeModeState(mode);
+    saveThemeMode(mode);
+  }, []);
+
+  return { themeMode, setThemeMode };
 }
