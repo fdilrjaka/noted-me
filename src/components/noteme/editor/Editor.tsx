@@ -43,6 +43,7 @@ import {
   resolvePendingImages,
   sanitizePastedHtml,
   serializeContent,
+  tryAutoConvertLineToList,
 } from "./domHelpers";
 
 type Props = {
@@ -650,6 +651,16 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         }}
         onPaste={handlePaste}
         onKeyDown={(e) => {
+          // Auto-list ala Google Docs: "1. " / "- " di awal baris (kosong
+          // sebelumnya) langsung jadi list beneran, bukan cuma teks — nomor
+          // lanjut otomatis pas Enter, dan Enter dua kali di item kosong
+          // otomatis keluar dari list (itu udah perilaku bawaan browser buat
+          // contenteditable, gak perlu ditangani manual di sini).
+          if (e.key === " " && ref.current && tryAutoConvertLineToList(ref.current)) {
+            e.preventDefault();
+            handleInput();
+            return;
+          }
           if (e.key !== "Backspace" && e.key !== "Delete") return;
           const wrap = ref.current?.querySelector(".img-resize-wrap.is-selected");
           if (!wrap) return;
