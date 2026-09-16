@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 
 /*
- * NoteMe design system — Bright Clean Glass & Sharp Fluid Wavy Background
+ * NoteMe design system — Bright Clean Glass & Smooth Wavy Ambient Dust Background
  */
 
 @theme inline {
@@ -48,26 +48,26 @@
 :root {
   --radius: 1.25rem;
   
-  /* Latar Belakang Terang Soft Cream/White */
+  /* Latar Belakang Terang Soft White */
   --background: #f8fafc;
   --foreground: #1e293b;
   
-  /* Glass Surface Soft & Fresh */
-  --card: rgba(255, 255, 255, 0.92);
+  /* Glass Surface Soft & Fresh (Seimbang & Elegan) */
+  --card: rgba(255, 255, 255, 0.75);
   --card-foreground: #0f172a;
-  --popover: rgba(255, 255, 255, 0.95);
+  --popover: rgba(255, 255, 255, 0.88);
   --popover-foreground: #0f172a;
   
   --primary: #46c7ad;
   --primary-foreground: #ffffff;
-  --secondary: rgba(241, 245, 249, 0.9);
+  --secondary: rgba(241, 245, 249, 0.8);
   --secondary-foreground: #1e293b;
-  --muted: rgba(241, 245, 249, 0.7);
+  --muted: rgba(241, 245, 249, 0.6);
   --muted-foreground: #64748b;
   --accent: #46c7ad;
   --accent-foreground: #ffffff;
-  --border: rgba(226, 232, 240, 0.8);
-  --input: rgba(255, 255, 255, 0.9);
+  --border: rgba(255, 255, 255, 0.85);
+  --input: rgba(255, 255, 255, 0.75);
 
   /* Variabel Warna Default Slider */
   --glow-hint: rgba(70, 199, 173, 0.15);
@@ -97,7 +97,7 @@
     position: relative;
   }
 
-  /* Layer 1: Base Background Terang (Palet Dasar) */
+  /* Layer 1: Base Background Terang */
   body::before {
     content: "";
     position: fixed;
@@ -107,26 +107,26 @@
     background: #f8fafc;
   }
 
-  /* Layer 2: Gelombang Ombak Tajam Tanpa Blur (Paling Belakang / z-index: -10) */
+  /* Layer 2: Debu Warna Wavy / Ambient Color Dust (Super Smooth & Soft) */
   body::after {
     content: "";
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 55vh;
+    bottom: -5%;
+    left: -5%;
+    right: -5%;
+    height: 65vh;
     z-index: -10;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 0.35; /* Opacity sangat halus seperti debu warna */
     background-color: var(--glow-green);
     color: var(--glow-blue);
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 600'%3E%3Cpath fill='black' fill-opacity='0.45' d='M0,224L60,213.3C120,203,240,181,360,197.3C480,213,600,267,720,272C840,277,960,235,1080,213.3C1200,192,1320,192,1380,192L1440,192L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3Cpath fill='currentColor' fill-opacity='0.75' d='M0,352L60,336C120,320,240,288,360,298.7C480,309,600,363,720,368C840,373,960,331,1080,314.7C1200,299,1320,309,1380,314.7L1440,320L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 600'%3E%3Cpath fill='black' fill-opacity='0.45' d='M0,224L60,213.3C120,203,240,181,360,197.3C480,213,600,267,720,272C840,277,960,235,1080,213.3C1200,192,1320,192,1380,192L1440,192L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3Cpath fill='currentColor' fill-opacity='0.75' d='M0,352L60,336C120,320,240,288,360,298.7C480,309,600,363,720,368C840,373,960,331,1080,314.7C1200,299,1320,309,1380,314.7L1440,320L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 600'%3E%3Cpath fill='black' fill-opacity='0.3' d='M0,224L60,213.3C120,203,240,181,360,197.3C480,213,600,267,720,272C840,277,960,235,1080,213.3C1200,192,1320,192,1380,192L1440,192L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3Cpath fill='currentColor' fill-opacity='0.5' d='M0,352L60,336C120,320,240,288,360,298.7C480,309,600,363,720,368C840,373,960,331,1080,314.7C1200,299,1320,309,1380,314.7L1440,320L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 600'%3E%3Cpath fill='black' fill-opacity='0.3' d='M0,224L60,213.3C120,203,240,181,360,197.3C480,213,600,267,720,272C840,277,960,235,1080,213.3C1200,192,1320,192,1380,192L1440,192L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3Cpath fill='currentColor' fill-opacity='0.5' d='M0,352L60,336C120,320,240,288,360,298.7C480,309,600,363,720,368C840,373,960,331,1080,314.7C1200,299,1320,309,1380,314.7L1440,320L1440,600L1380,600C1320,600,1200,600,1080,600C960,600,840,600,720,600C600,600,480,600,360,600C240,600,120,600,60,600L0,600Z'%3E%3C/path%3E%3C/svg%3E");
     -webkit-mask-size: cover;
     mask-size: cover;
     -webkit-mask-position: center bottom;
     mask-position: center bottom;
-    filter: none; /* Hilangkan filter blur untuk mencegah efek bayangan menutup elemen */
+    filter: blur(36px); /* Blur halus untuk meratakan kelembutan warna tanpa membuat kusam */
     transition: background-color 0.3s var(--ease-ios), color 0.3s var(--ease-ios);
   }
 
@@ -141,41 +141,41 @@
   backdrop-filter: blur(25px) saturate(160%);
   -webkit-backdrop-filter: blur(25px) saturate(160%);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.04);
 }
 
 @utility glass-soft {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
 }
 
 @utility glass-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
   transition: transform 0.3s var(--ease-spring-soft), box-shadow 0.3s var(--ease-ios);
 
   @media (hover: hover) {
     &:hover {
       border-color: rgba(255, 255, 255, 1);
       transform: translateY(-2px);
-      box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.07);
+      box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.06);
     }
   }
 }
 
 @utility glass-input {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   transition: border-color 0.2s var(--ease-ios), box-shadow 0.2s var(--ease-ios);
 
   &:focus-within {
@@ -197,22 +197,22 @@
   padding-top: calc(env(safe-area-inset-top) + 0.75rem);
 }
 
-/* Glass Navigation Light Style (Sidebar & Nav) */
+/* Glass Navigation Light Style */
 @utility glass-navigation {
   position: relative;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
 }
 
 @utility glass-floating {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(14px) saturate(180%);
   -webkit-backdrop-filter: blur(14px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 @utility nav-pill {
