@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  Ban,
   Bold,
   Camera,
   CheckSquare,
@@ -14,11 +15,12 @@ import {
   MoreHorizontal,
   Palette,
   PenTool,
+  Pipette,
+  Plus,
   Quote,
   Table,
   Type,
   Underline,
-  X,
 } from "lucide-react";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { TypingIndicator } from "./TypingIndicator";
@@ -29,7 +31,7 @@ import { useTypingPresence } from "@/lib/noteme/presence";
 import { useSession } from "@/hooks/useSession";
 import {
   BG_OPTIONS,
-  HIGHLIGHT_COLORS,
+  HIGHLIGHT_COLOR_GRID,
   buildTableHtml,
   dataUrlToCompressedBlob,
   deselectImages,
@@ -73,6 +75,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
   const [bg, setBg] = useState<"default" | "white">("default");
+  const [customHighlights, setCustomHighlights] = useState<string[]>([]);
+  const customColorInputRef = useRef<HTMLInputElement>(null);
   const [selectionToolbar, setSelectionToolbar] = useState<{ top: number; left: number } | null>(
     null,
   );
@@ -218,7 +222,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContent]);
 
-
   const flush = () => {
     timer.current = null;
     if (!ref.current) return;
@@ -285,6 +288,36 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     exec("hiliteColor", color ?? "transparent");
     handleInput();
     setPanel("none");
+  };
+
+  // Eyedropper native browser (EyeDropper API) — ambil warna dari mana saja di
+  // layar, persis tombol pipet di screenshot referensi. Kalau browser gak
+  // dukung (mis. Firefox/Safari lama), tombolnya tetap ada tapi disembunyikan
+  // lewat pengecekan ini sebelum dipanggil.
+  const pickHighlightWithEyedropper = async () => {
+    const EyeDropperCtor = (
+      window as unknown as { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }
+    ).EyeDropper;
+    if (!EyeDropperCtor) {
+      window.alert(
+        "Browser ini belum mendukung color picker. Coba pakai tombol + untuk pilih warna manual.",
+      );
+      return;
+    }
+    try {
+      const result = await new EyeDropperCtor().open();
+      setCustomHighlights((prev) =>
+        [result.sRGBHex, ...prev.filter((c) => c !== result.sRGBHex)].slice(0, 10),
+      );
+      applyHighlight(result.sRGBHex);
+    } catch {
+      // user batalin pemilihan warna, gak perlu ditindaklanjuti
+    }
+  };
+
+  const addCustomHighlight = (color: string) => {
+    setCustomHighlights((prev) => [color, ...prev.filter((c) => c !== color)].slice(0, 10));
+    applyHighlight(color);
   };
 
   const insertTable = () => {
@@ -497,6 +530,20 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
 
       <button
         type="button"
+        title="Highlight"
+        aria-label="Highlight"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          ref.current?.focus();
+          setPanel("highlight");
+        }}
+        className="press-sm flex size-9 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+      >
+        <Highlighter className="size-4" />
+      </button>
+
+      <button
+        type="button"
         title="Gambar"
         aria-label="Gambar"
         onMouseDown={(e) => e.preventDefault()}
@@ -648,6 +695,19 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
                 <Icon className="size-4" />
               </button>
             ))}
+            <button
+              type="button"
+              title="Highlight"
+              aria-label="Highlight"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                hideSelectionToolbar();
+                setPanel("highlight");
+              }}
+              className="press-sm flex size-8 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+            >
+              <Highlighter className="size-4" />
+            </button>
             <span className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
             <button
               type="button"
@@ -707,18 +767,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setFormatSheetOpen(false);
-                    setPanel("highlight");
-                  }}
-                  className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
-                >
-                  <Highlighter className="size-4" />
-                  Highlight
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setFormatSheetOpen(false);
                     setPanel("bg");
                   }}
                   className="press-sm flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
@@ -758,30 +806,80 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
             >
               {panel === "highlight" && (
                 <>
-                  <p className="mb-3 text-sm font-medium">Highlight</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {HIGHLIGHT_COLORS.map((c) => (
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => applyHighlight(null)}
+                    className="press-sm mb-3 flex w-full items-center gap-2.5 rounded-xl px-1 py-1.5 text-left text-sm text-muted-foreground hover:bg-input hover:text-foreground"
+                  >
+                    <Ban className="size-4" />
+                    None
+                  </button>
+
+                  <div className="grid grid-cols-10 gap-1">
+                    {HIGHLIGHT_COLOR_GRID.flat().map((color, i) => (
                       <button
-                        key={c.value}
+                        key={`${color}-${i}`}
                         type="button"
-                        title={c.label}
-                        aria-label={c.label}
+                        title={color}
+                        aria-label={color}
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => applyHighlight(c.value)}
-                        className="size-9 flex-none rounded-full border border-black/10 active:scale-90"
-                        style={{ background: c.value }}
+                        onClick={() => applyHighlight(color)}
+                        className="size-5 flex-none rounded-sm border border-black/10 active:scale-90"
+                        style={{ background: color }}
                       />
                     ))}
+                  </div>
+
+                  {customHighlights.length > 0 && (
+                    <>
+                      <p className="mb-1.5 mt-3 text-xs font-medium text-muted-foreground">
+                        Custom
+                      </p>
+                      <div className="grid grid-cols-10 gap-1">
+                        {customHighlights.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            title={color}
+                            aria-label={color}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => applyHighlight(color)}
+                            className="size-5 flex-none rounded-sm border border-black/10 active:scale-90"
+                            style={{ background: color }}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-1 border-t border-border/60 pt-3">
                     <button
                       type="button"
-                      title="Hapus highlight"
-                      aria-label="Hapus highlight"
+                      title="Tambah warna custom"
+                      aria-label="Tambah warna custom"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => applyHighlight(null)}
-                      className="press-sm flex size-9 flex-none items-center justify-center rounded-full bg-input active:scale-90"
+                      onClick={() => customColorInputRef.current?.click()}
+                      className="press-sm flex size-8 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
                     >
-                      <X className="size-4" />
+                      <Plus className="size-4" />
                     </button>
+                    <button
+                      type="button"
+                      title="Pipet warna"
+                      aria-label="Pipet warna"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={pickHighlightWithEyedropper}
+                      className="press-sm flex size-8 flex-none items-center justify-center rounded-xl text-muted-foreground hover:bg-input hover:text-foreground active:scale-90"
+                    >
+                      <Pipette className="size-4" />
+                    </button>
+                    <input
+                      ref={customColorInputRef}
+                      type="color"
+                      className="sr-only"
+                      onChange={(e) => addCustomHighlight(e.target.value)}
+                    />
                   </div>
                 </>
               )}
