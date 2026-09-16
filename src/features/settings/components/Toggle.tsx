@@ -12,7 +12,7 @@ export function Toggle({
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
         {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
       </div>
       <button
@@ -21,7 +21,7 @@ export function Toggle({
         aria-label={label}
         onClick={() => onChange(!checked)}
         className={`press-sm relative h-6 w-11 flex-none rounded-full transition-colors ${
-          checked ? "bg-primary" : "bg-white/10"
+          checked ? "bg-primary" : "bg-muted"
         }`}
       >
         <span
