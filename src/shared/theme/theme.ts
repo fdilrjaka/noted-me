@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 export const THEME_STORAGE_KEY = "noteme.theme";
 
 export type ThemeMode = "light" | "dark";
-
 export const DEFAULT_THEME_MODE: ThemeMode = "light";
 
 export function readThemeMode(): ThemeMode {
@@ -22,9 +21,7 @@ export function saveThemeMode(mode: ThemeMode) {
   applyThemeMode(mode);
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, mode);
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 export function useThemeMode() {
@@ -41,5 +38,11 @@ export function useThemeMode() {
     saveThemeMode(mode);
   }, []);
 
-  return { themeMode, setThemeMode };
+  const setThemeModeAnimated = useCallback((mode: ThemeMode, x: number, y: number) => {
+    setThemeModeState(mode);
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, mode); } catch {}
+    window.dispatchEvent(new CustomEvent("noteme:theme-transition", { detail: { toMode: mode, x, y } }));
+  }, []);
+
+  return { themeMode, setThemeMode, setThemeModeAnimated };
 }
