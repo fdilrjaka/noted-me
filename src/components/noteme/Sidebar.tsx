@@ -27,15 +27,15 @@ export function Sidebar() {
                 to={to}
                 className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                   active
-                    ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15 hover:translate-x-0.5"
+                    ? "border border-primary/25 bg-primary/15 text-primary shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.18)]"
+                    : "border border-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.12),0_0_18px_rgba(67,199,175,0.16)] hover:translate-x-0.5"
                 }`}
               >
                 <Icon className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
                 <span className="flex-1">{label}</span>
                 <ChevronRight
-                  className={`size-4 flex-none opacity-60 transition-all duration-200 ${
-                    active ? "translate-x-0" : "opacity-0 group-hover:opacity-70 group-hover:translate-x-0.5"
+                  className={`size-4 flex-none transition-all duration-200 ${
+                    active ? "opacity-60" : "opacity-0 group-hover:opacity-70 group-hover:translate-x-0.5"
                   }`}
                 />
               </Link>
@@ -48,8 +48,8 @@ export function Sidebar() {
             to="/trash"
             className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
               pathname === "/trash"
-                ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
-                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15"
+                ? "border border-primary/25 bg-primary/15 text-primary shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.18)]"
+                : "border border-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.12),0_0_18px_rgba(67,199,175,0.16)]"
             }`}
           >
             <Trash2 className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
@@ -59,8 +59,8 @@ export function Sidebar() {
             to="/auth"
             className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
               pathname === "/auth"
-                ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
-                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15"
+                ? "border border-primary/25 bg-primary/15 text-primary shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.18)]"
+                : "border border-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.12),0_0_18px_rgba(67,199,175,0.16)]"
             }`}
           >
             <User className="size-4.5 transition-transform duration-200 group-hover:scale-110" />
