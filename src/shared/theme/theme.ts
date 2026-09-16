@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export const THEME_STORAGE_KEY = "noteme.theme";
 
@@ -15,7 +15,7 @@ export function applyThemeMode(mode: ThemeMode) {
   if (typeof document === "undefined") return;
 
   const html = document.documentElement;
-  html.dataset.theme = mode;
+  html.dataset["theme"] = mode;
 
   // HOTFIX: sinkronkan dengan Tailwind dark: yang memakai class
   if (mode === "dark") html.classList.add("dark");
