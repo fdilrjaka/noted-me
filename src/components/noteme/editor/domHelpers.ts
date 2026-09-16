@@ -31,6 +31,12 @@ const ORDERED_LIST_MARKER = /^(\d{1,3})\.$/;
 // selain "1." start number-nya ikut disesuaikan (mis. "3. " mulai dari 3).
 // Dipanggil dari onKeyDown saat key === " ", SEBELUM spasinya ke-insert —
 // return true berarti pemanggil harus preventDefault() spasi tsb.
+//
+// Sengaja gak pakai document.execCommand("insert(Un)orderedList") — command
+// itu gampang ngerusak seleksi/caret kalau dipanggil pas blok-nya kosong
+// (persis kondisi di sini setelah marker dihapus), efeknya caret "ilang" dan
+// gak bisa ngetik lagi. List-nya dibangun manual lewat DOM API supaya posisi
+// caret di dalam <li> yang baru selalu jelas & konsisten di semua browser.
 export function tryAutoConvertLineToList(container: HTMLElement): boolean {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
@@ -48,28 +54,27 @@ export function tryAutoConvertLineToList(container: HTMLElement): boolean {
   const block = (node.parentElement?.closest("p, div, li, h1, h2, blockquote, td, th") ??
     container) as HTMLElement;
   if (block === container || block.textContent !== textBefore) return false;
+  // Udah di dalam list (mis. nulis "1." di dalam <li> yang udah ada) — biarin
+  // browser yang urus, jangan di-nest-in list lagi di sini.
+  if (block.tagName === "LI") return false;
+  if (!block.parentNode) return false;
 
-  const markerRange = document.createRange();
-  markerRange.setStart(node, 0);
-  markerRange.setEnd(node, range.startOffset);
-  markerRange.deleteContents();
-
-  container.focus();
-  document.execCommand(orderedMatch ? "insertOrderedList" : "insertUnorderedList");
-
+  const list = document.createElement(orderedMatch ? "ol" : "ul");
   if (orderedMatch) {
     const startNum = Number(orderedMatch[1]);
-    if (startNum > 1) {
-      const activeSel = window.getSelection();
-      const anchor = activeSel?.anchorNode ?? null;
-      const anchorEl = anchor
-        ? ((anchor.nodeType === Node.TEXT_NODE ? anchor.parentElement : (anchor as HTMLElement)) ??
-          null)
-        : null;
-      const ol = anchorEl?.closest("ol");
-      if (ol) ol.setAttribute("start", String(startNum));
-    }
+    if (startNum > 1) list.setAttribute("start", String(startNum));
   }
+  const li = document.createElement("li");
+  li.appendChild(document.createElement("br"));
+  list.appendChild(li);
+
+  block.replaceWith(list);
+
+  const newRange = document.createRange();
+  newRange.setStart(li, 0);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
 
   return true;
 }
