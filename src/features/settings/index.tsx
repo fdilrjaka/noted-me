@@ -21,7 +21,7 @@ import { Sidebar } from "@/components/noteme/Sidebar";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
 import { registerNavDragTarget } from "@/lib/noteme/navDrag";
-import { readThemeMode, saveThemeMode } from "@/shared/theme/theme";
+import { useThemeMode } from "@/shared/theme/theme";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { exportBackupJson, exportBackupMarkdown } from "@/import-export/backupExport";
@@ -33,7 +33,7 @@ import { useAccountSettings } from "./hooks/useAccountSettings";
 
 export function SettingsPage() {
   const { user } = useSession();
-  const themeMode = readThemeMode();
+  const { themeMode, setThemeMode } = useThemeMode();
   const notifPrefs = useNotifPrefs();
 
   const {
@@ -142,7 +142,7 @@ export function SettingsPage() {
                     <p className="mb-2 text-sm font-medium">Mode Tampilan</p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => saveThemeMode("light")}
+                        onClick={() => setThemeMode("light")}
                         className={`press-sm rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
                           themeMode === "light"
                             ? "border-primary bg-primary/10 text-primary"
@@ -152,7 +152,7 @@ export function SettingsPage() {
                         Light Mode
                       </button>
                       <button
-                        onClick={() => saveThemeMode("dark")}
+                        onClick={() => setThemeMode("dark")}
                         className={`press-sm rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
                           themeMode === "dark"
                             ? "border-primary bg-primary/10 text-primary"
