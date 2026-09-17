@@ -20,6 +20,9 @@ import {
   Table,
   Type,
   Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { DrawingCanvas } from "../DrawingCanvas";
 import { TypingIndicator } from "./TypingIndicator";
@@ -471,6 +474,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   ];
 
   const secondaryTools = [
+    { icon: AlignLeft, label: "Rata kiri", run: () => exec("justifyLeft") },
+    { icon: AlignCenter, label: "Rata tengah", run: () => exec("justifyCenter") },
+    { icon: AlignRight, label: "Rata kanan", run: () => exec("justifyRight") },
     { icon: Heading1, label: "Judul", run: () => exec("formatBlock", "h1") },
     { icon: Heading2, label: "Subjudul", run: () => exec("formatBlock", "h2") },
     { icon: ListOrdered, label: "Daftar angka", run: () => exec("insertOrderedList") },
@@ -615,6 +621,8 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        spellCheck
+        className="outline-none focus:outline-none focus-visible:outline-none"
         onInput={handleInput}
         onBlur={() => {
           isEditing.current = false;
@@ -640,6 +648,19 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
             e.preventDefault();
             handleInput();
             return;
+          }
+          // Menjaga caret saat pertama kali enter setelah auto-list dibuat.
+          // Beberapa browser menghapus blok kosong jika <li><br> baru saja dibuat.
+          if (e.key === "Enter") {
+            const sel = window.getSelection();
+            const anchor = sel?.anchorNode;
+            if (anchor && anchor.parentElement?.closest("li") && ref.current) {
+              const li = anchor.parentElement.closest("li");
+              if (li && li.textContent === "") {
+                const br = li.querySelector("br");
+                if (!br) li.appendChild(document.createElement("br"));
+              }
+            }
           }
           if (e.key !== "Backspace" && e.key !== "Delete") return;
           const wrap = ref.current?.querySelector(".img-resize-wrap.is-selected");
