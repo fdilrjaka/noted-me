@@ -137,7 +137,13 @@ export function SyncStatus() {
   useEffect(() => {
     if (!user) return;
 
+    let lastRealtimeEvent = 0;
     const scheduleRealtimeSync = () => {
+      const now = Date.now();
+      // Supabase dapat mengirim echo dari device sendiri beberapa kali.
+      // Hindari sync ulang yang membuat catatan versi lain muncul sebagai konflik palsu.
+      if (now - lastRealtimeEvent < 1200) return;
+      lastRealtimeEvent = now;
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       realtimeTimer.current = setTimeout(() => {
         if (navigator.onLine) attemptSync(user.id);
