@@ -65,7 +65,8 @@ export function tryAutoConvertLineToList(container: HTMLElement): boolean {
     if (startNum > 1) list.setAttribute("start", String(startNum));
   }
   const li = document.createElement("li");
-  li.appendChild(document.createElement("br"));
+  const br = document.createElement("br");
+  li.appendChild(br);
   list.appendChild(li);
 
   block.replaceWith(list);
@@ -402,6 +403,8 @@ const ALLOWED_PASTE_TAGS = new Set([
   "a",
   "img",
   "table",
+  "colgroup",
+  "col",
   "thead",
   "tbody",
   "tfoot",
@@ -418,9 +421,21 @@ const DANGEROUS_TAGS = new Set(["script", "style", "meta", "link", "iframe", "ob
 const ALLOWED_ATTRS: Record<string, string[]> = {
   a: ["href"],
   img: ["src", "alt"],
-  td: ["colspan", "rowspan"],
-  th: ["colspan", "rowspan"],
+  td: ["colspan", "rowspan", "style"],
+  th: ["colspan", "rowspan", "style"],
+  p: ["style"],
+  div: ["style"],
+  span: ["style"],
 };
+
+function sanitizeInlineStyle(style: string) {
+  const allowed = ["text-align", "font-weight", "font-style", "text-decoration"];
+  return style
+    .split(";")
+    .map((x) => x.trim())
+    .filter((x) => allowed.some((a) => x.toLowerCase().startsWith(a + ":")))
+    .join(";");
+}
 
 // Bersihkan HTML hasil copy-paste (dari web, Google Docs, Word, dsb) TANPA membuang
 // konten di luar elemen yang jadi fokus (tabel/gambar) — beda dari sanitizeTableHtml
@@ -467,6 +482,11 @@ export function sanitizePastedHtml(html: string): string {
       Array.from(node.attributes).forEach((attr) => {
         if (!keep.has(attr.name)) node.removeAttribute(attr.name);
       });
+      if (node.hasAttribute("style")) {
+        const cleanedStyle = sanitizeInlineStyle(node.getAttribute("style") ?? "");
+        if (cleanedStyle) node.setAttribute("style", cleanedStyle);
+        else node.removeAttribute("style");
+      }
 
       // <img> tanpa src valid (http/https/data) tidak berguna dan bisa jadi request
       // pelacakan (tracking pixel) — buang.
