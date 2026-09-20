@@ -46,11 +46,7 @@ export function SplashIntro() {
   // kena pengaruh transform/filter dari ancestor mana pun (mis. animasi
   // route-push/route-pop di RouteTransition).
   return createPortal(
-    <div
-      className={`splash-root stage-${stage}`}
-      role="status"
-      aria-label="Memuat NoteMe"
-    >
+    <div className={`splash-root stage-${stage}`} role="status" aria-label="Memuat NoteMe">
       <div className="splash-ambient-bg" aria-hidden="true">
         <div className="ambient-layer-1" />
         <div className="ambient-layer-2" />
@@ -68,13 +64,11 @@ export function SplashIntro() {
           <div className="glass-ripple" />
           <div className="glass-noise" />
 
-          <h1 className="splash-text-emboss">
-            NoteMe.
-          </h1>
+          <h1 className="splash-text-emboss">NoteMe.</h1>
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 

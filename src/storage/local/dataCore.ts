@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { preserveCorrupt } from "./corruptBackup";
 
 /**
  * dataCore.ts — mesin data inti (single source of truth di localStorage).
@@ -92,10 +93,40 @@ function isQuotaExceeded(err: unknown): boolean {
   );
 }
 
-function persist() {
+// Seluruh catatan disimpan dalam SATU key localStorage. Menyerialisasi semuanya di setiap
+// perubahan (sinkron, di main thread) membuat mengetik terasa berat begitu catatan menumpuk,
+// jadi tulisan beruntun digabung: state di memori selalu terbaru, sedangkan tulisan ke
+// localStorage tertunda sampai jeda singkat. Tab yang disembunyikan/ditutup langsung menulis
+// (localStorage sinkron, aman di pagehide), jadi jendela kehilangan data hanya ~PERSIST_DELAY_MS
+// kalau browser crash.
+const PERSIST_DELAY_MS = 300;
+// Kuota localStorage umumnya ~5 juta karakter per origin; peringatkan di ~80%.
+const STORAGE_QUOTA_CHARS = 5_242_880;
+const NEAR_QUOTA_CHARS = 4_000_000;
+const NEAR_QUOTA_WARN_EVERY_MS = 30 * 60 * 1000;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let flushHooked = false;
+let lastNearQuotaWarningAt = 0;
+
+function persistNow() {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(data));
+    const json = JSON.stringify(data);
+    window.localStorage.setItem(KEY, json);
+    const nowMs = Date.now();
+    if (
+      json.length > NEAR_QUOTA_CHARS &&
+      nowMs - lastNearQuotaWarningAt > NEAR_QUOTA_WARN_EVERY_MS
+    ) {
+      lastNearQuotaWarningAt = nowMs;
+      toast.warning(
+        `Penyimpanan lokal hampir penuh (${Math.round((json.length / STORAGE_QUOTA_CHARS) * 100)}%). Ekspor cadangan, lalu hapus catatan atau gambar yang tidak dipakai sebelum penuh.`,
+      );
+    }
   } catch (err) {
     // Data was NOT saved — surface this instead of silently dropping the user's changes.
     // Throttled so a burst of edits (e.g. typing) doesn't spam toasts.
@@ -111,6 +142,24 @@ function persist() {
   }
 }
 
+/** Tulis sekarang juga kalau ada perubahan yang masih menunggu (dipakai saat tab ditutup). */
+export function flushLocal() {
+  if (persistTimer) persistNow();
+}
+
+function persist() {
+  if (typeof window === "undefined") return;
+  if (!flushHooked) {
+    flushHooked = true;
+    window.addEventListener("pagehide", flushLocal);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushLocal();
+    });
+  }
+  if (persistTimer) return; // sudah dijadwalkan; data terbaru dibaca saat timer jalan
+  persistTimer = setTimeout(persistNow, PERSIST_DELAY_MS);
+}
+
 function emit() {
   listeners.forEach((l) => l());
 }
@@ -118,8 +167,9 @@ function emit() {
 export function loadLocal() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
+  let raw: string | null = null;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    raw = window.localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Data;
       data = {
@@ -130,7 +180,11 @@ export function loadLocal() {
       };
     }
   } catch {
+    preserveCorrupt(KEY, raw);
     data = EMPTY;
+    toast.error(
+      "Data lokal tidak bisa dibaca. Salinan mentahnya diamankan; catatan yang sudah tersinkron akan ditarik ulang dari server.",
+    );
   }
   emit();
 }
@@ -249,6 +303,11 @@ export function dirtyCount() {
     data.pages.filter((p) => p.dirty).length +
     data.images.filter((i) => i.dirty).length
   );
+}
+
+/** True kalau di store catatan lokal ada baris apa pun (termasuk yang sudah di trash). */
+export function hasLocalNotes() {
+  return data.subjects.length > 0 || data.pages.length > 0 || data.images.length > 0;
 }
 
 export function clearLocal() {

@@ -16,8 +16,7 @@ export default defineConfig({
         // Keep the auth screen in the initial route graph. Vite can otherwise
         // refresh its optimized React graph when this hook-heavy chunk first
         // loads, which causes React's dispatcher to be null until a reload.
-        splitBehavior: ({ routeId }: { routeId: string }) =>
-          routeId === "/auth" ? [] : undefined,
+        splitBehavior: ({ routeId }: { routeId: string }) => (routeId === "/auth" ? [] : undefined),
       },
     },
   },

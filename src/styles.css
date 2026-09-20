@@ -140,3 +140,16 @@ html[data-theme="dark"] {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* iOS Safari memperbesar halaman sendiri saat input ber-font < 16px difokuskan. Dulu itu ditutup
+   dengan maximum-scale=1 di meta viewport, yang sekaligus memblokir pinch-zoom (masalah aksesibilitas
+   untuk pengguna low-vision). Sekarang zoom manual dibolehkan dan input di iOS dipaksa minimal 16px.
+   Sengaja di luar @layer supaya menang atas utilitas Tailwind seperti text-sm. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em);
+  }
+}

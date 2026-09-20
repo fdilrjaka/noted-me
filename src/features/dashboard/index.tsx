@@ -487,7 +487,9 @@ export function Dashboard() {
                         className="press-sm flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
                         <FileText className="size-4 flex-none text-muted-foreground" />
-                        <span className="truncate text-sm font-semibold text-foreground">{subj.name}</span>
+                        <span className="truncate text-sm font-semibold text-foreground">
+                          {subj.name}
+                        </span>
                       </button>
                       <button
                         onClick={() => handleRemoveFromFolder(subj.id)}

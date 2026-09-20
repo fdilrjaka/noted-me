@@ -28,7 +28,9 @@ export function saveThemeMode(mode: ThemeMode) {
   applyThemeMode(mode);
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, mode);
-  } catch {}
+  } catch {
+    // localStorage tidak tersedia (mode privat / diblokir): tema tetap berlaku untuk sesi ini.
+  }
 }
 
 export function useThemeMode() {
@@ -47,8 +49,14 @@ export function useThemeMode() {
 
   const setThemeModeAnimated = useCallback((mode: ThemeMode, x: number, y: number) => {
     setThemeModeState(mode);
-    try { window.localStorage.setItem(THEME_STORAGE_KEY, mode); } catch {}
-    window.dispatchEvent(new CustomEvent("noteme:theme-transition", { detail: { toMode: mode, x, y } }));
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+    } catch {
+      // localStorage tidak tersedia (mode privat / diblokir): tema tetap berlaku untuk sesi ini.
+    }
+    window.dispatchEvent(
+      new CustomEvent("noteme:theme-transition", { detail: { toMode: mode, x, y } }),
+    );
   }, []);
 
   return { themeMode, setThemeMode, setThemeModeAnimated };

@@ -10,7 +10,8 @@ export const Route = createFileRoute("/subject/$subjectId")({
       { title: "NoteMe" },
       {
         name: "description",
-        content: "Tulis catatan per pertemuan dengan editor teks kaya, foto, tabel, dan checklist di NoteMe.",
+        content:
+          "Tulis catatan per pertemuan dengan editor teks kaya, foto, tabel, dan checklist di NoteMe.",
       },
       { property: "og:title", content: "NoteMe" },
       {

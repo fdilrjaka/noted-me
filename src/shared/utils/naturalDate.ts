@@ -90,15 +90,7 @@ function monthIndex(word: string): number | null {
 
 const WEEKDAYS_ID = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
 const WEEKDAYS_ID_ALT: Record<string, number> = { "jum'at": 5, jum: 5 };
-const WEEKDAYS_EN = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
+const WEEKDAYS_EN = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 function weekdayIndex(word: string): number | null {
   const w = word.toLowerCase();
@@ -200,7 +192,7 @@ function findDateMatch(text: string): { date: Date; match: NaturalMatch } | null
         month = mi;
       }
     }
-    let year = today.getFullYear();
+    const year = today.getFullYear();
     let candidate = new Date(year, month, day);
     // kalau tanggalnya sudah lewat tahun ini & user ga sebut bulan, anggap bulan depan/tahun depan
     if (!monthWord && candidate < today) {
@@ -212,7 +204,8 @@ function findDateMatch(text: string): { date: Date; match: NaturalMatch } | null
   }
 
   // 5) nama hari: "senin", "senin depan", "next monday"
-  re = /\b(next\s+)?(minggu|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|sunday|monday|tuesday|wednesday|thursday|friday|saturday)(\s+depan)?\b/gi;
+  re =
+    /\b(next\s+)?(minggu|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|sunday|monday|tuesday|wednesday|thursday|friday|saturday)(\s+depan)?\b/gi;
   m = re.exec(text);
   if (m) {
     const wi = weekdayIndex(m[2]!);
@@ -236,8 +229,8 @@ function findDateMatch(text: string): { date: Date; match: NaturalMatch } | null
 
 function findTimeMatch(text: string): { hour: number; minute: number; match: NaturalMatch } | null {
   // 0) periode di depan "jam": "siang jam 2", "sore jam 5.30", "pagi jam 8"
-  let re0 = /\b(pagi|siang|sore|malam)\s+(?:jam|pukul)\s+(\d{1,2})(?:[.:](\d{2}))?\b/gi;
-  let m0 = re0.exec(text);
+  const re0 = /\b(pagi|siang|sore|malam)\s+(?:jam|pukul)\s+(\d{1,2})(?:[.:](\d{2}))?\b/gi;
+  const m0 = re0.exec(text);
   if (m0) {
     let hour = parseInt(m0[2]!, 10);
     const minute = m0[3] ? parseInt(m0[3], 10) : 0;
@@ -273,7 +266,11 @@ function findTimeMatch(text: string): { hour: number; minute: number; match: Nat
     let hour = parseInt(m[1]!, 10);
     if (hour >= 1 && hour <= 24) {
       hour = applyPeriod(hour, m[2]);
-      return { hour, minute: 0, match: { start: m.index, end: m.index + m[0].length, kind: "time" } };
+      return {
+        hour,
+        minute: 0,
+        match: { start: m.index, end: m.index + m[0].length, kind: "time" },
+      };
     }
   }
 

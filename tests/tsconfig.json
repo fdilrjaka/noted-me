@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "baseUrl": ".",
+    "paths": {
+      "@/integrations/supabase/client": ["./fakes/supabase.ts"],
+      "@/features/auth/recovery.functions": ["./fakes/recoveryFns.ts"],
+      "sonner": ["./fakes/sonner.ts"],
+      "@tanstack/react-router": ["./fakes/router.tsx"],
+      "@/*": ["../src/*"]
+    }
+  }
+}

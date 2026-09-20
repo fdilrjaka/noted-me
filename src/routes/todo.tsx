@@ -5,7 +5,10 @@ export const Route = createFileRoute("/todo")({
   head: () => ({
     meta: [
       { title: "To Do List — NoteMe" },
-      { name: "description", content: "Project, tugas kuliah, dan task lain per kategori & section." },
+      {
+        name: "description",
+        content: "Project, tugas kuliah, dan task lain per kategori & section.",
+      },
     ],
   }),
   component: TodoPage,

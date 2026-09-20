@@ -1,4 +1,14 @@
-import { extractLocalImageIds, getData, setData, uid, type NoteImage, type Page, type Subject } from "@/storage/local/dataCore";
+import {
+  SUBJECT_COLORS,
+  extractLocalImageIds,
+  getData,
+  setData,
+  uid,
+  type NoteImage,
+  type Page,
+  type Subject,
+} from "@/storage/local/dataCore";
+import { sanitizeStoredHtml } from "@/lib/noteme/sanitizeHtml";
 import { putImage } from "@/storage/local/imageStore";
 import { base64ToBlob, type BackupImage } from "./shared";
 
@@ -41,7 +51,10 @@ export async function importBackupJson(
     return {
       id: newId,
       name: String(row["name"] ?? "Mata Kuliah"),
-      color: String(row["color"] ?? "blue"),
+      // Nilai dari file tidak dipercaya: harus salah satu warna yang dikenal app.
+      color: (SUBJECT_COLORS as readonly string[]).includes(String(row["color"]))
+        ? String(row["color"])
+        : "blue",
       pinned: false,
       position: positionBase + idx + 1,
       deleted: false,
@@ -58,11 +71,14 @@ export async function importBackupJson(
     const newSubjectId = subjectIdMap.get(String(row["subject_id"]));
     if (!newSubjectId) continue; // halaman punya subject yang gak ada di file, lewatin
     const newPageId = uid();
-    let content = String(row["content"] ?? "");
+    // File backup bisa berasal dari siapa saja: buang markup yang bisa menjalankan kode SEBELUM
+    // content masuk ke store (dan nanti ke editor / server). Harus sebelum pencarian id gambar
+    // di bawah supaya penggantian idb:<id> bekerja pada string yang sama.
+    let content = sanitizeStoredHtml(String(row["content"] ?? ""));
 
     for (const oldImageId of extractLocalImageIds(content)) {
       const img = raw.images?.[oldImageId];
-      if (!img) continue;
+      if (!img || !/^image\//i.test(String(img.contentType))) continue;
       try {
         const blob = base64ToBlob(img.base64, img.contentType);
         const newImageId = await putImage(blob, newPageId);
@@ -87,7 +103,7 @@ export async function importBackupJson(
       title: String(row["title"] ?? "Tanpa judul"),
       content,
       pinned: false,
-      position: Number(row["position"] ?? 0),
+      position: Number.isFinite(Number(row["position"])) ? Number(row["position"]) : 0,
       deleted: false,
       updated_at: nowIso,
       dirty: true,

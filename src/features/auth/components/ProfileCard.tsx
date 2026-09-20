@@ -1,13 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Camera, LogOut, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import type { useSession } from "@/hooks/useSession";
 import { dirtyCount, useData } from "@/storage/local/dataCore";
-import { syncNow } from "@/storage/sync-engine/syncNow";
+import { syncAndSignOut } from "../signOut";
 import { AVATAR_COLORS, initialLetter, useAvatarUpload } from "../hooks/useAvatarUpload";
 
-export function ProfileCard({ user }: { user: NonNullable<ReturnType<typeof useSession>["user"]> }) {
+export function ProfileCard({
+  user,
+}: {
+  user: NonNullable<ReturnType<typeof useSession>["user"]>;
+}) {
   const data = useData();
   const navigate = useNavigate();
   const {
@@ -129,8 +132,7 @@ export function ProfileCard({ user }: { user: NonNullable<ReturnType<typeof useS
 
       <button
         onClick={async () => {
-          await syncNow(user.id).catch(() => toast.error("Sinkronisasi gagal"));
-          await supabase.auth.signOut();
+          if (!(await syncAndSignOut(user.id))) return;
           toast.success("Keluar — catatan tetap ada di perangkat");
           void navigate({ to: "/" });
         }}

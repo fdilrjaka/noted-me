@@ -57,6 +57,14 @@ function loadLocal() {
   }
 }
 
+/** Kosongkan semua folder (dipakai saat data lokal milik akun lain harus dibuang). */
+export function clearFolders() {
+  loaded = true;
+  folders = [];
+  persist();
+  emit();
+}
+
 export function useFolders(): Folder[] {
   loadLocal();
   return useSyncExternalStore(

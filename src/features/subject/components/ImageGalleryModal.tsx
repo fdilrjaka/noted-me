@@ -1,12 +1,6 @@
 import { X } from "lucide-react";
 
-export function ImageGalleryModal({
-  images,
-  onClose,
-}: {
-  images: string[];
-  onClose: () => void;
-}) {
+export function ImageGalleryModal({ images, onClose }: { images: string[]; onClose: () => void }) {
   return (
     <div className="fade-in-ios fixed inset-0 z-40 flex items-end justify-center bg-background/70 p-3 backdrop-blur-sm sm:items-center">
       <div className="glass-sheet sheet-up max-h-[80dvh] w-full max-w-2xl overflow-y-auto rounded-3xl p-5 safe-bottom">

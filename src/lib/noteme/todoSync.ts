@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getTodoData, setTodoData, type TodoData, type TodoSection, type TodoTask } from "./todoStore";
+import { decodeCursor, nextCursor, pullChanges } from "@/storage/remote/pull";
+import {
+  getTodoData,
+  setTodoData,
+  type TodoData,
+  type TodoSection,
+  type TodoTask,
+} from "./todoStore";
 
 type Row = Record<string, unknown>;
 
@@ -59,10 +66,38 @@ function buildTask(row: Row): TodoTask {
   };
 }
 
-// Last-write-wins per baris: kalau baris lokal masih dirty (belum ke-push) dan
-// versi remote-nya lebih baru, remote yang menang begitu online. Ini cukup buat
-// task/section (field pendek & terstruktur) — beda dari isi catatan (Page.content)
-// yang butuh dialog konflik di sync.ts karena bisa kehilangan banyak tulisan.
+// Last-write-wins per baris berdasarkan `updated_at`: versi yang lebih baru menang, di sisi
+// lokal maupun remote. Ini cukup buat task/section (field pendek & terstruktur) — beda dari isi
+// catatan (Page.content) yang butuh dialog konflik di sync.ts karena bisa kehilangan banyak tulisan.
+//
+// Dua aturan yang dulu terlewat:
+//  1. Remote yang LEBIH BARU dari baris lokal yang dirty harus menang SEBELUM push, bukan
+//     sesudahnya. Dulu push selalu jalan duluan sehingga edit di perangkat lain tertimpa diam-diam
+//     (lihat `isRemoteNewer` dipakai untuk menyaring baris yang akan di-push).
+//  2. Salinan remote yang lebih LAMA tidak boleh menimpa baris lokal (mis. baris yang baru saja
+//     di-push, sudah bersih, tetapi salinan server lama sempat ditarik sebelum push).
+const ts = (value: string) => Date.parse(value);
+
+function isRemoteNewer(remoteUpdatedAt: string | undefined, localUpdatedAt: string): boolean {
+  return remoteUpdatedAt !== undefined && ts(remoteUpdatedAt) > ts(localUpdatedAt);
+}
+
+// Versi + isi baris. `updated_at` saja tidak cukup untuk memastikan "yang terkirim = yang ada
+// sekarang": dua edit dalam milidetik yang sama menghasilkan stempel yang sama.
+function rowSig(item: object): string {
+  return JSON.stringify(
+    Object.entries(item)
+      .filter(([key]) => key !== "dirty")
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+}
+
+function remoteVersions(rows: Array<Record<string, unknown>>): Map<string, string> {
+  return new Map(
+    rows.map((r) => [String(r["id"]), new Date(String(r["updated_at"])).toISOString()]),
+  );
+}
+
 function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean }>(
   local: T[],
   remote: Array<Record<string, unknown>>,
@@ -76,8 +111,10 @@ function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean 
       byId.set(incoming.id, incoming);
       continue;
     }
-    if (existing.dirty && existing.updated_at >= incoming.updated_at) continue;
-    byId.set(incoming.id, incoming);
+    if (isRemoteNewer(incoming.updated_at, existing.updated_at)) {
+      byId.set(incoming.id, incoming); // remote lebih baru: menang, walau lokal dirty
+    }
+    // selain itu lokal sama/lebih baru: pertahankan (yang dirty akan ter-push)
   }
   return [...byId.values()];
 }
@@ -122,17 +159,30 @@ export function syncTodoNow(userId: string, opts?: { full?: boolean }): Promise<
 
 async function doSync(userId: string, full: boolean) {
   const before = migrateLegacyIds(getTodoData());
-  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
+  const since = full ? "1970-01-01T00:00:00.000Z" : decodeCursor(before.lastPull);
 
   const [sectionsRes, tasksRes] = await Promise.all([
-    supabase.from("todo_sections").select("*").gt("updated_at", since),
-    supabase.from("todo_tasks").select("*").gt("updated_at", since),
+    pullChanges("todo_sections", since),
+    pullChanges("todo_tasks", since),
   ]);
-  if (sectionsRes.error) throw sectionsRes.error;
-  if (tasksRes.error) throw tasksRes.error;
 
-  const dirtySections = before.sections.filter((s) => s.dirty && UUID_RE.test(s.id));
-  const dirtyTasks = before.tasks.filter((t) => t.dirty && UUID_RE.test(t.id) && UUID_RE.test(t.section_id));
+  // Baris dirty yang ternyata sudah diubah LEBIH BARU di perangkat lain tidak di-push: remote
+  // menang dan akan menimpa versi lokal di mergeRemote di bawah.
+  const remoteSectionVersions = remoteVersions(sectionsRes.rows);
+  const remoteTaskVersions = remoteVersions(tasksRes.rows);
+  const dirtySections = before.sections.filter(
+    (s) =>
+      s.dirty &&
+      UUID_RE.test(s.id) &&
+      !isRemoteNewer(remoteSectionVersions.get(s.id), s.updated_at),
+  );
+  const dirtyTasks = before.tasks.filter(
+    (t) =>
+      t.dirty &&
+      UUID_RE.test(t.id) &&
+      UUID_RE.test(t.section_id) &&
+      !isRemoteNewer(remoteTaskVersions.get(t.id), t.updated_at),
+  );
 
   if (dirtySections.length) {
     const { error } = await supabase
@@ -147,21 +197,22 @@ async function doSync(userId: string, full: boolean) {
     if (error) throw error;
   }
 
-  const pushedSections = new Map(dirtySections.map((s) => [s.id, s.updated_at]));
-  const pushedTasks = new Map(dirtyTasks.map((t) => [t.id, t.updated_at]));
+  const pushedSections = new Map(dirtySections.map((s) => [s.id, rowSig(s)]));
+  const pushedTasks = new Map(dirtyTasks.map((t) => [t.id, rowSig(t)]));
 
+  // State TERBARU (bukan `before`): user bisa mengedit selagi request di atas berjalan.
   const current = getTodoData();
   const sections = current.sections.map((s) =>
-    pushedSections.get(s.id) === s.updated_at ? { ...s, dirty: false } : s,
+    pushedSections.get(s.id) === rowSig(s) ? { ...s, dirty: false } : s,
   );
   const tasks = current.tasks.map((t) =>
-    pushedTasks.get(t.id) === t.updated_at ? { ...t, dirty: false } : t,
+    pushedTasks.get(t.id) === rowSig(t) ? { ...t, dirty: false } : t,
   );
 
   const next: TodoData = {
-    sections: mergeRemote(sections, sectionsRes.data ?? [], buildSection),
-    tasks: mergeRemote(tasks, tasksRes.data ?? [], buildTask),
-    lastPull: new Date(Date.now() - 5000).toISOString(),
+    sections: mergeRemote(sections, sectionsRes.rows, buildSection),
+    tasks: mergeRemote(tasks, tasksRes.rows, buildTask),
+    lastPull: nextCursor(before.lastPull, [sectionsRes, tasksRes]),
   };
 
   setTodoData(next);

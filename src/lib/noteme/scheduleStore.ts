@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { preserveCorrupt } from "@/storage/local/corruptBackup";
 import type { ScheduleDayId } from "@/components/schedule/DayTabs";
 import type { ClassType, ClassStatus, LmsLinkItem } from "@/components/schedule/scheduleData";
 
@@ -63,10 +64,12 @@ function update(fn: (prev: ScheduleData) => ScheduleData) {
 export function loadScheduleLocal() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
+  let raw: string | null = null;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    raw = window.localStorage.getItem(KEY);
     if (raw) data = JSON.parse(raw);
   } catch {
+    preserveCorrupt(KEY, raw);
     data = EMPTY;
   }
   notify();
@@ -82,6 +85,11 @@ export function setScheduleData(next: ScheduleData) {
   notify();
 }
 
+/** Kosongkan seluruh jadwal lokal (dipakai saat data lokal milik akun lain harus dibuang). */
+export function clearScheduleLocal() {
+  setScheduleData({ classes: [], lastPull: null });
+}
+
 export function useScheduleData() {
   return useSyncExternalStore(
     (cb) => {
@@ -94,7 +102,9 @@ export function useScheduleData() {
 }
 
 export function classesForDay(d: ScheduleData, day: ScheduleDayId) {
-  return d.classes.filter((c) => c.day === day && !c.deleted).sort((a, b) => a.position - b.position);
+  return d.classes
+    .filter((c) => c.day === day && !c.deleted)
+    .sort((a, b) => a.position - b.position);
 }
 
 export function dirtyScheduleCount(d: ScheduleData): number {
@@ -118,7 +128,7 @@ export function createClass(input: {
     id,
     day: input.day,
     courseName: input.courseName.trim(),
-    lecturer: input.lecturer?.trim() || "Dr. Andi Wijaya",
+    lecturer: input.lecturer?.trim() ?? "",
     time: input.time,
     room: input.room,
     classType: input.classType,
@@ -135,7 +145,7 @@ export function createClass(input: {
 
 export function updateClass(
   id: string,
-  input: Partial<Omit<ScheduleClassRow, "id" | "position" | "deleted" | "updated_at" | "dirty">>
+  input: Partial<Omit<ScheduleClassRow, "id" | "position" | "deleted" | "updated_at" | "dirty">>,
 ) {
   update((d) => ({
     ...d,
@@ -147,7 +157,7 @@ export function updateClass(
             updated_at: now(),
             dirty: true,
           }
-        : c
+        : c,
     ),
   }));
 }
@@ -155,6 +165,8 @@ export function updateClass(
 export function deleteClass(id: string) {
   update((d) => ({
     ...d,
-    classes: d.classes.map((c) => (c.id === id ? { ...c, deleted: true, updated_at: now(), dirty: true } : c)),
+    classes: d.classes.map((c) =>
+      c.id === id ? { ...c, deleted: true, updated_at: now(), dirty: true } : c,
+    ),
   }));
 }

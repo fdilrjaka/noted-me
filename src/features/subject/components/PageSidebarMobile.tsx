@@ -63,7 +63,9 @@ export function PageSidebarMobile({
                 key={p.id}
                 {...(selectMode ? {} : sidebarReorder.itemProps(p.id))}
                 onClick={
-                  selectMode ? () => onToggleSelected(p.id) : sidebarReorder.guardClick(() => onGoto(p.id))
+                  selectMode
+                    ? () => onToggleSelected(p.id)
+                    : sidebarReorder.guardClick(() => onGoto(p.id))
                 }
                 className={`press flex w-full select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm active:scale-[0.98] ${
                   !selectMode && sidebarReorder.isGhost(p.id) ? "invisible" : ""

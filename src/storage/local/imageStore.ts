@@ -148,3 +148,12 @@ export async function listImagesForPage(pageId: string): Promise<LocalImageMeta[
     return [];
   }
 }
+
+/** Kosongkan seluruh blob gambar lokal (dipakai saat data lokal milik akun lain harus dibuang). */
+export async function clearAllImages(): Promise<void> {
+  try {
+    await withStore("readwrite", (store) => store.clear());
+  } catch {
+    // Best-effort — IndexedDB tidak tersedia / gagal, jangan sampai memblokir alur login.
+  }
+}

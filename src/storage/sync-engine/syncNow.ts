@@ -9,6 +9,7 @@ import {
   type Row,
 } from "@/storage/remote/rowMappers";
 import { uploadImageBlob } from "@/storage/remote/imageSync";
+import { decodeCursor, nextCursor, pullChanges } from "@/storage/remote/pull";
 import {
   markPageSynced,
   persistSyncedVersions,
@@ -79,18 +80,17 @@ export function syncNow(userId: string, opts?: { full?: boolean }): Promise<void
 
 async function doSync(userId: string, full: boolean) {
   const before = getData();
-  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
+  const since = full ? "1970-01-01T00:00:00.000Z" : decodeCursor(before.lastPull);
 
   // Pull duluan SEBELUM push, supaya kita bisa lihat apakah row yang mau kita push
   // ternyata sudah diubah duluan sama device lain sejak terakhir kita sync.
+  // Ditarik per halaman (bukan satu query) supaya tidak kepotong batas 1000 baris, dan
+  // kursornya dari jam server (lihat storage/remote/pull.ts).
   const [subjectsRes, pagesRes, imagesRes] = await Promise.all([
-    supabase.from("subjects").select("*").gt("updated_at", since),
-    supabase.from("pages").select("*").gt("updated_at", since),
-    supabase.from("note_images").select("*").gt("updated_at", since),
+    pullChanges("subjects", since),
+    pullChanges("pages", since),
+    pullChanges("note_images", since),
   ]);
-  if (subjectsRes.error) throw subjectsRes.error;
-  if (pagesRes.error) throw pagesRes.error;
-  if (imagesRes.error) throw imagesRes.error;
 
   const dirtySubjects = before.subjects.filter((s) => s.dirty);
   const dirtyPages = before.pages.filter((p) => p.dirty);
@@ -100,9 +100,7 @@ async function doSync(userId: string, full: boolean) {
   // di server juga sudah berubah (updated_at beda) sejak terakhir kita pull — berarti
   // diedit di device lain. Row ini gak boleh di-push atau ditimpa diam-diam; tahan dulu
   // dan biarin dialog konflik yang nentuin (timpa/gabung), bukan last-write-wins.
-  const remotePagesById = new Map(
-    (pagesRes.data ?? []).map((r) => [String((r as Row)["id"]), r as Row]),
-  );
+  const remotePagesById = new Map(pagesRes.rows.map((r) => [String(r["id"]), r]));
   const conflictIds = new Set<string>();
   const newConflicts: PageConflict[] = [];
   // Konflik yang ketemu saat KEDUA sisi sempat online terus (bukan hasil edit offline) —
@@ -237,7 +235,7 @@ async function doSync(userId: string, full: boolean) {
   );
 
   const next: Data = {
-    subjects: mergeRemote(subjects, subjectsRes.data ?? [], (row) => ({
+    subjects: mergeRemote(subjects, subjectsRes.rows, (row) => ({
       id: String(row["id"]),
       name: String(row["name"] ?? ""),
       color: String(row["color"] ?? "blue"),
@@ -251,10 +249,10 @@ async function doSync(userId: string, full: boolean) {
     // gak diam-diam nimpa versi lokal yang lagi nunggu keputusan user.
     pages: mergeRemote(
       pages,
-      (pagesRes.data ?? []).filter((row) => !conflictIds.has(String((row as Row)["id"]))),
+      pagesRes.rows.filter((row) => !conflictIds.has(String(row["id"]))),
       buildPage,
     ),
-    images: mergeRemote(images, imagesRes.data ?? [], (row) => ({
+    images: mergeRemote(images, imagesRes.rows, (row) => ({
       id: String(row["id"]),
       page_id: String(row["page_id"]),
       storage_path: row["storage_path"] == null ? null : String(row["storage_path"]),
@@ -262,7 +260,7 @@ async function doSync(userId: string, full: boolean) {
       updated_at: new Date(String(row["updated_at"])).toISOString(),
       dirty: false,
     })),
-    lastPull: new Date(Date.now() - 5000).toISOString(),
+    lastPull: nextCursor(before.lastPull, [subjectsRes, pagesRes, imagesRes]),
   };
 
   // Perbarui baseline "udah sama antara lokal & server" buat tiap page yang gak lagi

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { getData, setData, stripHtml, type Page } from "@/storage/local/dataCore";
+import { extractImages, getData, setData, stripHtml, type Page } from "@/storage/local/dataCore";
 import { markPageSynced, persistSyncedVersions } from "./versionTracker";
 
 /**
@@ -49,12 +49,49 @@ export function useConflicts(): PageConflict[] {
   );
 }
 
-/** Cek apakah `needle` (secara isi teks, bukan HTML mentah) udah ada di dalam `haystack`. */
+/**
+ * Cek apakah `needle` sudah tercakup PENUH di dalam `haystack` (artinya membuang `needle`
+ * tidak menghilangkan apa pun).
+ *
+ * Dulu ini hanya membandingkan teks polos (stripHtml). Akibatnya dua hal yang menghilangkan
+ * data diam-diam: (1) catatan berisi gambar saja dianggap "kosong" sehingga selalu dianggap
+ * tercakup, dan (2) gambar / tabel / format di `needle` tidak dihitung sama sekali. Sekarang:
+ * HTML persis sama dulu (kasus gaung hasil "gabung" sebelumnya, yang memang menyalin HTML
+ * mentah), kalau tidak, semua gambar `needle` harus ada di `haystack` DAN teksnya tercakup.
+ */
 function contentIncludes(haystack: string, needle: string): boolean {
-  const n = stripHtml(needle).trim();
-  if (!n) return true;
-  const h = stripHtml(haystack).trim();
-  return h.includes(n);
+  const rawNeedle = needle.trim();
+  if (!rawNeedle) return true;
+  if (haystack.includes(rawNeedle)) return true;
+
+  const haystackImages = new Set(extractImages(haystack));
+  if (!extractImages(needle).every((src) => haystackImages.has(src))) return false;
+
+  const n = stripHtml(needle);
+  if (!n) return true; // tidak ada teks dan semua gambarnya ada
+  return includesAtWordBoundary(stripHtml(haystack), n);
+}
+
+/**
+ * `includes` biasa terlalu longgar: potongan pendek seperti "a" ada di hampir semua kalimat,
+ * sehingga edit lokal kecil dianggap "sudah tercakup" lalu dibuang. Di sini kecocokan harus
+ * berawal & berakhir di batas kata (input sudah dinormalkan stripHtml: spasi tunggal).
+ * Salah-negatif hanya berujung pada gabungan bertanda versi (duplikat), bukan data hilang.
+ */
+function includesAtWordBoundary(haystack: string, needle: string): boolean {
+  let from = 0;
+  for (;;) {
+    const i = haystack.indexOf(needle, from);
+    if (i < 0) return false;
+    const end = i + needle.length;
+    if (
+      (i === 0 || haystack[i - 1] === " ") &&
+      (end === haystack.length || haystack[end] === " ")
+    ) {
+      return true;
+    }
+    from = i + 1;
+  }
 }
 
 export function mergePageContent(local: Page, remote: Page): string {

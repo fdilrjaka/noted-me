@@ -1,5 +1,6 @@
 import { getData, stripHtml } from "@/storage/local/dataCore";
 import { collectImagesForPages, downloadBlob, escapeHtml, slugify, stamp } from "./shared";
+import { sanitizeStoredHtml } from "@/lib/noteme/sanitizeHtml";
 
 /**
  * Export satu pertemuan/page sebagai file PDF yang langsung ke-download —
@@ -15,7 +16,10 @@ export async function exportPagePdf(pageId: string) {
   const subject = data.subjects.find((s) => s.id === page.subject_id);
   const images = await collectImagesForPages([page]);
 
-  let content = page.content || "";
+  // Sanitasi SEBELUM id gambar diganti data URL: data URL itu dibuat app sendiri dari blob
+  // lokal dan tidak boleh ikut terfilter (tipe blob bisa apa saja), sedangkan sisa HTML-nya
+  // tidak dipercaya karena container ini diisi lewat innerHTML.
+  let content = sanitizeStoredHtml(page.content || "");
   for (const [id, img] of Object.entries(images)) {
     content = content.split(`idb:${id}`).join(`data:${img.contentType};base64,${img.base64}`);
   }

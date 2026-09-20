@@ -7,7 +7,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Masuk — NoteMe" },
       {
         name: "description",
-        content: "Masuk ke NoteMe dengan username dan password untuk menyinkronkan catatan kuliahmu.",
+        content:
+          "Masuk ke NoteMe dengan username dan password untuk menyinkronkan catatan kuliahmu.",
       },
       { property: "og:title", content: "Masuk — NoteMe" },
       {

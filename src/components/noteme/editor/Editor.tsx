@@ -28,6 +28,7 @@ import { DrawingCanvas } from "../DrawingCanvas";
 import { TypingIndicator } from "./TypingIndicator";
 import { putImage } from "@/storage/local/imageStore";
 import { revokeAllResolved } from "@/lib/noteme/imageResolver";
+import { sanitizeStoredHtml } from "@/lib/noteme/sanitizeHtml";
 import { registerLocalImage } from "@/storage/local/imageMetaStore";
 import { useTypingPresence } from "@/lib/noteme/presence";
 import { useSession } from "@/hooks/useSession";
@@ -160,7 +161,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   const lastKnownContent = useRef(initialContent);
 
   useEffect(() => {
-    if (ref.current) ref.current.innerHTML = initialContent || "";
+    const el = ref.current;
+    // Content selalu disanitasi sebelum masuk DOM: bisa berasal dari import backup / sumber lain.
+    if (el) el.innerHTML = sanitizeStoredHtml(initialContent || "");
     lastKnownContent.current = initialContent;
     setSaved(true);
     setPanel("none");
@@ -171,9 +174,21 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
       enhanceImages(ref.current);
       resolvePendingImages(ref.current);
     }
-    // Ganti halaman (atau unmount) — object URL yang sudah dibikin resolveImageSrc buat
-    // halaman sebelumnya gak dipakai lagi, revoke biar gak numpuk di memory browser.
-    return () => revokeAllResolved();
+    // Ganti halaman (atau unmount): (1) simpan dulu ketikan yang masih menunggu flush milik
+    // halaman INI. Sebelumnya timer dibiarkan hidup lalu menyerialisasi DOM yang SUDAH berisi
+    // halaman berikutnya dan menulisnya ke halaman lama (isi halaman tertimpa), atau timer
+    // dibatalkan begitu saja pada unmount (ketikan terakhir hilang). `el` ditangkap di awal
+    // karena ref.current sudah null saat cleanup unmount. (2) object URL yang dibikin
+    // resolveImageSrc buat halaman ini gak dipakai lagi, revoke biar gak numpuk di memory.
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        if (el) onChange(serializeContent(el));
+      }
+      revokeAllResolved();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, updateCounts]);
 
   // Halaman yang sama tetap terbuka, tapi `initialContent` berubah dari luar (device lain
@@ -194,7 +209,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     (html: string) => {
       if (!ref.current) return;
       lastKnownContent.current = html;
-      ref.current.innerHTML = html || "";
+      ref.current.innerHTML = sanitizeStoredHtml(html || "");
       updateCounts();
       enhanceTables(ref.current);
       enhanceImages(ref.current);
@@ -218,6 +233,9 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
   }, [initialContent]);
 
   const flush = () => {
+    // Batalkan timeout yang masih menggantung (flush dari onBlur sebelumnya hanya meng-null-kan
+    // handle-nya sehingga timeout lama tetap jalan belakangan, bahkan setelah ganti halaman).
+    if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     if (!ref.current) return;
     const html = serializeContent(ref.current);
@@ -237,9 +255,23 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     timer.current = setTimeout(flush, 600);
   };
 
+  // Tab ditutup / app di-minimize (Safari iOS standalone agresif men-suspend) dalam jendela
+  // 600ms setelah ketikan terakhir: simpan sekarang juga. localStorage sinkron, jadi aman
+  // dijalankan di pagehide.
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
   useEffect(() => {
+    const flushPending = () => {
+      if (timer.current) flushRef.current();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushPending();
+    };
+    window.addEventListener("pagehide", flushPending);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      window.removeEventListener("pagehide", flushPending);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -312,6 +344,11 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
     setPanel("none");
   };
 
+  // Efek pointerdown di bawah dipasang sekali per halaman, tapi handleInput dibuat ulang tiap
+  // render; lewat ref, handler yang lama tetap memanggil versi terbaru (bukan closure basi).
+  const handleInputRef = useRef(handleInput);
+  handleInputRef.current = handleInput;
+
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
@@ -346,7 +383,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           resizing.current = null;
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
-          handleInput();
+          handleInputRef.current();
         };
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
@@ -358,7 +395,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         if (!wrap) return;
         e.preventDefault();
         wrap.remove();
-        handleInput();
+        handleInputRef.current();
         return;
       }
 
@@ -386,7 +423,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           resizingImage.current = null;
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
-          handleInput();
+          handleInputRef.current();
         };
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
@@ -622,7 +659,6 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
         contentEditable
         suppressContentEditableWarning
         spellCheck
-        className="outline-none focus:outline-none focus-visible:outline-none"
         onInput={handleInput}
         onBlur={() => {
           isEditing.current = false;
@@ -675,7 +711,7 @@ export function Editor({ pageId, initialContent, onChange }: Props) {
           setFormatSheetOpen(false);
         }}
         data-placeholder="Mulai menulis catatan…"
-        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32"
+        className="note-content min-h-[60vh] flex-1 px-1 py-5 pb-32 outline-none focus:outline-none focus-visible:outline-none"
       />
 
       <TypingIndicator typists={typists} />

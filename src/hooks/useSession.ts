@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeUsername } from "@/lib/noteme/credentialPolicy";
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -22,6 +23,7 @@ export function useSession() {
 }
 
 export function usernameToEmail(username: string) {
-  const clean = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
-  return clean.includes("@") ? clean : `${clean}@noteme.app`;
+  // Dulu ada cabang `clean.includes("@")` di sini yang tidak pernah bisa true (regex di atasnya
+  // sudah membuang "@"), jadi selalu berakhir di domain palsu ini. Dihapus; perilakunya sama.
+  return `${normalizeUsername(username)}@noteme.app`;
 }

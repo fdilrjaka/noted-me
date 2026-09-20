@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,8 @@ import { useSession } from "@/hooks/useSession";
 import { dirtyCount, loadLocal, useData } from "@/storage/local/dataCore";
 import { resolveConflict, useConflicts, diffPageContent } from "@/storage/remote/conflictResolver";
 import { syncNow } from "@/storage/sync-engine/syncNow";
+import { dirtySignature } from "@/storage/sync-engine/dirtySignature";
+import { ensureLocalOwner } from "@/storage/local/localOwner";
 import { dirtyTodoCount, loadTodoLocal, useTodoData } from "@/lib/noteme/todoStore";
 import { syncTodoNow } from "@/lib/noteme/todoSync";
 import { dirtyScheduleCount, loadScheduleLocal, useScheduleData } from "@/lib/noteme/scheduleStore";
@@ -53,6 +55,9 @@ export function SyncStatus() {
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryAttempt = useRef(0);
   const hasWarnedThisFailure = useRef(false);
+  // Akun yang sudah menjalani sync awal (pull) di sesi ini; di-reset saat offline / logout
+  // supaya begitu online lagi kita langsung menarik perubahan yang terlewat.
+  const initialSyncFor = useRef<string | null>(null);
 
   useEffect(() => {
     loadLocal();
@@ -80,7 +85,9 @@ export function SyncStatus() {
 
   function attemptSync(userId: string, opts?: { announceSuccess?: boolean }) {
     setState("syncing");
-    Promise.all([syncNow(userId), syncTodoNow(userId), syncScheduleNow(userId)])
+    // Pastikan data lokal milik akun ini SEBELUM apa pun di-push/pull (lihat localOwner.ts).
+    ensureLocalOwner(userId)
+      .then(() => Promise.all([syncNow(userId), syncTodoNow(userId), syncScheduleNow(userId)]))
       .then(() => {
         setState("idle");
         retryAttempt.current = 0;
@@ -106,18 +113,35 @@ export function SyncStatus() {
       });
   }
 
+  // Pemicu auto-sync = sidik jari baris yang menunggu di-push, BUKAN objek data itu sendiri.
+  // Dulu efek ini bergantung pada `data`/`todoData`/`scheduleData`, padahal setiap sync selesai
+  // menulis objek baru ke store (walau isinya sama) -> efek terpicu lagi -> sync lagi ->
+  // ... tanpa henti tiap ~1,2 detik. Lihat storage/sync-engine/dirtySignature.ts.
+  const signature = useMemo(
+    () => dirtySignature(data, todoData, scheduleData),
+    [data, todoData, scheduleData],
+  );
+  const userId = user?.id ?? null;
+
   useEffect(() => {
-    if (!user || !online) return;
+    if (!userId || !online) {
+      initialSyncFor.current = null;
+      return;
+    }
+    // Sync awal (pull perubahan device lain) sekali per login / per kembali online; setelah
+    // itu hanya jalan kalau ada edit lokal baru (sidik jari berubah dan tidak kosong).
+    const needsInitial = initialSyncFor.current !== userId;
+    if (!needsInitial && signature === "") return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      attemptSync(user.id);
+      initialSyncFor.current = userId;
+      attemptSync(userId);
     }, 1200);
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-    // re-run whenever local data changes so edits push automatically
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, online, data, todoData, scheduleData]);
+  }, [userId, online, signature]);
 
   // Coming back online should retry right away instead of waiting for the backoff timer.
   useEffect(() => {

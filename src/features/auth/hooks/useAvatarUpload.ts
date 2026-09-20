@@ -8,9 +8,10 @@ export const AVATAR_COLORS = ["#7c3aed", "#be185d", "#0369a1", "#047857", "#c241
 
 const AVATAR_SIZE_PX = 160; // sisi persegi thumbnail avatar sebelum dikompres
 
-/** Kompres foto yang dipilih jadi thumbnail persegi kecil (data URL), biar muat nyaman
- * disimpan di user_metadata (gak butuh bucket Storage terpisah buat sesuatu sekecil ini). */
-function fileToAvatarDataUrl(file: File): Promise<string> {
+const AVATAR_BUCKET = "avatars";
+
+/** Kompres foto yang dipilih jadi thumbnail persegi kecil (JPEG). */
+function fileToAvatarBlob(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Gagal membaca file"));
@@ -31,12 +32,41 @@ function fileToAvatarDataUrl(file: File): Promise<string> {
         const sx = (img.width - side) / 2;
         const sy = (img.height - side) / 2;
         ctx.drawImage(img, sx, sy, side, side, 0, 0, AVATAR_SIZE_PX, AVATAR_SIZE_PX);
-        resolve(canvas.toDataURL("image/jpeg", 0.75));
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Gagal memproses foto"))),
+          "image/jpeg",
+          0.75,
+        );
       };
       img.src = String(reader.result);
     };
     reader.readAsDataURL(file);
   });
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Gagal membaca file"));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Unggah avatar ke bucket Storage dan kembalikan URL publiknya. Yang disimpan di user_metadata
+ * cukup URL ini: data URL base64 di metadata ikut masuk ke JWT (terkirim di setiap request) dan
+ * ke presence realtime (terkirim ke peserta lain setiap ada yang mengetik).
+ * Parameter `?v=` memaksa browser memuat ulang setelah foto diganti (path-nya sama).
+ */
+export async function uploadAvatarBlob(userId: string, blob: Blob): Promise<string> {
+  const path = `${userId}/avatar.jpg`;
+  const { error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, blob, { upsert: true, contentType: "image/jpeg", cacheControl: "3600" });
+  if (error) throw error;
+  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 export function initialLetter(nickname: string, username: string) {
@@ -72,6 +102,27 @@ export function useAvatarUpload(user: ReturnType<typeof useSession>["user"]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Avatar lama berupa data URL base64 di metadata: pindahkan sekali ke Storage supaya JWT
+  // akun ini mengecil. Gagal (mis. bucket belum ada) diabaikan; coba lagi di sesi berikutnya.
+  const migratedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || migratedFor.current === user.id) return;
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const legacy = meta["avatar_url"];
+    if (typeof legacy !== "string" || !legacy.startsWith("data:")) return;
+    migratedFor.current = user.id;
+    void (async () => {
+      try {
+        const blob = await (await fetch(legacy)).blob();
+        const url = await uploadAvatarBlob(user.id, blob);
+        const { error } = await supabase.auth.updateUser({ data: { avatar_url: url } });
+        if (!error) setAvatarUrl(url);
+      } catch {
+        // Diam-diam: avatar lama tetap berfungsi.
+      }
+    })();
+  }, [user]);
+
   async function saveProfile(overrides?: { avatar_url?: string | null }) {
     if (!user) return;
     setSavingProfile(true);
@@ -102,9 +153,18 @@ export function useAvatarUpload(user: ReturnType<typeof useSession>["user"]) {
     }
     setUploadingPhoto(true);
     try {
-      const dataUrl = await fileToAvatarDataUrl(file);
-      setAvatarUrl(dataUrl);
-      await saveProfile({ avatar_url: dataUrl });
+      const blob = await fileToAvatarBlob(file);
+      let url: string;
+      try {
+        if (!user) throw new Error("Belum login");
+        url = await uploadAvatarBlob(user.id, blob);
+      } catch {
+        // Bucket "avatars" belum ada (migrasi belum dijalankan) atau jaringan bermasalah: pakai
+        // cara lama supaya foto tetap tersimpan.
+        url = await blobToDataUrl(blob);
+      }
+      setAvatarUrl(url);
+      await saveProfile({ avatar_url: url });
     } catch {
       toast.error("Gagal memproses foto");
     } finally {

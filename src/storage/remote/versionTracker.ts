@@ -43,3 +43,14 @@ export function persistSyncedVersions() {
 export function markPageSynced(id: string, updatedAt: string) {
   syncedPageVersions.set(id, updatedAt);
 }
+
+/** Buang semua baseline versi (dipakai saat data lokal diganti ke akun lain). */
+export function clearSyncedVersions() {
+  syncedPageVersions.clear();
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(SYNCED_VERSIONS_KEY);
+  } catch {
+    // Best-effort.
+  }
+}

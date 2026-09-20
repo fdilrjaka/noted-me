@@ -6,7 +6,18 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  {
+    ignores: [
+      "dist",
+      ".output",
+      ".vinxi",
+      // Digenerate Lovable ("Do not edit it directly"): perubahan lokal akan tertimpa, jadi tidak
+      // ada gunanya di-lint.
+      "src/integrations/supabase/**",
+      // Tes memakai tipe longgar (fake Supabase, akses globalThis) dan punya package.json sendiri.
+      "tests/**",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -35,6 +46,12 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
     },
+  },
+  {
+    // Komponen shadcn/ui sengaja mengekspor varian (buttonVariants, dst) bersama komponennya;
+    // memindahkannya ke file lain menyimpang dari pola shadcn dan menyulitkan pembaruan.
+    files: ["src/shared/ui/**/*.{ts,tsx}"],
+    rules: { "react-refresh/only-export-components": "off" },
   },
   eslintPluginPrettier,
 );

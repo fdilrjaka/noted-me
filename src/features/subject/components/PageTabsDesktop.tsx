@@ -31,7 +31,9 @@ export function PageTabsDesktop({
           <button
             key={p.id}
             {...(selectMode ? {} : tabReorder.itemProps(p.id))}
-            onClick={selectMode ? () => onToggleSelected(p.id) : tabReorder.guardClick(() => onGoto(p.id))}
+            onClick={
+              selectMode ? () => onToggleSelected(p.id) : tabReorder.guardClick(() => onGoto(p.id))
+            }
             title={selectMode ? undefined : "Tahan lalu geser untuk mengubah urutan"}
             className={`press flex flex-none select-none items-center gap-1.5 rounded-full px-4 py-2 text-sm active:scale-95 ${
               !selectMode && tabReorder.isGhost(p.id) ? "invisible" : ""

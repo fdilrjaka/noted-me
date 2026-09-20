@@ -1,5 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getScheduleData, setScheduleData, type ScheduleClassRow, type ScheduleData } from "./scheduleStore";
+import { decodeCursor, nextCursor, pullChanges } from "@/storage/remote/pull";
+import {
+  getScheduleData,
+  setScheduleData,
+  type ScheduleClassRow,
+  type ScheduleData,
+} from "./scheduleStore";
 
 type Row = Record<string, unknown>;
 
@@ -22,21 +28,47 @@ function classRow(c: ScheduleClassRow, userId: string): Row {
   };
 }
 
+// Versi + isi baris. `updated_at` saja tidak cukup: dua edit dalam milidetik yang sama
+// menghasilkan stempel yang sama walau isinya beda.
+function rowSignature(c: ScheduleClassRow): string {
+  return JSON.stringify([
+    c.updated_at,
+    c.day,
+    c.courseName,
+    c.lecturer,
+    c.time,
+    c.room,
+    c.classType,
+    c.status,
+    c.lmsLinks,
+    c.deadline,
+    c.position,
+    c.deleted,
+  ]);
+}
+
+function toIso(value: unknown): string {
+  const t = Date.parse(String(value));
+  return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
+}
+
 function buildClass(row: Row): ScheduleClassRow {
   return {
     id: String(row["id"]),
     day: String(row["day"]) as ScheduleClassRow["day"],
     courseName: String(row["course_name"] ?? ""),
-    lecturer: String(row["lecturer"] ?? "Dr. Andi Wijaya"),
+    lecturer: String(row["lecturer"] ?? ""),
     time: String(row["time"] ?? ""),
     room: String(row["room"] ?? ""),
     classType: (row["class_type"] as ScheduleClassRow["classType"]) ?? "online",
     status: (row["status"] as ScheduleClassRow["status"]) ?? "upcoming",
-    lmsLinks: Array.isArray(row["lms_links"]) ? (row["lms_links"] as ScheduleClassRow["lmsLinks"]) : [],
+    lmsLinks: Array.isArray(row["lms_links"])
+      ? (row["lms_links"] as ScheduleClassRow["lmsLinks"])
+      : [],
     deadline: row["deadline"] == null ? null : String(row["deadline"]),
     position: Number(row["position"] ?? 0),
     deleted: Boolean(row["deleted"]),
-    updated_at: String(row["updated_at"] ?? new Date().toISOString()),
+    updated_at: toIso(row["updated_at"]),
     dirty: false,
   };
 }
@@ -65,35 +97,50 @@ export function syncScheduleNow(userId: string, opts?: { full?: boolean }): Prom
 
 export async function syncScheduleWithSupabase(userId: string, full = false) {
   const before = migrateLegacyIds(getScheduleData());
-  const since = full ? "1970-01-01T00:00:00.000Z" : (before.lastPull ?? "1970-01-01T00:00:00.000Z");
+  const since = full ? "1970-01-01T00:00:00.000Z" : decodeCursor(before.lastPull);
 
-  const { data: remoteRows, error } = await supabase
-    .from("schedule_classes")
-    .select("*")
-    .gt("updated_at", since);
-  if (error) throw error;
+  const pulled = await pullChanges("schedule_classes", since);
 
   const dirtyClasses = before.classes.filter((c) => c.dirty && UUID_RE.test(c.id));
 
   if (dirtyClasses.length) {
     const { error: upsertError } = await supabase
       .from("schedule_classes")
-      .upsert(dirtyClasses.map((c) => classRow(c, userId)) as any);
+      .upsert(dirtyClasses.map((c) => classRow(c, userId)) as never);
     if (upsertError) throw upsertError;
   }
 
-  const localMap = new Map(before.classes.map((c) => [c.id, c]));
+  const pushed = new Map(dirtyClasses.map((c) => [c.id, rowSignature(c)]));
 
-  if (remoteRows) {
-    for (const r of remoteRows) {
-      const incoming = buildClass(r as Row);
-      const existing = localMap.get(incoming.id);
-      if (!existing || new Date(incoming.updated_at) > new Date(existing.updated_at)) {
-        localMap.set(incoming.id, incoming);
-      }
+  // PENTING: pakai state TERBARU, bukan `before`. User bisa mengedit jadwal selagi request di
+  // atas berjalan; dulu semua baris otomatis ditandai bersih di sini, jadi edit yang terjadi
+  // di jendela itu tidak pernah terkirim. Sekarang cuma baris yang isinya persis sama dengan
+  // yang barusan dikirim yang ditandai bersih.
+  const current = getScheduleData();
+  const localMap = new Map<string, ScheduleClassRow>(
+    current.classes.map((c) => {
+      const pushedAt = pushed.get(c.id);
+      return [c.id, pushedAt != null && pushedAt === rowSignature(c) ? { ...c, dirty: false } : c];
+    }),
+  );
+
+  for (const r of pulled.rows) {
+    const incoming = buildClass(r);
+    const existing = localMap.get(incoming.id);
+    if (!existing) {
+      localMap.set(incoming.id, incoming);
+      continue;
+    }
+    // Edit lokal yang belum terkirim tidak boleh ditimpa data lama dari server; ia akan
+    // ke-push di sync berikutnya.
+    if (existing.dirty) continue;
+    if (Date.parse(incoming.updated_at) > Date.parse(existing.updated_at)) {
+      localMap.set(incoming.id, incoming);
     }
   }
 
-  const nextClasses = Array.from(localMap.values()).map((c) => ({ ...c, dirty: false }));
-  setScheduleData({ classes: nextClasses, lastPull: new Date().toISOString() });
+  setScheduleData({
+    classes: Array.from(localMap.values()),
+    lastPull: nextCursor(before.lastPull, [pulled]),
+  });
 }

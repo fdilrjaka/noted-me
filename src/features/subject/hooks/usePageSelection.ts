@@ -45,5 +45,12 @@ export function usePageSelection() {
     }
   };
 
-  return { selectMode, setSelectMode, selected, toggleSelected, exitSelectMode, deleteSelectedPages };
+  return {
+    selectMode,
+    setSelectMode,
+    selected,
+    toggleSelected,
+    exitSelectMode,
+    deleteSelectedPages,
+  };
 }

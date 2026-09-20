@@ -379,14 +379,14 @@ export function BottomNav({
                   if (!active) void navigate({ to });
                 }}
                 className={`press-sm relative z-10 flex flex-1 flex-col items-center gap-0.5 rounded-full px-5 py-1.5 text-[11px] transition-colors duration-300 ${
-                  active ? "font-semibold text-white" : "text-foreground/55 hover:text-foreground/80"
+                  active
+                    ? "font-semibold text-white"
+                    : "text-foreground/55 hover:text-foreground/80"
                 }`}
               >
                 <Icon
                   className={`size-5 transition-all duration-300 ${
-                    active
-                      ? "text-primary drop-shadow-[0_0_6px_rgba(45,212,191,0.65)]"
-                      : ""
+                    active ? "text-primary drop-shadow-[0_0_6px_rgba(45,212,191,0.65)]" : ""
                   }`}
                   strokeWidth={active ? 2.4 : 2}
                 />

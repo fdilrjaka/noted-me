@@ -26,7 +26,12 @@ export function GreetingBanner({ name }: { name?: string }) {
               not perfection
               <span className="text-lg"></span>
             </span>
-            <svg width="100" height="12" viewBox="0 0 100 12" className="text-muted-foreground/60 stroke-current fill-none">
+            <svg
+              width="100"
+              height="12"
+              viewBox="0 0 100 12"
+              className="text-muted-foreground/60 stroke-current fill-none"
+            >
               <path d="M 5 6 Q 50 12 95 4" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>

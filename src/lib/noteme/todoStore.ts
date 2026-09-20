@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { preserveCorrupt } from "@/storage/local/corruptBackup";
 
 /** 5 kategori tetap — ditentukan di klien, bukan tabel terpisah, biar sederhana. */
 export const TODO_CATEGORIES = [
@@ -75,8 +76,9 @@ function emit() {
 export function loadTodoLocal() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
+  let raw: string | null = null;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    raw = window.localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as TodoData;
       data = {
@@ -86,6 +88,7 @@ export function loadTodoLocal() {
       };
     }
   } catch {
+    preserveCorrupt(KEY, raw);
     data = EMPTY;
   }
   emit();
@@ -193,7 +196,9 @@ export function createTask(sectionId: string, title: string, deadline: string | 
 export function patchTask(id: string, patch: Partial<TodoTask>) {
   update((d) => ({
     ...d,
-    tasks: d.tasks.map((t) => (t.id === id ? { ...t, ...patch, updated_at: now(), dirty: true } : t)),
+    tasks: d.tasks.map((t) =>
+      t.id === id ? { ...t, ...patch, updated_at: now(), dirty: true } : t,
+    ),
   }));
 }
 

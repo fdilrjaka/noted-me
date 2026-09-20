@@ -1,4 +1,10 @@
-import { activeSubjects, extractLocalImageIds, getData, stripHtml, subjectPages } from "@/storage/local/dataCore";
+import {
+  activeSubjects,
+  extractLocalImageIds,
+  getData,
+  stripHtml,
+  subjectPages,
+} from "@/storage/local/dataCore";
 import { collectImagesForPages, download, slugify, stamp } from "./shared";
 
 /**
