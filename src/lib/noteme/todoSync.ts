@@ -24,8 +24,22 @@ function sectionRow(s: TodoSection, userId: string): Row {
   };
 }
 
+// Kalau kolom `progress` belum ada di database (migrasi belum dijalankan), sync tetap jalan
+// tanpa kolom itu supaya task lain tidak ikut gagal. Progres tetap tersimpan lokal.
+let progressColumnMissing = false;
+
+function isMissingProgressColumn(error: { message?: string; code?: string } | null) {
+  return (
+    !!error &&
+    /progress/i.test(error.message ?? "") &&
+    /column|schema cache/i.test(error.message ?? "")
+  );
+}
+
 function taskRow(t: TodoTask, userId: string): Row {
+  const withProgress = !progressColumnMissing;
   return {
+    ...(withProgress ? { progress: t.progress } : {}),
     id: t.id,
     user_id: userId,
     section_id: t.section_id,
@@ -33,7 +47,6 @@ function taskRow(t: TodoTask, userId: string): Row {
     description: t.description,
     deadline: t.deadline,
     completed: t.completed,
-    progress: t.progress,
     position: t.position,
     deleted: t.deleted,
     updated_at: t.updated_at,
@@ -196,9 +209,15 @@ async function doSync(userId: string, full: boolean) {
     if (error) throw error;
   }
   if (dirtyTasks.length) {
-    const { error } = await supabase
+    let { error } = await supabase
       .from("todo_tasks")
       .upsert(dirtyTasks.map((t) => taskRow(t, userId)) as any);
+    if (isMissingProgressColumn(error) && !progressColumnMissing) {
+      progressColumnMissing = true;
+      ({ error } = await supabase
+        .from("todo_tasks")
+        .upsert(dirtyTasks.map((t) => taskRow(t, userId)) as any));
+    }
     if (error) throw error;
   }
 
