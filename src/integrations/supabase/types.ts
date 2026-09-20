@@ -203,6 +203,7 @@ export type Database = {
       todo_tasks: {
         Row: {
           completed: boolean;
+          progress: number;
           created_at: string;
           deadline: string | null;
           deleted: boolean;
@@ -216,6 +217,7 @@ export type Database = {
         };
         Insert: {
           completed?: boolean;
+          progress?: number;
           created_at?: string;
           deadline?: string | null;
           deleted?: boolean;
@@ -229,6 +231,7 @@ export type Database = {
         };
         Update: {
           completed?: boolean;
+          progress?: number;
           created_at?: string;
           deadline?: string | null;
           deleted?: boolean;

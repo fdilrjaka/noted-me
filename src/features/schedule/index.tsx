@@ -24,7 +24,7 @@ export function SchedulePage() {
   );
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem] text-foreground">
+    <main className="mx-auto min-h-dvh w-full max-w-5xl px-4 safe-top safe-bottom-lg md:pl-[5.5rem] text-foreground">
       <Sidebar />
       {/* Top Search Bar */}
       <div className="pt-4 pb-2">

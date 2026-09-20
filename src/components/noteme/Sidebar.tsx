@@ -1,63 +1,115 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, CheckSquare, ChevronRight, NotebookText, Trash2, User } from "lucide-react";
-import { BrandMark } from "@/components/noteme/BrandMark";
+import {
+  CalendarDays,
+  LayoutGrid,
+  NotebookText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  Trash2,
+  User,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { BrandLogo } from "@/components/noteme/BrandMark";
+import { setSidebarExpanded, toggleSidebar, useSidebarExpanded } from "@/lib/noteme/sidebarStore";
 
-const items = [
+const mainItems: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/", label: "Notes", icon: NotebookText },
-  { to: "/todo", label: "To Do List", icon: CheckSquare },
+  { to: "/todo", label: "To Do List", icon: LayoutGrid },
   { to: "/schedule", label: "Jadwal", icon: CalendarDays },
-] as const;
+  { to: "/settings", label: "Pengaturan", icon: Settings },
+];
 
-export function Sidebar() {
+const bottomItems: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/trash", label: "Trash", icon: Trash2 },
+  { to: "/auth", label: "Profile", icon: User },
+];
+
+/**
+ * Sidebar desktop ala desain baru: default mengecil (ikon saja). Tombol di atas memperbesar
+ * sidebar (overlay, konten tidak bergeser); memilih menu atau klik di luar mengecilkannya lagi.
+ * `offsetTop` dipakai halaman yang punya top bar tetap (tinggi 4rem) supaya sidebar mulai di bawahnya.
+ */
+export function Sidebar({ offsetTop = false }: { offsetTop?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const expanded = useSidebarExpanded();
+
+  const renderItem = ({ to, label, icon: Icon }: (typeof mainItems)[number]) => {
+    const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+    return (
+      <Link
+        key={to}
+        to={to}
+        title={expanded ? undefined : label}
+        aria-label={label}
+        onClick={() => setSidebarExpanded(false)}
+        className={`press-sm group relative flex h-11 items-center rounded-xl text-sm font-semibold transition-colors duration-200 ${
+          expanded ? "gap-3 px-3.5" : "justify-center"
+        } ${
+          active
+            ? "bg-primary/15 text-primary"
+            : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+        }`}
+      >
+        {active && (
+          <span
+            aria-hidden="true"
+            className="absolute -left-3 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary"
+          />
+        )}
+        <Icon className="size-5 flex-none transition-transform duration-200 group-hover:scale-110" />
+        {expanded && <span className="flex-1 whitespace-nowrap">{label}</span>}
+      </Link>
+    );
+  };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between p-4 safe-top safe-bottom md:flex">
-      <div className="glass-navigation flex h-full flex-col rounded-3xl p-3">
-        <div className="px-3 py-3">
-          <BrandMark className="text-xl transition-transform duration-300 hover:rotate-6" />
-        </div>
-
-        <nav className="mt-4 flex flex-col gap-1.5">
-          {items.map(({ to, label, icon: Icon }) => {
-            const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
-                  active
-                    ? "bg-primary/15 text-primary shadow-sm border border-primary/20"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15 hover:translate-x-0.5"
-                }`}
-              >
-                <Icon className="size-4.5 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
-                <span className="flex-1">{label}</span>
-                <ChevronRight
-                  className={`size-4 flex-none opacity-60 transition-all duration-200 ${active ? "translate-x-0" : "opacity-0 group-hover:opacity-70 group-hover:translate-x-0.5"}`}
-                />
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto flex flex-col gap-1.5 border-t border-border/60 pt-3">
-          <Link
-            to="/trash"
-            className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${pathname === "/trash" ? "bg-primary/15 text-primary shadow-sm border border-primary/20" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15]"}`}
+    <>
+      {expanded && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-[45] hidden md:block"
+          onClick={() => setSidebarExpanded(false)}
+        />
+      )}
+      <aside
+        aria-label="Sidebar"
+        className={`fixed bottom-0 left-0 hidden flex-col overflow-hidden border-r border-slate-200/80 bg-white/75 p-3 backdrop-blur-xl transition-[width] duration-300 ease-out dark:border-white/10 dark:bg-slate-900/70 md:flex ${
+          offsetTop ? "top-16" : "top-0 pt-5"
+        } ${expanded ? "z-50 w-60 shadow-2xl" : "z-30 w-[4.5rem]"}`}
+      >
+        {!offsetTop && (
+          <div
+            className={`mb-3 flex h-10 items-center ${expanded ? "gap-2.5 px-2" : "justify-center"}`}
           >
-            <Trash2 className="size-4.5 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6" />
-            Trash
-          </Link>
-          <Link
-            to="/auth"
-            className={`press-sm group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${pathname === "/auth" ? "bg-primary/15 text-primary shadow-sm border border-primary/20" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground hover:shadow-[0_0_0_1px_rgba(67,199,175,0.14),0_0_18px_rgba(67,199,175,0.14)] hover:border hover:border-primary/15]"}`}
-          >
-            <User className="size-4.5 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
-            Profile
-          </Link>
+            <BrandLogo className="size-9" />
+            {expanded && <span className="text-xl font-bold tracking-tight">NoteMe</span>}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={expanded ? "Perkecil sidebar" : "Perbesar sidebar"}
+          title={expanded ? undefined : "Perbesar sidebar"}
+          className={`press-sm mb-2 flex h-11 items-center rounded-xl text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground ${
+            expanded ? "gap-3 px-3.5 text-sm font-semibold" : "justify-center"
+          }`}
+        >
+          {expanded ? (
+            <PanelLeftClose className="size-5 flex-none" />
+          ) : (
+            <PanelLeftOpen className="size-5 flex-none" />
+          )}
+          {expanded && <span className="whitespace-nowrap">Perkecil sidebar</span>}
+        </button>
+
+        <nav className="flex flex-col gap-1.5">{mainItems.map(renderItem)}</nav>
+
+        <div className="mt-auto flex flex-col gap-1.5 border-t border-slate-200/80 pt-3 dark:border-white/10">
+          {bottomItems.map(renderItem)}
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

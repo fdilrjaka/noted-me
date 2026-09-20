@@ -32,7 +32,7 @@ const destinations = [
 
 function Explore() {
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg md:pl-[16.5rem]">
+    <main className="mx-auto min-h-dvh w-full max-w-3xl px-4 safe-top safe-bottom-lg md:pl-[5.5rem]">
       <header className="flex items-center justify-between gap-3 py-4">
         <h1 className="text-2xl font-bold tracking-tight">Explore</h1>
         <Link

@@ -117,7 +117,7 @@ export function Dashboard() {
       className="min-h-dvh w-full safe-top safe-bottom-lg"
     >
       <Sidebar />
-      <div className="md:ml-[16.5rem]">
+      <div className="md:ml-[5.5rem]">
         <div className="mx-auto w-full max-w-5xl px-4">
           {/* Header Top Bar */}
           <header className="relative z-20 flex items-center justify-between gap-3 py-4">

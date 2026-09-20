@@ -61,7 +61,7 @@ export function SettingsPage() {
   return (
     <main ref={registerNavDragTarget} className="min-h-dvh w-full safe-top safe-bottom-lg">
       <Sidebar />
-      <div className="md:ml-[16.5rem]">
+      <div className="md:ml-[5.5rem]">
         <div className="mx-auto w-full max-w-6xl px-4 pb-10">
           <header className="flex items-center gap-3 py-4">
             <Link

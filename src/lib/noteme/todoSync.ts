@@ -33,6 +33,7 @@ function taskRow(t: TodoTask, userId: string): Row {
     description: t.description,
     deadline: t.deadline,
     completed: t.completed,
+    progress: t.progress,
     position: t.position,
     deleted: t.deleted,
     updated_at: t.updated_at,
@@ -52,13 +53,17 @@ function buildSection(row: Row): TodoSection {
 }
 
 function buildTask(row: Row): TodoTask {
+  const completed = Boolean(row["completed"]);
+  const rawProgress = row["progress"] == null ? null : Number(row["progress"]);
+  const progress = completed ? 100 : Math.max(0, Math.min(100, rawProgress ?? 0));
   return {
     id: String(row["id"]),
     section_id: String(row["section_id"]),
     title: String(row["title"] ?? ""),
     description: String(row["description"] ?? ""),
     deadline: row["deadline"] == null ? null : String(row["deadline"]),
-    completed: Boolean(row["completed"]),
+    completed: completed || progress >= 100,
+    progress: completed ? 100 : progress,
     position: Number(row["position"] ?? 0),
     deleted: Boolean(row["deleted"]),
     updated_at: new Date(String(row["updated_at"])).toISOString(),

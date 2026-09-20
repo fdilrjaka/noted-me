@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
-import { deleteTask, patchTask, type TodoTask } from "@/lib/noteme/todoStore";
+import { deleteTask, patchTask, taskProgress, type TodoTask } from "@/lib/noteme/todoStore";
 
 export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void }) {
   const [title, setTitle] = useState(task.title);
@@ -10,6 +10,7 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
   const [deadlineTime, setDeadlineTime] = useState(
     task.deadline?.includes("T") ? task.deadline.split("T")[1] : "",
   );
+  const [progress, setProgress] = useState(taskProgress(task));
   const save = () => {
     const deadline = deadlineDate
       ? deadlineTime
@@ -20,6 +21,8 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
       title: title.trim() || task.title,
       description,
       deadline,
+      progress,
+      completed: progress >= 100,
     });
     onClose();
   };
@@ -72,6 +75,20 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
             className="glass-input min-w-0 flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none disabled:opacity-50"
           />
         </div>
+        <div className="mt-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <label htmlFor="task-progress">Progress</label>
+          <span className="tabular-nums text-foreground">{progress}%</span>
+        </div>
+        <input
+          id="task-progress"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={progress}
+          onChange={(e) => setProgress(Number(e.target.value))}
+          className="mt-1 w-full accent-primary"
+        />
         <div className="mt-4 flex justify-between gap-2">
           <button
             onClick={() => {

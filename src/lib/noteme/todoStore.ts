@@ -32,6 +32,8 @@ export type TodoTask = {
   // atau null kalau belum ada deadline.
   deadline: string | null;
   completed: boolean;
+  // Progres 0–100. Invarian: completed <=> progress === 100.
+  progress: number;
   position: number;
   deleted: boolean;
   updated_at: string;
@@ -83,7 +85,8 @@ export function loadTodoLocal() {
       const parsed = JSON.parse(raw) as TodoData;
       data = {
         sections: parsed.sections ?? [],
-        tasks: parsed.tasks ?? [],
+        // Data lama belum punya `progress`: turunkan dari status selesai.
+        tasks: (parsed.tasks ?? []).map((t) => ({ ...t, progress: taskProgress(t) })),
         lastPull: parsed.lastPull ?? null,
       };
     }
@@ -92,6 +95,13 @@ export function loadTodoLocal() {
     data = EMPTY;
   }
   emit();
+}
+
+/** Progres task (0–100); aman untuk data lama yang belum punya field `progress`. */
+export function taskProgress(t: Pick<TodoTask, "completed"> & { progress?: number | null }) {
+  if (t.completed) return 100;
+  const p = typeof t.progress === "number" ? t.progress : 0;
+  return Math.max(0, Math.min(100, Math.round(p)));
 }
 
 export function setTodoData(next: TodoData) {
@@ -184,6 +194,7 @@ export function createTask(sectionId: string, title: string, deadline: string | 
     description: "",
     deadline,
     completed: false,
+    progress: 0,
     position: siblings.reduce((max, t) => Math.max(max, t.position), 0) + 1,
     deleted: false,
     updated_at: now(),
@@ -205,7 +216,26 @@ export function patchTask(id: string, patch: Partial<TodoTask>) {
 export function toggleTaskCompleted(id: string) {
   const task = data.tasks.find((t) => t.id === id);
   if (!task) return;
-  patchTask(id, { completed: !task.completed });
+  const done = !taskProgress(task) || taskProgress(task) < 100;
+  patchTask(id, { completed: done, progress: done ? 100 : 0 });
+}
+
+export function setTaskProgress(id: string, progress: number) {
+  const p = Math.max(0, Math.min(100, Math.round(progress)));
+  patchTask(id, { progress: p, completed: p >= 100 });
+}
+
+/** Hapus (soft-delete) semua task yang sudah selesai di section-section tertentu. */
+export function deleteCompletedTasks(sectionIds: string[]) {
+  const ids = new Set(sectionIds);
+  update((d) => ({
+    ...d,
+    tasks: d.tasks.map((t) =>
+      ids.has(t.section_id) && !t.deleted && taskProgress(t) >= 100
+        ? { ...t, deleted: true, updated_at: now(), dirty: true }
+        : t,
+    ),
+  }));
 }
 
 export function deleteTask(id: string) {

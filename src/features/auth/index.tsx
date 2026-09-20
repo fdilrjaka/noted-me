@@ -15,7 +15,7 @@ export function AuthPage() {
   return (
     <main
       ref={registerNavDragTarget}
-      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 safe-top safe-bottom-lg md:pl-[16.5rem]"
+      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 safe-top safe-bottom-lg md:pl-[5.5rem]"
     >
       <Sidebar />
       <header className="flex items-center gap-2 py-3">
