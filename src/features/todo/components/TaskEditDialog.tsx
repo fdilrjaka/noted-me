@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { NaturalDateTitleInput } from "@/components/noteme/NaturalDateTitleInput";
-import { deleteTask, patchTask, taskProgress, type TodoTask } from "@/lib/noteme/todoStore";
+import {
+  deleteTask,
+  normalizeTags,
+  patchTask,
+  taskProgress,
+  type TodoTask,
+} from "@/lib/noteme/todoStore";
+import { tagColor } from "../utils";
 
 export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () => void }) {
   const [title, setTitle] = useState(task.title);
@@ -11,6 +18,15 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
     task.deadline?.includes("T") ? task.deadline.split("T")[1] : "",
   );
   const [progress, setProgress] = useState(taskProgress(task));
+  const [tags, setTags] = useState<string[]>(task.tags ?? []);
+  const [tagDraft, setTagDraft] = useState("");
+  const commitTagDraft = () => {
+    if (!tagDraft.trim()) return tags;
+    const next = normalizeTags([...tags, tagDraft]);
+    setTags(next);
+    setTagDraft("");
+    return next;
+  };
   const save = () => {
     const deadline = deadlineDate
       ? deadlineTime
@@ -23,6 +39,7 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
       deadline,
       progress,
       completed: progress >= 100,
+      tags: normalizeTags([...tags, tagDraft]),
     });
     onClose();
   };
@@ -73,6 +90,44 @@ export function TaskEditDialog({ task, onClose }: { task: TodoTask; onClose: () 
             onChange={(e) => setDeadlineTime(e.target.value)}
             disabled={!deadlineDate}
             className="glass-input min-w-0 flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none disabled:opacity-50"
+          />
+        </div>
+        <label className="mt-3 block text-xs font-medium text-muted-foreground" htmlFor="task-tags">
+          Tag
+        </label>
+        <div className="glass-input mt-1 flex flex-wrap items-center gap-1.5 rounded-2xl px-2.5 py-2">
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setTags(tags.filter((t) => t !== tag))}
+              aria-label={`Hapus tag ${tag}`}
+              className="press-sm inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
+              style={{ backgroundColor: `${tagColor(tag)}22`, color: tagColor(tag) }}
+            >
+              #{tag}
+              <X className="size-3" />
+            </button>
+          ))}
+          <input
+            id="task-tags"
+            value={tagDraft}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v.endsWith(",")) {
+                setTags(normalizeTags([...tags, v.slice(0, -1)]));
+                setTagDraft("");
+              } else setTagDraft(v);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitTagDraft();
+              }
+              if (e.key === "Backspace" && !tagDraft && tags.length) setTags(tags.slice(0, -1));
+            }}
+            placeholder={tags.length ? "" : "Ketik tag lalu Enter"}
+            className="min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs font-medium text-muted-foreground">

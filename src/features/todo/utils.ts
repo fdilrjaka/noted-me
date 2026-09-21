@@ -41,3 +41,12 @@ export function deadlineTime(deadline: string | null): number {
   if (!deadline) return Number.POSITIVE_INFINITY;
   return new Date(deadline.includes("T") ? deadline : `${deadline}T00:00:00`).getTime();
 }
+
+const TAG_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#a855f7", "#ec4899", "#14b8a6", "#eab308"];
+
+/** Warna tag yang stabil (hash dari teks tag, tanpa peduli huruf besar). */
+export function tagColor(tag: string): string {
+  let h = 0;
+  for (const ch of tag.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TAG_COLORS[h % TAG_COLORS.length]!;
+}

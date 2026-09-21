@@ -15,6 +15,9 @@ import { TaskCard } from "./TaskCard";
 
 export function SectionColumn({
   sectionId,
+  ensureSectionId,
+  showMenu = true,
+  taskLabel,
   name,
   color,
   owner,
@@ -27,7 +30,11 @@ export function SectionColumn({
   onDelete,
   onEditTask,
 }: {
-  sectionId: string;
+  /** null = kolom kategori yang belum punya section; dibuat lazily lewat `ensureSectionId`. */
+  sectionId: string | null;
+  ensureSectionId?: () => string;
+  showMenu?: boolean;
+  taskLabel?: ((task: TodoTask) => string | undefined) | undefined;
   name: string;
   color: string;
   owner: TodoOwner;
@@ -59,7 +66,12 @@ export function SectionColumn({
       return;
     }
     const deadline = taskDate ? (taskTime ? `${taskDate}T${taskTime}` : taskDate) : null;
-    createTask(sectionId, taskTitle, deadline);
+    const target = sectionId ?? ensureSectionId?.();
+    if (!target) {
+      resetTaskForm();
+      return;
+    }
+    createTask(target, taskTitle, deadline);
     resetTaskForm();
   };
 
@@ -92,36 +104,38 @@ export function SectionColumn({
           ) : (
             <h2 className="truncate text-lg font-semibold">{name}</h2>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Menu section"
-                className="press-sm flex size-7 flex-none items-center justify-center rounded-full hover:bg-white/20"
-              >
-                <MoreVertical className="size-5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 rounded-xl">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setNameDraft(name);
-                  setRenaming(true);
-                }}
-              >
-                <Pencil className="size-4" /> Ganti nama
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onAddingChange(true)}>
-                <Plus className="size-4" /> Tambah task
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={onDelete}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-4" /> Hapus section
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {showMenu && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Menu section"
+                  className="press-sm flex size-7 flex-none items-center justify-center rounded-full hover:bg-white/20"
+                >
+                  <MoreVertical className="size-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setNameDraft(name);
+                    setRenaming(true);
+                  }}
+                >
+                  <Pencil className="size-4" /> Ganti nama
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onAddingChange(true)}>
+                  <Plus className="size-4" /> Tambah task
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="size-4" /> Hapus section
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         <div className="mt-1 flex items-center gap-2 text-[15px] font-medium">
           <OwnerAvatar owner={owner} className="size-6" />
@@ -141,6 +155,7 @@ export function SectionColumn({
             task={task}
             color={color}
             editMode={editMode}
+            label={taskLabel?.(task)}
             onOpen={onEditTask}
           />
         ))}

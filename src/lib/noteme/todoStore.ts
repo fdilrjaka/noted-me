@@ -34,6 +34,8 @@ export type TodoTask = {
   completed: boolean;
   // Progres 0–100. Invarian: completed <=> progress === 100.
   progress: number;
+  // Label bebas per task (mis. "uas", "kelompok"); dipakai untuk filter & urutan.
+  tags: string[];
   position: number;
   deleted: boolean;
   updated_at: string;
@@ -86,7 +88,11 @@ export function loadTodoLocal() {
       data = {
         sections: parsed.sections ?? [],
         // Data lama belum punya `progress`: turunkan dari status selesai.
-        tasks: (parsed.tasks ?? []).map((t) => ({ ...t, progress: taskProgress(t) })),
+        tasks: (parsed.tasks ?? []).map((t) => ({
+          ...t,
+          progress: taskProgress(t),
+          tags: Array.isArray(t.tags) ? t.tags : [],
+        })),
         lastPull: parsed.lastPull ?? null,
       };
     }
@@ -195,6 +201,7 @@ export function createTask(sectionId: string, title: string, deadline: string | 
     deadline,
     completed: false,
     progress: 0,
+    tags: [],
     position: siblings.reduce((max, t) => Math.max(max, t.position), 0) + 1,
     deleted: false,
     updated_at: now(),
@@ -223,6 +230,21 @@ export function toggleTaskCompleted(id: string) {
 export function setTaskProgress(id: string, progress: number) {
   const p = Math.max(0, Math.min(100, Math.round(progress)));
   patchTask(id, { progress: p, completed: p >= 100 });
+}
+
+/** Rapikan input tag: buang '#', spasi berlebih, duplikat (tanpa peduli huruf besar), maks 6. */
+export function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.replace(/^#+/, "").trim().replace(/\s+/g, " ").slice(0, 20);
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 /** Hapus (soft-delete) semua task yang sudah selesai di section-section tertentu. */

@@ -24,22 +24,24 @@ function sectionRow(s: TodoSection, userId: string): Row {
   };
 }
 
-// Kalau kolom `progress` belum ada di database (migrasi belum dijalankan), sync tetap jalan
-// tanpa kolom itu supaya task lain tidak ikut gagal. Progres tetap tersimpan lokal.
-let progressColumnMissing = false;
+// Kolom opsional yang ditambahkan belakangan. Kalau database belum punya kolomnya (migrasi belum
+// dijalankan), sync tetap jalan tanpa kolom itu supaya task lain tidak ikut gagal; datanya tetap
+// tersimpan lokal dan ikut tersinkron setelah migrasi dijalankan + halaman di-refresh.
+const OPTIONAL_TASK_COLUMNS = ["progress", "tags"] as const;
+const missingColumns = new Set<string>();
 
-function isMissingProgressColumn(error: { message?: string; code?: string } | null) {
-  return (
-    !!error &&
-    /progress/i.test(error.message ?? "") &&
-    /column|schema cache/i.test(error.message ?? "")
-  );
+function missingColumnFrom(error: { message?: string } | null): string | null {
+  const m = /Could not find the '([a-z_]+)' column/i.exec(error?.message ?? "");
+  const col = m?.[1];
+  return col &&
+    (OPTIONAL_TASK_COLUMNS as readonly string[]).includes(col) &&
+    !missingColumns.has(col)
+    ? col
+    : null;
 }
 
 function taskRow(t: TodoTask, userId: string): Row {
-  const withProgress = !progressColumnMissing;
-  return {
-    ...(withProgress ? { progress: t.progress } : {}),
+  const row: Row = {
     id: t.id,
     user_id: userId,
     section_id: t.section_id,
@@ -47,10 +49,14 @@ function taskRow(t: TodoTask, userId: string): Row {
     description: t.description,
     deadline: t.deadline,
     completed: t.completed,
+    progress: t.progress,
+    tags: t.tags,
     position: t.position,
     deleted: t.deleted,
     updated_at: t.updated_at,
   };
+  for (const col of missingColumns) delete row[col];
+  return row;
 }
 
 function buildSection(row: Row): TodoSection {
@@ -77,6 +83,7 @@ function buildTask(row: Row): TodoTask {
     deadline: row["deadline"] == null ? null : String(row["deadline"]),
     completed: completed || progress >= 100,
     progress: completed ? 100 : progress,
+    tags: Array.isArray(row["tags"]) ? (row["tags"] as unknown[]).map(String) : [],
     position: Number(row["position"] ?? 0),
     deleted: Boolean(row["deleted"]),
     updated_at: new Date(String(row["updated_at"])).toISOString(),
@@ -209,14 +216,14 @@ async function doSync(userId: string, full: boolean) {
     if (error) throw error;
   }
   if (dirtyTasks.length) {
-    let { error } = await supabase
-      .from("todo_tasks")
-      .upsert(dirtyTasks.map((t) => taskRow(t, userId)) as any);
-    if (isMissingProgressColumn(error) && !progressColumnMissing) {
-      progressColumnMissing = true;
+    let error: { message?: string } | null = null;
+    for (let attempt = 0; attempt <= OPTIONAL_TASK_COLUMNS.length; attempt++) {
       ({ error } = await supabase
         .from("todo_tasks")
         .upsert(dirtyTasks.map((t) => taskRow(t, userId)) as any));
+      const col = missingColumnFrom(error);
+      if (!col) break;
+      missingColumns.add(col);
     }
     if (error) throw error;
   }

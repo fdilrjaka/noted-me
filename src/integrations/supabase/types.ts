@@ -204,6 +204,7 @@ export type Database = {
         Row: {
           completed: boolean;
           progress: number;
+          tags: string[];
           created_at: string;
           deadline: string | null;
           deleted: boolean;
@@ -218,6 +219,7 @@ export type Database = {
         Insert: {
           completed?: boolean;
           progress?: number;
+          tags?: string[];
           created_at?: string;
           deadline?: string | null;
           deleted?: boolean;
@@ -232,6 +234,7 @@ export type Database = {
         Update: {
           completed?: boolean;
           progress?: number;
+          tags?: string[];
           created_at?: string;
           deadline?: string | null;
           deleted?: boolean;

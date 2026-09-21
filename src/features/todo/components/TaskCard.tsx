@@ -1,16 +1,19 @@
 import { CalendarDays, X } from "lucide-react";
 import { deleteTask, setTaskProgress, taskProgress, type TodoTask } from "@/lib/noteme/todoStore";
-import { deadlineLabel } from "../utils";
+import { deadlineLabel, tagColor } from "../utils";
 
 export function TaskCard({
   task,
   color,
   editMode,
+  label,
   onOpen,
 }: {
   task: TodoTask;
   color: string;
   editMode: boolean;
+  /** Keterangan asal task (mis. nama section/kategori) — dipakai di tampilan proyek & jadwal. */
+  label?: string | undefined;
   onOpen: (task: TodoTask) => void;
 }) {
   const progress = taskProgress(task);
@@ -53,6 +56,24 @@ export function TaskCard({
       </p>
       {task.description.trim() && (
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{task.description}</p>
+      )}
+      {(label || task.tags.length > 0) && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {label && (
+            <span className="rounded-md bg-slate-200/70 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground dark:bg-white/10">
+              {label}
+            </span>
+          )}
+          {task.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+              style={{ backgroundColor: `${tagColor(tag)}22`, color: tagColor(tag) }}
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
       )}
 
       {deadline && (

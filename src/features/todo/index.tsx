@@ -21,11 +21,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import type { QuickAddTarget } from "./components/QuickAddPopover";
+import { ScheduleTimeline } from "./components/ScheduleTimeline";
 import { SectionColumn } from "./components/SectionColumn";
 import { TaskEditDialog } from "./components/TaskEditDialog";
 import { TodoTopBar } from "./components/TodoTopBar";
 import {
   TodoToolbar,
+  type TagCount,
   type TodoFilter,
   type TodoSort,
   type TodoStats,
@@ -46,6 +49,7 @@ export function TodoPage() {
   const [editMode, setEditMode] = useState(false);
   const [filter, setFilter] = useState<TodoFilter>("all");
   const [sort, setSort] = useState<TodoSort>("manual");
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [addingIn, setAddingIn] = useState<string | null>(null);
   const [addingSection, setAddingSection] = useState(false);
@@ -62,41 +66,97 @@ export function TodoPage() {
   }, []);
 
   const sections = useMemo(() => categorySections(data, category), [data, category]);
+  const inGridView = view === "board" || view === "list";
 
-  // Semua task aktif di kategori ini (sebelum filter/cari) → untuk statistik & hapus selesai.
-  const categoryTasks = useMemo(() => {
+  // Semua section aktif + task aktif lintas kategori (untuk tampilan proyek & jadwal).
+  const sectionById = useMemo(
+    () => new Map(data.sections.filter((s) => !s.deleted).map((s) => [s.id, s])),
+    [data.sections],
+  );
+  const activeTasks = useMemo(
+    () => data.tasks.filter((t) => !t.deleted && sectionById.has(t.section_id)),
+    [data.tasks, sectionById],
+  );
+
+  // Task yang jadi cakupan tampilan sekarang (sebelum filter/cari) → statistik, tag, hapus selesai.
+  const scopeSections = inGridView ? sections : [...sectionById.values()];
+  const scopeTasks = useMemo(() => {
+    if (!inGridView) return activeTasks;
     const ids = new Set(sections.map((s) => s.id));
-    return data.tasks.filter((t) => !t.deleted && ids.has(t.section_id));
-  }, [data.tasks, sections]);
+    return activeTasks.filter((t) => ids.has(t.section_id));
+  }, [activeTasks, inGridView, sections]);
 
   const stats: TodoStats = useMemo(() => {
-    const total = categoryTasks.length;
-    const done = categoryTasks.filter((t) => taskProgress(t) >= 100).length;
-    const overdue = categoryTasks.filter(isOverdue).length;
+    const total = scopeTasks.length;
+    const done = scopeTasks.filter((t) => taskProgress(t) >= 100).length;
+    const overdue = scopeTasks.filter(isOverdue).length;
     const avgProgress = total
-      ? Math.round(categoryTasks.reduce((n, t) => n + taskProgress(t), 0) / total)
+      ? Math.round(scopeTasks.reduce((n, t) => n + taskProgress(t), 0) / total)
       : 0;
     return { total, done, overdue, avgProgress };
-  }, [categoryTasks]);
+  }, [scopeTasks]);
 
-  const visibleTasks = (sectionId: string) => {
+  const tags: TagCount[] = useMemo(() => {
+    const map = new Map<string, TagCount>();
+    for (const t of scopeTasks) {
+      for (const tag of t.tags) {
+        const key = tag.toLowerCase();
+        const cur = map.get(key);
+        if (cur) cur.count += 1;
+        else map.set(key, { tag, count: 1 });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+  }, [scopeTasks]);
+
+  // Tag yang sudah tidak dipakai task manapun jangan ikut memfilter.
+  const activeTagFilter = tagFilter.filter((k) => tags.some((t) => t.tag.toLowerCase() === k));
+
+  const applyView = (list: TodoTask[]) => {
     const q = query.trim().toLowerCase();
-    const list = categoryTasks.filter((t) => {
-      if (t.section_id !== sectionId) return false;
-      if (q && !`${t.title} ${t.description}`.toLowerCase().includes(q)) return false;
+    const out = list.filter((t) => {
+      if (q && !`${t.title} ${t.description} ${t.tags.join(" ")}`.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (
+        activeTagFilter.length &&
+        !t.tags.some((g) => activeTagFilter.includes(g.toLowerCase()))
+      ) {
+        return false;
+      }
       if (filter === "active") return taskProgress(t) < 100;
       if (filter === "done") return taskProgress(t) >= 100;
       if (filter === "overdue") return isOverdue(t);
       return true;
     });
+    const sectionPos = (t: TodoTask) => sectionById.get(t.section_id)?.position ?? 0;
     if (sort === "deadline") {
-      return list.sort((a, b) => deadlineTime(a.deadline) - deadlineTime(b.deadline));
+      return out.sort((a, b) => deadlineTime(a.deadline) - deadlineTime(b.deadline));
     }
     if (sort === "progress") {
-      return list.sort((a, b) => taskProgress(b) - taskProgress(a) || a.position - b.position);
+      return out.sort((a, b) => taskProgress(b) - taskProgress(a) || a.position - b.position);
     }
-    return list.sort((a, b) => a.position - b.position);
+    if (sort === "tag") {
+      const key = (t: TodoTask) => (t.tags[0] ?? "\uffff").toLowerCase();
+      return out.sort((a, b) => key(a).localeCompare(key(b)) || a.position - b.position);
+    }
+    return out.sort((a, b) => sectionPos(a) - sectionPos(b) || a.position - b.position);
   };
+
+  const visibleTasks = (sectionId: string) =>
+    applyView(scopeTasks.filter((t) => t.section_id === sectionId));
+
+  const quickAddTargets: QuickAddTarget[] = useMemo(
+    () =>
+      TODO_CATEGORIES.flatMap((c) => {
+        const secs = categorySections(data, c.id);
+        return secs.length
+          ? secs.map((s) => ({ value: s.id, label: `${c.label} · ${s.name}` }))
+          : [{ value: `new:${c.id}`, label: `${c.label} · To Do (baru)` }];
+      }),
+    [data],
+  );
+  const quickAddDefault = sections[0]?.id ?? `new:${category}`;
 
   const submitSection = () => {
     if (sectionName.trim()) createSection(category, sectionName);
@@ -105,6 +165,7 @@ export function TodoPage() {
   };
 
   const onHeaderAddTask = () => {
+    if (!inGridView) setView("board");
     if (sections.length === 0) {
       setAddingIn(createSection(category, "To Do"));
       return;
@@ -114,10 +175,30 @@ export function TodoPage() {
 
   const onClearDone = () => {
     if (stats.done === 0) return;
-    if (window.confirm(`Hapus ${stats.done} task yang sudah selesai di kategori ini?`)) {
-      deleteCompletedTasks(sections.map((s) => s.id));
+    const where = inGridView ? "di kategori ini" : "di semua kategori";
+    if (window.confirm(`Hapus ${stats.done} task yang sudah selesai ${where}?`)) {
+      deleteCompletedTasks(scopeSections.map((s) => s.id));
     }
   };
+
+  const onReset = () => {
+    setFilter("all");
+    setSort("manual");
+    setQuery("");
+    setTagFilter([]);
+  };
+
+  const onToggleTag = (tag: string) => {
+    const key = tag.toLowerCase();
+    setTagFilter((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+  };
+
+  const viewHint =
+    view === "project"
+      ? "Tampilan proyek — dikelompokkan per kategori"
+      : view === "schedule"
+        ? "Jadwal & deadline — urut per tanggal"
+        : null;
 
   return (
     <main className="min-h-dvh w-full">
@@ -129,8 +210,9 @@ export function TodoPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-bold tracking-tight">to-do list</h1>
-              <div className="mt-1">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 <SyncStatus />
+                {viewHint && <span className="text-xs text-muted-foreground">{viewHint}</span>}
               </div>
             </div>
             <div className="flex flex-none items-center gap-2">
@@ -155,102 +237,150 @@ export function TodoPage() {
                   <DropdownMenuItem onSelect={() => setAddingSection(true)}>
                     <Plus className="size-4" /> Tambah section
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setFilter("all");
-                      setSort("manual");
-                      setQuery("");
-                    }}
-                  >
-                    Reset filter & urutan
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={onReset}>Reset filter & urutan</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
 
-          <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-            {TODO_CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setCategory(c.id)}
-                className={`press-sm flex-none rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  category === c.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-black/[0.05] text-muted-foreground hover:bg-black/10 dark:bg-white/10"
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-
-          <div
-            className={`-mx-4 mt-5 px-4 pb-2 md:mx-0 md:px-0 ${
-              view === "board"
-                ? "flex items-start gap-4 overflow-x-auto"
-                : "flex flex-col items-start gap-4"
-            }`}
-          >
-            {sections.map((section, i) => (
-              <SectionColumn
-                key={section.id}
-                sectionId={section.id}
-                name={section.name}
-                color={sectionColor(i)}
-                owner={owner}
-                tasks={visibleTasks(section.id)}
-                wide={view === "list"}
-                editMode={editMode}
-                adding={addingIn === section.id}
-                onAddingChange={(open) => setAddingIn(open ? section.id : null)}
-                onRename={(name) => patchSection(section.id, { name })}
-                onDelete={() => deleteSection(section.id)}
-                onEditTask={setEditingTask}
-              />
-            ))}
-
-            <div
-              className={`flex-none ${view === "list" ? "w-full max-w-3xl" : "w-[17.5rem] sm:w-72"}`}
-            >
-              {addingSection ? (
-                <div className="rounded-2xl border border-black/5 bg-card p-3 shadow-sm dark:border-white/10">
-                  <input
-                    autoFocus
-                    value={sectionName}
-                    onChange={(e) => setSectionName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") submitSection();
-                      if (e.key === "Escape") setAddingSection(false);
-                    }}
-                    placeholder="Nama section"
-                    className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-muted-foreground"
-                  />
-                  <div className="mt-2 flex justify-end gap-2">
-                    <button
-                      onClick={() => setAddingSection(false)}
-                      className="press-sm rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      onClick={submitSection}
-                      className="press-sm rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-                    >
-                      Simpan
-                    </button>
-                  </div>
-                </div>
-              ) : (
+          {inGridView && (
+            <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+              {TODO_CATEGORIES.map((c) => (
                 <button
-                  onClick={() => setAddingSection(true)}
-                  className="press-sm flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-black/[0.03] dark:border-white/20 dark:hover:bg-white/5"
+                  key={c.id}
+                  onClick={() => setCategory(c.id)}
+                  className={`press-sm flex-none rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    category === c.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-black/[0.05] text-muted-foreground hover:bg-black/10 dark:bg-white/10"
+                  }`}
                 >
-                  <Plus className="size-4" /> Add section
+                  {c.label}
                 </button>
-              )}
+              ))}
             </div>
-          </div>
+          )}
+
+          {view === "schedule" && (
+            <div className="mt-6">
+              <ScheduleTimeline
+                items={applyView(activeTasks).map((task) => {
+                  const sec = sectionById.get(task.section_id)!;
+                  const ci = Math.max(
+                    0,
+                    TODO_CATEGORIES.findIndex((c) => c.id === sec.category_id),
+                  );
+                  return {
+                    task,
+                    color: sectionColor(ci),
+                    label: `${TODO_CATEGORIES[ci]!.label} · ${sec.name}`,
+                  };
+                })}
+                editMode={editMode}
+                onOpen={setEditingTask}
+              />
+            </div>
+          )}
+
+          {view === "project" && (
+            <div className="-mx-4 mt-5 flex items-start gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+              {TODO_CATEGORIES.map((c, i) => {
+                const secs = categorySections(data, c.id);
+                const ids = new Set(secs.map((s) => s.id));
+                return (
+                  <SectionColumn
+                    key={c.id}
+                    sectionId={secs[0]?.id ?? null}
+                    ensureSectionId={() => createSection(c.id, "To Do")}
+                    showMenu={false}
+                    taskLabel={
+                      secs.length > 1 ? (t) => sectionById.get(t.section_id)?.name : undefined
+                    }
+                    name={c.label}
+                    color={sectionColor(i)}
+                    owner={owner}
+                    tasks={applyView(activeTasks.filter((t) => ids.has(t.section_id)))}
+                    wide={false}
+                    editMode={editMode}
+                    adding={addingIn === `cat:${c.id}`}
+                    onAddingChange={(open) => setAddingIn(open ? `cat:${c.id}` : null)}
+                    onRename={() => {}}
+                    onDelete={() => {}}
+                    onEditTask={setEditingTask}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {inGridView && (
+            <div
+              className={`-mx-4 mt-5 px-4 pb-2 md:mx-0 md:px-0 ${
+                view === "board"
+                  ? "flex items-start gap-4 overflow-x-auto"
+                  : "flex flex-col items-start gap-4"
+              }`}
+            >
+              {sections.map((section, i) => (
+                <SectionColumn
+                  key={section.id}
+                  sectionId={section.id}
+                  name={section.name}
+                  color={sectionColor(i)}
+                  owner={owner}
+                  tasks={visibleTasks(section.id)}
+                  wide={view === "list"}
+                  editMode={editMode}
+                  adding={addingIn === section.id}
+                  onAddingChange={(open) => setAddingIn(open ? section.id : null)}
+                  onRename={(name) => patchSection(section.id, { name })}
+                  onDelete={() => deleteSection(section.id)}
+                  onEditTask={setEditingTask}
+                />
+              ))}
+
+              <div
+                className={`flex-none ${view === "list" ? "w-full max-w-3xl" : "w-[17.5rem] sm:w-72"}`}
+              >
+                {addingSection ? (
+                  <div className="rounded-2xl border border-black/5 bg-card p-3 shadow-sm dark:border-white/10">
+                    <input
+                      autoFocus
+                      value={sectionName}
+                      onChange={(e) => setSectionName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitSection();
+                        if (e.key === "Escape") setAddingSection(false);
+                      }}
+                      placeholder="Nama section"
+                      className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-muted-foreground"
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <button
+                        onClick={() => setAddingSection(false)}
+                        className="press-sm rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={submitSection}
+                        className="press-sm rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                      >
+                        Simpan
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingSection(true)}
+                    className="press-sm flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-black/[0.03] dark:border-white/20 dark:hover:bg-white/5"
+                  >
+                    <Plus className="size-4" /> Add section
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -261,11 +391,16 @@ export function TodoPage() {
         onEditMode={setEditMode}
         filter={filter}
         onFilter={setFilter}
+        tags={tags}
+        tagFilter={activeTagFilter}
+        onToggleTag={onToggleTag}
         sort={sort}
         onSort={setSort}
         stats={stats}
-        doneCount={stats.done}
         onClearDone={onClearDone}
+        onReset={onReset}
+        quickAddTargets={quickAddTargets}
+        quickAddDefault={quickAddDefault}
       />
 
       {editingTask && <TaskEditDialog task={editingTask} onClose={() => setEditingTask(null)} />}
