@@ -17,7 +17,7 @@ import { ConflictDialog, ServiceWorkerRegistrar } from "@/components/noteme/Sync
 import { SplashIntro } from "@/components/noteme/SplashIntro";
 import { ThemeWipeOverlay } from "@/components/noteme/ThemeWipeOverlay";
 import { useBackgroundHue } from "@/hooks/use-background-hue";
-import { readThemeMode, applyThemeMode } from "@/shared/theme/theme";
+import { readThemeMode, applyThemeMode, useAutoTheme } from "@/shared/theme/theme";
 
 function NotFoundComponent() {
   return (
@@ -124,6 +124,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useBackgroundHue();
+  useAutoTheme();
   useEffect(() => {
     applyThemeMode(readThemeMode());
   }, []);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 import { Sidebar } from "@/components/noteme/Sidebar";
 import { SyncStatus } from "@/components/noteme/SyncEngine";
@@ -25,7 +25,6 @@ import type { QuickAddTarget } from "./components/QuickAddPopover";
 import { ScheduleTimeline } from "./components/ScheduleTimeline";
 import { SectionColumn } from "./components/SectionColumn";
 import { TaskEditDialog } from "./components/TaskEditDialog";
-import { TodoTopBar } from "./components/TodoTopBar";
 import {
   TodoToolbar,
   type TagCount,
@@ -201,12 +200,25 @@ export function TodoPage() {
         : null;
 
   return (
-    <main className="min-h-dvh w-full">
-      <TodoTopBar query={query} onQuery={setQuery} />
-      <Sidebar offsetTop />
+    <main className="mx-auto min-h-dvh w-full max-w-[100rem] px-4 safe-top safe-bottom-lg text-foreground md:pl-[5.5rem]">
+      <Sidebar />
+      {/* Search bar — sama seperti halaman Jadwal */}
+      <div className="pb-2 pt-4">
+        <div className="relative w-full max-w-xl">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search Search..."
+            aria-label="Cari task"
+            className="glass-soft w-full rounded-full py-2 pl-10 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+        </div>
+      </div>
 
-      <div className="pt-16 md:pl-[5.5rem]">
-        <div className="px-4 pb-52 pt-6 md:px-8 md:pb-40">
+      <div className="pb-52 pt-3 md:pb-40">
+        <div>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-bold tracking-tight">to-do list</h1>

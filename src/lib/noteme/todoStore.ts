@@ -247,6 +247,44 @@ export function normalizeTags(tags: string[]): string[] {
   return out;
 }
 
+/** Ganti nama tag di semua task (kalau namanya sudah ada, otomatis digabung). */
+export function renameTag(from: string, to: string) {
+  const key = from.toLowerCase();
+  const [next] = normalizeTags([to]);
+  if (!next) return;
+  update((d) => ({
+    ...d,
+    tasks: d.tasks.map((t) =>
+      t.deleted || !t.tags.some((g) => g.toLowerCase() === key)
+        ? t
+        : {
+            ...t,
+            tags: normalizeTags(t.tags.map((g) => (g.toLowerCase() === key ? next : g))),
+            updated_at: now(),
+            dirty: true,
+          },
+    ),
+  }));
+}
+
+/** Lepas satu tag dari semua task. */
+export function deleteTag(tag: string) {
+  const key = tag.toLowerCase();
+  update((d) => ({
+    ...d,
+    tasks: d.tasks.map((t) =>
+      t.deleted || !t.tags.some((g) => g.toLowerCase() === key)
+        ? t
+        : {
+            ...t,
+            tags: t.tags.filter((g) => g.toLowerCase() !== key),
+            updated_at: now(),
+            dirty: true,
+          },
+    ),
+  }));
+}
+
 /** Hapus (soft-delete) semua task yang sudah selesai di section-section tertentu. */
 export function deleteCompletedTasks(sectionIds: string[]) {
   const ids = new Set(sectionIds);
