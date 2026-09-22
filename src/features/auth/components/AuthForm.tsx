@@ -6,9 +6,13 @@ import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
 
 const INPUT_ICON =
-  "w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-colors";
+  "w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-12 pr-4 text-[15px] text-foreground placeholder:text-muted-foreground outline-none backdrop-blur-sm focus:border-primary focus:ring-1 focus:ring-primary transition-colors";
 const INPUT =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-colors";
+  "w-full rounded-2xl border border-white/70 bg-white/60 px-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground outline-none backdrop-blur-sm focus:border-primary focus:ring-1 focus:ring-primary transition-colors";
+const BUTTON =
+  "w-full rounded-2xl bg-primary py-3.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60";
+const CARD =
+  "glass-card w-[420px] rounded-3xl p-10 shadow-xl relative z-10";
 
 export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   const {
@@ -53,13 +57,13 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
   if (mode === "verify") {
     return (
-      <div className="w-[420px] bg-white rounded-[2rem] shadow-xl p-10 z-10 relative">
-        <h2 className="text-slate-300 text-sm font-semibold mb-1 uppercase tracking-wider">
+      <div className={CARD}>
+        <h2 className="text-muted-foreground text-sm font-semibold mb-1 uppercase tracking-wider">
           {title}
         </h2>
-        <p className="text-slate-500 text-sm mb-6">
+        <p className="text-muted-foreground text-sm mb-6">
           Masukkan kode 6 digit yang dikirim ke{" "}
-          <span className="font-semibold text-slate-700">{pendingEmail}</span>.
+          <span className="font-semibold text-foreground">{pendingEmail}</span>.
         </p>
 
         <input
@@ -95,25 +99,21 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
           </div>
         )}
 
-        <button
-          disabled={busy}
-          onClick={() => void submit()}
-          className="w-full bg-[#3B4254] text-white font-medium py-3.5 rounded-2xl mt-6 hover:bg-slate-700 transition-colors disabled:opacity-60"
-        >
+        <button disabled={busy} onClick={() => void submit()} className={`${BUTTON} mt-6`}>
           {busy ? "Memproses…" : action}
         </button>
 
-        <div className="mt-6 flex flex-col items-center space-y-2 text-sm text-slate-500">
+        <div className="mt-6 flex flex-col items-center space-y-2 text-sm text-muted-foreground">
           <button
             onClick={() => void resendOtp()}
             disabled={busy}
-            className="hover:text-slate-800 underline transition-colors disabled:opacity-60"
+            className="hover:text-foreground underline transition-colors disabled:opacity-60"
           >
             Kirim ulang kode
           </button>
           <button
             onClick={() => setMode("in")}
-            className="hover:text-slate-800 underline transition-colors"
+            className="hover:text-foreground underline transition-colors"
           >
             Batal
           </button>
@@ -123,18 +123,18 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   }
 
   return (
-    <div className="w-[420px] bg-white rounded-[2rem] shadow-xl p-10 z-10 relative">
-      <h2 className="text-slate-300 text-sm font-semibold mb-1 uppercase tracking-wider">
+    <div className={CARD}>
+      <h2 className="text-muted-foreground text-sm font-semibold mb-1 uppercase tracking-wider">
         {title}
       </h2>
-      <p className="text-slate-500 text-sm mb-6">
+      <p className="text-muted-foreground text-sm mb-6">
         {mode === "forgot"
           ? "Masukkan email akun kamu. Kami kirim kode verifikasi untuk mengatur ulang password."
           : "Selamat bergabung menjadi bagian dari NoteMe."}
       </p>
 
       <div className="relative mt-4">
-        <Mail className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+        <Mail className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -149,7 +149,7 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
       {mode !== "forgot" && (
         <div className="relative mt-3">
-          <Lock className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+          <Lock className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -163,7 +163,7 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
           </button>
@@ -175,25 +175,21 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
       )}
 
       {mode === "up" && (
-        <p className="mt-3 px-1 text-xs text-slate-400">
+        <p className="mt-3 px-1 text-xs text-muted-foreground">
           Setelah mendaftar, kami kirim kode 6 digit ke email kamu untuk verifikasi sebelum bisa
           masuk.
         </p>
       )}
 
-      <button
-        disabled={busy}
-        onClick={() => void submit()}
-        className="w-full bg-[#3B4254] text-white font-medium py-3.5 rounded-2xl mt-6 hover:bg-slate-700 transition-colors disabled:opacity-60"
-      >
+      <button disabled={busy} onClick={() => void submit()} className={`${BUTTON} mt-6`}>
         {busy ? "Memproses…" : action}
       </button>
 
-      <div className="mt-6 flex flex-col items-center space-y-3 text-sm text-slate-500">
+      <div className="mt-6 flex flex-col items-center space-y-3 text-sm text-muted-foreground">
         {mode === "in" && (
           <button
             onClick={() => setMode("forgot")}
-            className="underline hover:text-slate-800 transition-colors"
+            className="underline hover:text-foreground transition-colors"
           >
             Lupa password?
           </button>
@@ -201,26 +197,26 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
         <button
           onClick={() => setMode(mode === "in" ? "up" : "in")}
-          className="hover:text-slate-800 transition-colors"
+          className="hover:text-foreground transition-colors"
         >
           {mode === "in" ? (
             <>
               Belum punya akun?{" "}
-              <span className="font-semibold text-slate-700 underline underline-offset-2">
+              <span className="font-semibold text-foreground underline underline-offset-2">
                 Daftar
               </span>
             </>
           ) : mode === "up" ? (
             <>
               Sudah punya akun?{" "}
-              <span className="font-semibold text-slate-700 underline underline-offset-2">
+              <span className="font-semibold text-foreground underline underline-offset-2">
                 Masuk
               </span>
             </>
           ) : (
             <>
               Ingat password?{" "}
-              <span className="font-semibold text-slate-700 underline underline-offset-2">
+              <span className="font-semibold text-foreground underline underline-offset-2">
                 Kembali masuk
               </span>
             </>
@@ -230,7 +226,7 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
         <Link
           to="/"
           onClick={() => setGuestMode()}
-          className="underline hover:text-slate-800 transition-colors"
+          className="underline hover:text-foreground transition-colors"
         >
           Lanjut tanpa akun
         </Link>

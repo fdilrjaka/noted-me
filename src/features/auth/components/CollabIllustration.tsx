@@ -1,11 +1,12 @@
 import React from "react";
+import { PALETTE } from "@/features/canvas/palette";
 
 const CURSOR_COLORS = {
-  blue: "#2563eb",
-  orange: "#ea580c",
-  green: "#16a34a",
-  purple: "#7c3aed",
-  slate: "#334155",
+  blue: PALETTE.blue.solid,
+  orange: PALETTE.orange.solid,
+  green: PALETTE.green.solid,
+  purple: PALETTE.purple.solid,
+  slate: PALETTE.slate.solid,
 } as const;
 
 /** Panah kursor kecil bergaya "multiplayer cursor" dengan label nama di sampingnya. */
@@ -40,9 +41,9 @@ function Cursor({
   );
 }
 
-/** Tumpukan avatar bulat kecil (anggota kelompok), warna diturunkan dari inisial. */
+/** Tumpukan avatar bulat kecil (anggota kelompok), warna diturunkan dari palet node. */
 function AvatarStack({ names }: { names: string[] }) {
-  const colors = ["#2563eb", "#ea580c", "#16a34a", "#7c3aed", "#ec4899"];
+  const colors = [PALETTE.blue.solid, PALETTE.orange.solid, PALETTE.green.solid, PALETTE.purple.solid, PALETTE.pink.solid];
   return (
     <div className="flex -space-x-1.5">
       {names.map((n, i) => (
@@ -58,30 +59,50 @@ function AvatarStack({ names }: { names: string[] }) {
   );
 }
 
+/**
+ * Kartu mini bergaya kartu node kanvas asli: bilah judul solid berwarna + badan putih,
+ * bukan kotak generik dengan border tipis + garis aksen — supaya konsisten dengan
+ * NodeShell yang dipakai di dashboard/kanvas sungguhan.
+ */
 function MiniCard({
   title,
-  accent,
+  color,
   lines = 3,
+  pill,
   className = "",
 }: {
   title: string;
-  accent?: string;
+  color: keyof typeof PALETTE;
   lines?: number;
+  pill?: string;
   className?: string;
 }) {
+  const c = PALETTE[color];
   return (
     <div
-      className={`w-44 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-md backdrop-blur-sm z-10 ${className}`}
-      style={accent ? { borderTop: `3px solid ${accent}` } : undefined}
+      className={`w-44 overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
     >
-      <p className="text-xs font-semibold text-slate-700">{title}</p>
-      <div className="mt-2 flex flex-col gap-1.5">
+      <div
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white"
+        style={{ backgroundColor: c.solid }}
+      >
+        <span className="truncate">{title}</span>
+        {pill && (
+          <span className="ml-auto flex-none rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-semibold">
+            {pill}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-col gap-1.5 p-3">
         {Array.from({ length: lines }).map((_, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="size-2 flex-none rounded-[2px] border border-slate-300" />
             <span
-              className="h-1.5 rounded-full bg-slate-200"
-              style={{ width: `${75 - i * 15}%` }}
+              className="size-2.5 flex-none rounded-[3px] border-2"
+              style={{ borderColor: c.solid, backgroundColor: i === 0 ? c.solid : "transparent" }}
+            />
+            <span
+              className="h-1.5 rounded-full"
+              style={{ width: `${75 - i * 15}%`, backgroundColor: c.soft }}
             />
           </div>
         ))}
@@ -91,13 +112,18 @@ function MiniCard({
 }
 
 function GroupCard({ members, className = "" }: { members: string[]; className?: string }) {
-  const colors = ["#2563eb", "#ea580c", "#16a34a", "#7c3aed", "#ec4899"];
+  const colors = [PALETTE.blue.solid, PALETTE.orange.solid, PALETTE.green.solid, PALETTE.purple.solid, PALETTE.pink.solid];
   return (
     <div
-      className={`w-44 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-md backdrop-blur-sm z-10 ${className}`}
+      className={`w-44 overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
     >
-      <p className="text-xs font-semibold text-slate-700">Kelompok TA</p>
-      <div className="mt-2.5 flex flex-col gap-1.5">
+      <div
+        className="px-3 py-1.5 text-[12px] font-semibold text-white"
+        style={{ backgroundColor: PALETTE.slate.solid }}
+      >
+        Kelompok TA
+      </div>
+      <div className="flex flex-col gap-1.5 p-3">
         {members.map((m, i) => (
           <div key={m + i} className="flex items-center gap-2">
             <span
@@ -106,7 +132,7 @@ function GroupCard({ members, className = "" }: { members: string[]; className?:
             >
               {m[0]?.toUpperCase()}
             </span>
-            <span className="text-[11px] text-slate-600 font-medium">{m}</span>
+            <span className="text-[11px] font-medium text-slate-600">{m}</span>
           </div>
         ))}
       </div>
@@ -116,118 +142,39 @@ function GroupCard({ members, className = "" }: { members: string[]; className?:
 
 /**
  * Ilustrasi statis kolaboratif yang menggambarkan tim sedang menyusun dashboard
- * di kanvas tak terbatas.
+ * di kanvas tak terbatas — kartunya meniru gaya NodeShell asli (bilah judul solid,
+ * badan putih, shadow lembut) supaya tidak terasa seperti mockup generik.
  */
 export function CollabIllustration() {
   return (
     <div className="relative hidden h-[34rem] w-full max-w-xl lg:block" aria-hidden="true">
-      {/* Garis-garis Konektor SVG (Solid Tanpa Putus-Putus) */}
+      {/* Garis konektor lembut, meniru garis edge asli kanvas (slate, tanpa panah tegas) */}
       <svg
         className="absolute inset-0 size-full pointer-events-none"
         viewBox="0 0 560 560"
         fill="none"
       >
-        <defs>
-          <marker
-            id="arrow"
-            viewBox="0 0 10 10"
-            refX="8"
-            refY="5"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
-          </marker>
-        </defs>
-
-        {/* Cabang Alur Utama dari Kiri */}
-        <path
-          d="M 40 300 C 110 300, 110 150, 190 150"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-        />
-        <path
-          d="M 40 300 C 110 300, 110 300, 190 300"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-        />
-        <path
-          d="M 40 300 C 110 300, 110 450, 190 450"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-        />
-
-        {/* Garis Penghubung Vertikal / Antar Kartu */}
-        <path d="M 190 180 V 270" stroke="#94a3b8" strokeWidth="1.5" fill="none" />
-        <path
-          d="M 330 150 C 370 150, 370 110, 420 110"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-          markerEnd="url(#arrow)"
-        />
-        <path
-          d="M 330 300 C 370 300, 370 370, 420 370"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-          markerEnd="url(#arrow)"
-        />
-        <path
-          d="M 420 350 V 230"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          fill="none"
-          markerEnd="url(#arrow)"
-        />
+        <path d="M 40 300 C 110 300, 110 150, 190 150" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 40 300 C 110 300, 110 300, 190 300" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 40 300 C 110 300, 110 450, 190 450" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 190 180 V 270" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 330 150 C 370 150, 370 110, 420 110" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 330 300 C 370 300, 370 370, 420 370" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 420 350 V 230" stroke="#cbd5e1" strokeWidth="2" fill="none" />
       </svg>
 
       {/* 1. Card To-Do List & Cursor Adit */}
-      <MiniCard title="To-Do List" accent="#2563eb" className="absolute left-[180px] top-[100px]" />
-      <Cursor
-        color={CURSOR_COLORS.blue}
-        label="Adit"
-        rotate={-25}
-        className="left-[280px] top-[165px]"
-      />
+      <MiniCard title="To-Do List" color="blue" pill="Live" className="absolute left-[180px] top-[100px]" />
+      <Cursor color={CURSOR_COLORS.blue} label="Adit" rotate={-25} className="left-[280px] top-[165px]" />
 
       {/* 2. Card Tracker & Cursor Budi + Clara */}
-      <MiniCard
-        title="Tracker"
-        accent="#ea580c"
-        lines={2}
-        className="absolute left-[180px] top-[260px]"
-      />
-      <Cursor
-        color={CURSOR_COLORS.orange}
-        label="Budi"
-        rotate={0}
-        className="left-[285px] top-[320px]"
-      />
-      <Cursor
-        color={CURSOR_COLORS.green}
-        label="Clara"
-        rotate={20}
-        className="left-[140px] top-[350px]"
-      />
+      <MiniCard title="Tracker" color="orange" lines={2} pill="Live" className="absolute left-[180px] top-[260px]" />
+      <Cursor color={CURSOR_COLORS.orange} label="Budi" rotate={0} className="left-[285px] top-[320px]" />
+      <Cursor color={CURSOR_COLORS.green} label="Clara" rotate={20} className="left-[140px] top-[350px]" />
 
       {/* 3. Card Deadline & Cursor Doni */}
-      <MiniCard
-        title="Deadline"
-        accent="#f59e0b"
-        lines={2}
-        className="absolute left-[180px] top-[410px]"
-      />
-      <Cursor
-        color={CURSOR_COLORS.slate}
-        label="Doni"
-        rotate={35}
-        className="left-[290px] top-[475px]"
-      />
+      <MiniCard title="Deadline" color="yellow" lines={2} pill="Manual" className="absolute left-[180px] top-[410px]" />
+      <Cursor color={CURSOR_COLORS.slate} label="Doni" rotate={35} className="left-[290px] top-[475px]" />
 
       {/* 4. Group Card TA 1 & Avatar Stack */}
       <GroupCard members={["Adit", "Budi", "Clara"]} className="absolute left-[410px] top-[70px]" />
@@ -237,12 +184,7 @@ export function CollabIllustration() {
 
       {/* 5. Group Card TA 2 & Cursor user2 */}
       <GroupCard members={["user2"]} className="absolute left-[410px] top-[330px]" />
-      <Cursor
-        color={CURSOR_COLORS.purple}
-        label="user2"
-        rotate={-10}
-        className="left-[420px] top-[425px]"
-      />
+      <Cursor color={CURSOR_COLORS.purple} label="user2" rotate={-10} className="left-[420px] top-[425px]" />
     </div>
   );
 }

@@ -17,56 +17,40 @@ export function AuthPage() {
   return <AuthScreen />;
 }
 
-// Kertas kotak-kotak (grid paper) latar belakang
-const GRID_BACKGROUND =
-  "linear-gradient(rgba(100,116,139,0.14) 1px, transparent 1px), " +
-  "linear-gradient(90deg, rgba(100,116,139,0.14) 1px, transparent 1px)";
-
 function AuthScreen() {
   const form = useAuthForm();
 
   return (
     <main
-      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-6 py-10 safe-top safe-bottom-lg"
+      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-6 py-10 safe-top safe-bottom-lg bg-background"
       style={{
-        backgroundColor: "#c7d2de",
-        backgroundImage: GRID_BACKGROUND,
-        backgroundSize: "36px 36px",
+        // Titik-titik kanvas tak terbatas — sama persis dengan pola di CanvasSurface,
+        // bukan garis kotak-kotak, supaya halaman login terasa seperti "sebelum masuk kanvas".
+        backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
       }}
     >
-      {/* Soft Radial Overlay */}
+      {/* Glow lembut, pakai warna glow yang sama dengan sisa aplikasi */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 20% 30%, rgba(255,255,255,0.35), transparent), " +
-            "radial-gradient(ellipse 60% 60% at 85% 70%, rgba(148,163,184,0.25), transparent)",
+            "radial-gradient(ellipse 55% 45% at 15% 20%, var(--glow-green), transparent 70%), " +
+            "radial-gradient(ellipse 50% 50% at 90% 80%, var(--glow-blue), transparent 70%)",
+          opacity: 0.5,
         }}
       />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/60" />
 
-      <div
-        className="relative flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8 z-10"
-        style={
-          {
-            "--card": "#ffffff",
-            "--card-foreground": "#0f172a",
-            "--border": "#e2e8f0",
-            "--input": "#f8fafc",
-            "--muted-foreground": "#64748b",
-            "--primary": "#445164",
-            "--primary-foreground": "#ffffff",
-            "--ring": "#445164",
-          } as React.CSSProperties
-        }
-      >
+      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
         {/* Sapaan Teks & Ilustrasi Kiri (Layar Desktop / LG+) */}
         <div className="hidden max-w-xl flex-col lg:flex flex-1">
-          <h1 className="text-5xl font-bold leading-tight tracking-tight text-slate-700">
+          <h1 className="text-5xl font-bold leading-tight tracking-tight text-foreground">
             Selamat Datang
             <br />
             di NoteMe!
           </h1>
-          <p className="mt-3 text-lg text-slate-600">
+          <p className="mt-3 text-lg text-muted-foreground">
             Selamat bergabung menjadi bagian dari NoteMe.
           </p>
 
@@ -78,10 +62,10 @@ function AuthScreen() {
 
         {/* Sapaan Teks Atas (Layar Mobile / HP) */}
         <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-700">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Selamat Datang di NoteMe!
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-muted-foreground">
             Selamat bergabung menjadi bagian dari NoteMe.
           </p>
         </div>
