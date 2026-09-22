@@ -41,6 +41,26 @@ function Cursor({
   );
 }
 
+/** Pil kecil bergaya tombol aksi kartu (mis. "+ Add", "Lihat", "Detail"). */
+function ActionPill({
+  label,
+  color,
+  className = "",
+}: {
+  label: string;
+  color: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`pointer-events-none absolute z-20 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow-sm ${className}`}
+      style={{ backgroundColor: color }}
+    >
+      {label}
+    </span>
+  );
+}
+
 /** Tumpukan avatar bulat kecil (anggota kelompok), warna diturunkan dari palet node. */
 function AvatarStack({ names }: { names: string[] }) {
   const colors = [
@@ -75,12 +95,17 @@ function MiniCard({
   color,
   lines = 3,
   pill,
+  footer,
+  footerColor,
   className = "",
 }: {
   title: string;
   color: keyof typeof PALETTE;
   lines?: number;
   pill?: string;
+  /** Tombol aksi kecil di footer kartu, mis. "+ Add" / "Detail" — meniru referensi. */
+  footer?: string;
+  footerColor?: string;
   className?: string;
 }) {
   const c = PALETTE[color];
@@ -112,6 +137,16 @@ function MiniCard({
             />
           </div>
         ))}
+        {footer && (
+          <div className="mt-0.5 flex justify-end">
+            <span
+              className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-white"
+              style={{ backgroundColor: footerColor ?? c.solid }}
+            >
+              {footer}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -160,109 +195,66 @@ function GroupCard({ members, className = "" }: { members: string[]; className?:
 export function CollabIllustration() {
   return (
     <div className="relative hidden h-[34rem] w-full max-w-xl lg:block" aria-hidden="true">
-      {/* Garis konektor lembut, meniru garis edge asli kanvas (slate, tanpa panah tegas) */}
+      {/* Garis konektor melengkung berwarna, meniru "kabel" penghubung kartu di referensi. */}
       <svg
         className="absolute inset-0 size-full pointer-events-none"
         viewBox="0 0 560 560"
         fill="none"
       >
-        <path
-          d="M 40 300 C 110 300, 110 150, 190 150"
-          stroke="#cbd5e1"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path
-          d="M 40 300 C 110 300, 110 300, 190 300"
-          stroke="#cbd5e1"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path
-          d="M 40 300 C 110 300, 110 450, 190 450"
-          stroke="#cbd5e1"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path d="M 190 180 V 270" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-        <path
-          d="M 330 150 C 370 150, 370 110, 420 110"
-          stroke="#cbd5e1"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path
-          d="M 330 300 C 370 300, 370 370, 420 370"
-          stroke="#cbd5e1"
-          strokeWidth="2"
-          fill="none"
-        />
-        <path d="M 420 350 V 230" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path d="M 190 150 C 300 150, 300 90, 420 90" stroke="#93c5fd" strokeWidth="2.5" />
+        <path d="M 190 300 C 300 300, 320 260, 420 250" stroke="#fdba74" strokeWidth="2.5" />
+        <path d="M 190 410 C 300 410, 320 340, 420 330" stroke="#fdba74" strokeWidth="2.5" />
+        <path d="M 420 150 C 460 150, 460 250, 460 250" stroke="#c4b5fd" strokeWidth="2.5" />
+        <path d="M 420 410 C 460 410, 460 350, 460 350" stroke="#c4b5fd" strokeWidth="2.5" />
       </svg>
 
-      {/* 1. Card To-Do List & Cursor Adit */}
+      {/* 1. Card To-Do List */}
       <MiniCard
         title="To-Do List"
         color="blue"
-        pill="Live"
+        pill="Lihat"
+        footer="+ Add"
         className="absolute left-[180px] top-[100px]"
       />
-      <Cursor
-        color={CURSOR_COLORS.blue}
-        label="Adit"
-        rotate={-25}
-        className="left-[280px] top-[165px]"
-      />
 
-      {/* 2. Card Tracker & Cursor Budi + Clara */}
+      {/* 2. Card Tracker */}
       <MiniCard
         title="Tracker"
         color="orange"
         lines={2}
-        pill="Live"
+        pill="Lihat"
+        footer="+ Buat"
         className="absolute left-[180px] top-[260px]"
       />
-      <Cursor
-        color={CURSOR_COLORS.orange}
-        label="Budi"
-        rotate={0}
-        className="left-[285px] top-[320px]"
-      />
-      <Cursor
-        color={CURSOR_COLORS.green}
-        label="Clara"
-        rotate={20}
-        className="left-[140px] top-[350px]"
-      />
 
-      {/* 3. Card Deadline & Cursor Doni */}
+      {/* 3. Card Deadlines */}
       <MiniCard
-        title="Deadline"
+        title="Deadlines"
         color="yellow"
         lines={2}
-        pill="Manual"
+        pill="Mandiri"
+        footer="Detail"
+        footerColor={PALETTE.slate.solid}
         className="absolute left-[180px] top-[410px]"
       />
-      <Cursor
-        color={CURSOR_COLORS.slate}
-        label="Doni"
-        rotate={35}
-        className="left-[290px] top-[475px]"
+
+      {/* 4. Group Card TA 1 & pil "+ User2" */}
+      <GroupCard
+        members={["Asri", "Budi", "Clara", "Dika"]}
+        className="absolute left-[410px] top-[70px]"
+      />
+      <ActionPill
+        label="+ User2"
+        color={PALETTE.purple.solid}
+        className="left-[430px] top-[228px]"
       />
 
-      {/* 4. Group Card TA 1 & Avatar Stack */}
-      <GroupCard members={["Adit", "Budi", "Clara"]} className="absolute left-[410px] top-[70px]" />
-      <div className="absolute left-[425px] top-[180px] z-10">
-        <AvatarStack names={["A", "B", "C"]} />
-      </div>
-
-      {/* 5. Group Card TA 2 & Cursor user2 */}
+      {/* 5. Group Card TA 2 & pil "+ User2" */}
       <GroupCard members={["user2"]} className="absolute left-[410px] top-[330px]" />
-      <Cursor
-        color={CURSOR_COLORS.purple}
-        label="user2"
-        rotate={-10}
-        className="left-[420px] top-[425px]"
+      <ActionPill
+        label="+ User2"
+        color={PALETTE.purple.solid}
+        className="left-[430px] top-[420px]"
       />
     </div>
   );

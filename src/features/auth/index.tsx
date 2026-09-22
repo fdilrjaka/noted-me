@@ -3,6 +3,7 @@ import { useSession } from "@/hooks/useSession";
 import { useAuthForm } from "./hooks/useAuthForm";
 import { AuthForm } from "./components/AuthForm";
 import { CollabIllustration } from "./components/CollabIllustration";
+import { AuthDecorations } from "./components/AuthDecorations";
 
 /**
  * Halaman login mandiri — ini satu-satunya tempat untuk masuk/daftar. Tidak ada halaman
@@ -30,6 +31,8 @@ function AuthScreen() {
         backgroundSize: "24px 24px",
       }}
     >
+      <AuthDecorations />
+
       {/* Glow lembut, pakai warna glow yang sama dengan sisa aplikasi */}
       <div
         className="pointer-events-none absolute inset-0"

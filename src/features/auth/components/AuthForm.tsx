@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, UserPlus, LogIn, KeyRound, ShieldCheck } from "lucide-react";
 import type { useAuthForm } from "../hooks/useAuthForm";
 import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
@@ -50,6 +50,8 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
         : mode === "forgot"
           ? "Kirim kode"
           : "Verifikasi";
+  const TitleIcon =
+    mode === "in" ? LogIn : mode === "up" ? UserPlus : mode === "forgot" ? KeyRound : ShieldCheck;
 
   const enterOn = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") void submit();
@@ -58,9 +60,12 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   if (mode === "verify") {
     return (
       <div className={CARD}>
-        <h2 className="text-muted-foreground text-sm font-semibold mb-1 uppercase tracking-wider">
-          {title}
-        </h2>
+        <div className="mb-1 flex items-center gap-3">
+          <span className="flex size-10 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
+            <TitleIcon className="size-5" />
+          </span>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">{title}</h2>
+        </div>
         <p className="text-muted-foreground text-sm mb-6">
           Masukkan kode 6 digit yang dikirim ke{" "}
           <span className="font-semibold text-foreground">{pendingEmail}</span>.
@@ -124,9 +129,12 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
   return (
     <div className={CARD}>
-      <h2 className="text-muted-foreground text-sm font-semibold mb-1 uppercase tracking-wider">
-        {title}
-      </h2>
+      <div className="mb-1 flex items-center gap-3">
+        <span className="flex size-10 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
+          <TitleIcon className="size-5" />
+        </span>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">{title}</h2>
+      </div>
       <p className="text-muted-foreground text-sm mb-6">
         {mode === "forgot"
           ? "Masukkan email akun kamu. Kami kirim kode verifikasi untuk mengatur ulang password."
