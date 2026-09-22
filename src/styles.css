@@ -153,3 +153,14 @@ html[data-theme="dark"] {
     font-size: max(16px, 1em);
   }
 }
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-color: #F8FAFC; /* Slate-50 */
+    background-image: 
+      linear-gradient(to right, #E2E8F0 1px, transparent 1px),
+      linear-gradient(to bottom, #E2E8F0 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center center;
+  }
+}
