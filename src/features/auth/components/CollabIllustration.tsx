@@ -1,128 +1,59 @@
 import React from "react";
-import { PALETTE } from "@/features/canvas/palette";
-
-const CURSOR_COLORS = {
-  blue: PALETTE.blue.solid,
-  orange: PALETTE.orange.solid,
-  green: PALETTE.green.solid,
-  purple: PALETTE.purple.solid,
-  slate: PALETTE.slate.solid,
-} as const;
-
-/** Panah kursor kecil bergaya "multiplayer cursor" dengan label nama di sampingnya. */
-function Cursor({
-  color,
-  label,
-  className = "",
-  rotate = -20,
-}: {
-  color: string;
-  label: string;
-  className?: string;
-  rotate?: number;
-}) {
-  return (
-    <div className={`pointer-events-none absolute flex items-start gap-1.5 z-20 ${className}`}>
-      <svg
-        viewBox="0 0 24 24"
-        className="mt-0.5 size-5 flex-none drop-shadow-sm"
-        style={{ transform: `rotate(${rotate}deg)` }}
-        fill={color}
-      >
-        <path d="M4 2l14 6.2-5.8 1.7-1.3 5.9L4 2z" stroke="white" strokeWidth="1" />
-      </svg>
-      <span
-        className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm"
-        style={{ backgroundColor: color }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-/** Pil kecil bergaya tombol aksi kartu (mis. "+ Add", "Lihat", "Detail"). */
-function ActionPill({
-  label,
-  color,
-  className = "",
-  style,
-}: {
-  label: string;
-  color: string;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <span
-      className={`pointer-events-none z-20 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow-sm ${className}`}
-      style={{ ...style, backgroundColor: color }}
-    >
-      {label}
-    </span>
-  );
-}
+import { CheckSquare, BarChart2, Calendar, Users, User, GripVertical } from "lucide-react";
 
 /**
- * Kartu mini bergaya kartu node kanvas asli: bilah judul solid berwarna + badan putih,
- * bukan kotak generik dengan border tipis + garis aksen — supaya konsisten dengan
- * NodeShell yang dipakai di dashboard/kanvas sungguhan.
+ * Kartu mini bergaya node kanvas tak terbatas NoteMe.
+ * Didesain lebih profesional, bersih, dan modern mengikuti referensi visual.
  */
 function MiniCard({
   title,
-  color,
-  lines = 3,
+  icon: Icon,
+  headerBg,
   pill,
+  pillBg = "bg-white/20",
+  pillText = "text-white",
+  children,
   footer,
-  footerColor,
+  footerBg,
   className = "",
   style,
 }: {
   title: string;
-  color: keyof typeof PALETTE;
-  lines?: number;
+  icon?: React.ComponentType<{ className?: string }>;
+  headerBg: string;
   pill?: string;
-  /** Tombol aksi kecil di footer kartu, mis. "+ Add" / "Detail" — meniru referensi. */
+  pillBg?: string;
+  pillText?: string;
+  children: React.ReactNode;
   footer?: string;
-  footerColor?: string;
+  footerBg?: string;
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const c = PALETTE[color];
   return (
     <div
-      className={`overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08),0_8px_10px_-6px_rgba(0,0,0,0.04)] border border-slate-100/90 z-10 transition-transform duration-200 hover:-translate-y-0.5 ${className}`}
       style={style}
     >
-      <div
-        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white"
-        style={{ backgroundColor: c.solid }}
-      >
-        <span className="truncate">{title}</span>
+      <div className={`flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-white ${headerBg}`}>
+        <div className="flex items-center gap-1.5 truncate">
+          {Icon && <Icon className="size-3.5 shrink-0" />}
+          <span>{title}</span>
+        </div>
         {pill && (
-          <span className="ml-auto flex-none rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-semibold">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${pillBg} ${pillText}`}>
             {pill}
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-1.5 p-3">
-        {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span
-              className="size-2.5 flex-none rounded-[3px] border-2"
-              style={{ borderColor: c.solid, backgroundColor: i === 0 ? c.solid : "transparent" }}
-            />
-            <span
-              className="h-1.5 rounded-full"
-              style={{ width: `${75 - i * 15}%`, backgroundColor: c.soft }}
-            />
-          </div>
-        ))}
+      <div className="flex flex-col gap-2 p-3.5">
+        {children}
         {footer && (
-          <div className="mt-0.5 flex justify-end">
+          <div className="mt-1 flex justify-end">
             <span
-              className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-white"
-              style={{ backgroundColor: footerColor ?? c.solid }}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow-sm ${
+                footerBg ?? headerBg
+              }`}
             >
               {footer}
             </span>
@@ -133,211 +64,270 @@ function MiniCard({
   );
 }
 
-function GroupCard({
-  members,
-  className = "",
-  style,
-}: {
-  members: string[];
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  // Tidak pakai hijau & oranye gelap (kebaca "merah gelap" di layar kecil) —
-  // avatar cukup biru, ungu, pink, kuning, dan abu supaya tetap kontras & cerah.
-  const colors = [
-    PALETTE.blue.solid,
-    PALETTE.purple.solid,
-    PALETTE.pink.solid,
-    PALETTE.yellow.solid,
-    PALETTE.slate.solid,
-  ];
-  return (
-    <div
-      className={`overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
-      style={style}
-    >
-      <div
-        className="px-3 py-1.5 text-[12px] font-semibold text-white"
-        style={{ backgroundColor: PALETTE.slate.solid }}
-      >
-        Kelompok TA
-      </div>
-      <div className="flex flex-col gap-1.5 p-3">
-        {members.map((m, i) => (
-          <div key={m + i} className="flex items-center gap-2">
-            <span
-              className="flex size-4.5 flex-none items-center justify-center rounded-full text-[9px] font-bold text-white"
-              style={{ backgroundColor: colors[i % colors.length] }}
-            >
-              {m[0]?.toUpperCase()}
-            </span>
-            <span className="text-[11px] font-medium text-slate-600">{m}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+const VIEW_W = 660;
+const VIEW_H = 480;
+
+// Posisi & dimensi node-node kanvas
+const CATATAN = { x: 30, y: 220, w: 70, h: 28 };
+const TODO = { x: 140, y: 30, w: 180, h: 142 };
+const TRACKER = { x: 130, y: 195, w: 186, h: 132 };
+const DEADLINES = { x: 140, y: 350, w: 180, h: 122 };
+
+const GROUP1 = { x: 380, y: 20, w: 180, h: 186 };
+const GROUP2 = { x: 380, y: 270, w: 180, h: 110 };
+
+const PILL1 = { x: 420, y: GROUP1.y + GROUP1.h + 12 };
+const PILL2 = { x: 420, y: GROUP2.y + GROUP2.h + 12 };
+
+// Target masuk ke kartu login di kanan
+const AUTH_TARGET = { x: 650, y: 110 };
+
+function rightMid(b: { x: number; y: number; w: number; h: number }) {
+  return { x: b.x + b.w, y: b.y + b.h / 2 };
+}
+function leftMid(b: { x: number; y: number; w: number; h: number }) {
+  return { x: b.x, y: b.y + b.h / 2 };
 }
 
-/**
- * Ilustrasi statis kolaboratif yang menggambarkan tim sedang menyusun dashboard
- * di kanvas tak terbatas — kartunya meniru gaya NodeShell asli (bilah judul solid,
- * badan putih, shadow lembut) supaya tidak terasa seperti mockup generik.
- */
-/** Kotak posisi (x, y, lebar, tinggi) tiap kartu — dipakai bareng untuk penempatan
- * kartu ITU SENDIRI dan untuk menghitung titik ujung garis konektor, supaya garis
- * selalu nempel pas di tepi kartu (tidak ada celah/putus seperti sebelumnya). */
-const TODO = { x: 180, y: 96, w: 176, h: 156 };
-const TRACKER = { x: 180, y: 268, w: 176, h: 132 };
-const DEADLINES = { x: 180, y: 416, w: 176, h: 132 };
-const GROUP1 = { x: 424, y: 64, w: 176, h: 176 };
-const GROUP2 = { x: 424, y: 334, w: 176, h: 92 };
-const PILL1 = { x: 452, y: GROUP1.y + GROUP1.h + 14 };
-const PILL2 = { x: 452, y: GROUP2.y + GROUP2.h + 14 };
-const VIEW_W = 640;
-const VIEW_H = 580;
-
-const rightMid = (b: { x: number; y: number; w: number; h: number }) => ({
-  x: b.x + b.w,
-  y: b.y + b.h / 2,
-});
-const leftMid = (b: { x: number; y: number; w: number; h: number }) => ({
-  x: b.x,
-  y: b.y + b.h / 2,
-});
-
-/** Garis kurva mulus dari tepi kanan kartu A ke tepi kiri kartu B — kontrol
- * poin di tengah horizontal supaya lengkungannya rapi seperti "kabel" pada referensi. */
-function connectorPath(from: { x: number; y: number }, to: { x: number; y: number }) {
-  const midX = (from.x + to.x) / 2;
-  return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`;
+function curvePath(from: { x: number; y: number }, to: { x: number; y: number }, curviness = 0.5) {
+  const dx = (to.x - from.x) * curviness;
+  return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y}, ${to.x - dx} ${to.y}, ${to.x} ${to.y}`;
 }
 
-/** Titik bulat kecil di ujung garis konektor — penanda kalau garisnya sudah
- * "tersambung" pas ke tepi kartu tujuan, bukan cuma berhenti begitu saja. */
 function ConnectorDot({ x, y, color }: { x: number; y: number; color: string }) {
   return (
-    <>
+    <g>
       <circle cx={x} cy={y} r="5" fill="white" />
       <circle cx={x} cy={y} r="5" fill="none" stroke={color} strokeWidth="2.5" />
       <circle cx={x} cy={y} r="2" fill={color} />
-    </>
+    </g>
   );
 }
 
 export function CollabIllustration() {
-  const todoStart = rightMid(TODO);
-  const todoEnd = leftMid(GROUP1);
-  const trackerStart = rightMid(TRACKER);
-  const trackerEnd = leftMid(GROUP2);
-  const deadlinesStart = rightMid(DEADLINES);
-  const deadlinesEnd = leftMid(GROUP2);
-  const group1PillStart = { x: GROUP1.x + 56, y: GROUP1.y + GROUP1.h };
-  const group1PillEnd = { x: GROUP1.x + 56, y: PILL1.y + 8 };
-  const group2PillStart = { x: GROUP2.x + 56, y: GROUP2.y + GROUP2.h };
-  const group2PillEnd = { x: GROUP2.x + 56, y: PILL2.y + 8 };
+  const catatanRight = rightMid(CATATAN);
+  const trackerLeft = leftMid(TRACKER);
+  const trackerRight = rightMid(TRACKER);
 
-  const todoToGroup1 = connectorPath(todoStart, todoEnd);
-  const trackerToGroup2 = connectorPath(trackerStart, trackerEnd);
-  const deadlinesToGroup2 = connectorPath(deadlinesStart, deadlinesEnd);
-  const group1ToPill1 = `M ${group1PillStart.x} ${group1PillStart.y} V ${group1PillEnd.y}`;
-  const group2ToPill2 = `M ${group2PillStart.x} ${group2PillStart.y} V ${group2PillEnd.y}`;
+  const todoRight = rightMid(TODO);
+  const group1Left = leftMid(GROUP1);
+  const group1Right = rightMid(GROUP1);
 
-  const BLUE = "#93c5fd";
-  const ORANGE = "#fdba74";
-  const PURPLE = "#c4b5fd";
+  const deadlinesRight = rightMid(DEADLINES);
+  const group2Left = leftMid(GROUP2);
+
+  const catatanToTracker = curvePath(catatanRight, trackerLeft);
+  const todoToGroup1 = curvePath(todoRight, group1Left);
+  const trackerToGroup2 = curvePath(trackerRight, group2Left);
+  const deadlinesToGroup2 = curvePath(deadlinesRight, group2Left);
+  const group1ToAuth = curvePath(group1Right, AUTH_TARGET, 0.6);
+
+  const BLUE = "#3b82f6";
+  const ORANGE = "#f97316";
+  const PURPLE = "#8b5cf6";
 
   return (
     <div
-      className="relative hidden w-full max-w-2xl lg:block"
+      className="relative hidden w-full max-w-2xl lg:block select-none pointer-events-none"
       style={{ height: VIEW_H }}
       aria-hidden="true"
     >
-      {/* Garis konektor melengkung berwarna, meniru "kabel" penghubung kartu di referensi —
-          titik ujungnya dihitung dari kotak posisi kartu di atas, jadi selalu nempel pas dan
-          nyambung utuh (bukan putus-putus). Tiap ujung dikasih bulatan kecil sebagai penanda
-          sudah tersambung ke kartu tujuannya. */}
+      {/* Garis-garis kabel konektor antar node yang presisi & rapi */}
       <svg
-        className="absolute inset-0 size-full pointer-events-none"
+        className="absolute inset-0 size-full overflow-visible pointer-events-none"
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         fill="none"
       >
-        <path d={todoToGroup1} stroke={BLUE} strokeWidth="2.5" strokeLinecap="round" />
-        <path d={trackerToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
-        <path d={deadlinesToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
-        <path d={group1ToPill1} stroke={PURPLE} strokeWidth="2.5" strokeLinecap="round" />
-        <path d={group2ToPill2} stroke={PURPLE} strokeWidth="2.5" strokeLinecap="round" />
+        <defs>
+          <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#a855f7" />
+          </linearGradient>
+        </defs>
 
-        <ConnectorDot x={todoStart.x} y={todoStart.y} color={BLUE} />
-        <ConnectorDot x={todoEnd.x} y={todoEnd.y} color={BLUE} />
-        <ConnectorDot x={trackerStart.x} y={trackerStart.y} color={ORANGE} />
-        <ConnectorDot x={trackerEnd.x} y={trackerEnd.y} color={ORANGE} />
-        <ConnectorDot x={deadlinesStart.x} y={deadlinesStart.y} color={ORANGE} />
-        <ConnectorDot x={deadlinesEnd.x} y={deadlinesEnd.y} color={ORANGE} />
-        <ConnectorDot x={group1PillStart.x} y={group1PillStart.y} color={PURPLE} />
-        <ConnectorDot x={group1PillEnd.x} y={group1PillEnd.y} color={PURPLE} />
-        <ConnectorDot x={group2PillStart.x} y={group2PillStart.y} color={PURPLE} />
-        <ConnectorDot x={group2PillEnd.x} y={group2PillEnd.y} color={PURPLE} />
+        {/* Kabel kiri dari Catatan ke Tracker */}
+        <path d="M 0 234 Q 20 234, 30 234" stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+        <path d={catatanToTracker} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* Kabel To-Do ke Kelompok TA 1 */}
+        <path d={todoToGroup1} stroke={BLUE} strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* Kabel Tracker ke Kelompok TA 2 */}
+        <path d={trackerToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* Kabel Deadlines ke Kelompok TA 2 */}
+        <path d={deadlinesToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* Kabel vertikal dari Group ke Pill + User2 */}
+        <path
+          d={`M ${GROUP1.x + 60} ${GROUP1.y + GROUP1.h} V ${PILL1.y + 6}`}
+          stroke={PURPLE}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d={`M ${GROUP2.x + 60} ${GROUP2.y + GROUP2.h} V ${PILL2.y + 6}`}
+          stroke={PURPLE}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+
+        {/* Kabel utama dari Kelompok TA 1 mengalir mulus ke arah Form Login di kanan */}
+        <path d={group1ToAuth} stroke="url(#purpleGradient)" strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* Dots konektor */}
+        <ConnectorDot x={catatanRight.x} y={catatanRight.y} color={ORANGE} />
+        <ConnectorDot x={trackerLeft.x} y={trackerLeft.y} color={ORANGE} />
+        <ConnectorDot x={todoRight.x} y={todoRight.y} color={BLUE} />
+        <ConnectorDot x={group1Left.x} y={group1Left.y} color={BLUE} />
+        <ConnectorDot x={group1Right.x} y={group1Right.y} color={PURPLE} />
+        <ConnectorDot x={trackerRight.x} y={trackerRight.y} color={ORANGE} />
+        <ConnectorDot x={group2Left.x} y={group2Left.y} color={ORANGE} />
+        <ConnectorDot x={deadlinesRight.x} y={deadlinesRight.y} color={ORANGE} />
       </svg>
 
-      {/* 1. Card To-Do List */}
+      {/* 0. Pil Kecil "Catatan" di sisi kiri */}
+      <div
+        className="absolute z-10 flex items-center justify-center rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white shadow-sm"
+        style={{ left: CATATAN.x, top: CATATAN.y }}
+      >
+        Catatan
+      </div>
+
+      {/* 1. Card To-Do List (Biru) */}
       <MiniCard
         title="To-Do List"
-        color="blue"
+        icon={CheckSquare}
+        headerBg="bg-blue-600"
         pill="Lihat"
+        pillBg="bg-blue-500/80"
         footer="+ Add"
+        footerBg="bg-blue-600"
         className="absolute"
         style={{ left: TODO.x, top: TODO.y, width: TODO.w }}
-      />
+      >
+        <div className="space-y-2">
+          {[80, 65, 45].map((w, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-blue-500 shrink-0" />
+              <span className="h-1.5 rounded-full bg-slate-200" style={{ width: `${w}%` }} />
+            </div>
+          ))}
+        </div>
+      </MiniCard>
 
-      {/* 2. Card Tracker */}
+      {/* 2. Card Tracker (Oranye) */}
       <MiniCard
         title="Tracker"
-        color="orange"
-        lines={2}
+        icon={BarChart2}
+        headerBg="bg-orange-500"
         pill="Lihat"
+        pillBg="bg-orange-400/80"
         footer="+ Buat"
+        footerBg="bg-orange-500"
         className="absolute"
         style={{ left: TRACKER.x, top: TRACKER.y, width: TRACKER.w }}
-      />
+      >
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-orange-500 shrink-0" />
+            <span className="h-1.5 w-3/4 rounded-full bg-orange-100" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-orange-500 shrink-0" />
+            <span className="h-1.5 w-1/2 rounded-full bg-orange-100" />
+          </div>
+        </div>
+      </MiniCard>
 
-      {/* 3. Card Deadlines */}
+      {/* 3. Card Deadlines (Kuning / Amber) */}
       <MiniCard
         title="Deadlines"
-        color="yellow"
-        lines={2}
+        icon={Calendar}
+        headerBg="bg-amber-500"
         pill="Mandiri"
+        pillBg="bg-amber-400/80"
         footer="Detail"
-        footerColor={PALETTE.slate.solid}
+        footerBg="bg-slate-700"
         className="absolute"
         style={{ left: DEADLINES.x, top: DEADLINES.y, width: DEADLINES.w }}
-      />
+      >
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="h-1.5 w-4/5 rounded-full bg-amber-100" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="h-1.5 w-2/3 rounded-full bg-amber-100" />
+          </div>
+        </div>
+      </MiniCard>
 
-      {/* 4. Group Card TA 1 & pil "+ User2" */}
-      <GroupCard
-        members={["Asri", "Budi", "Clara", "Dika"]}
-        className="absolute"
+      {/* 4. Group Card TA 1 (Ungu) */}
+      <div
+        className="absolute z-10 overflow-hidden rounded-2xl bg-white shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08),0_8px_10px_-6px_rgba(0,0,0,0.04)] border border-slate-100/90"
         style={{ left: GROUP1.x, top: GROUP1.y, width: GROUP1.w }}
-      />
-      <ActionPill
-        label="+ User2"
-        color={PALETTE.purple.solid}
-        className="absolute"
+      >
+        <div className="flex items-center gap-1.5 bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white">
+          <Users className="size-3.5 shrink-0" />
+          <span>Kelompok TA</span>
+        </div>
+        <div className="flex flex-col gap-2 p-3">
+          {[
+            { initial: "A", name: "Asri", bg: "bg-blue-500" },
+            { initial: "B", name: "Budi", bg: "bg-orange-500" },
+            { initial: "C", name: "Clara", bg: "bg-emerald-500" },
+            { initial: "D", name: "Dika", bg: "bg-purple-600" },
+          ].map((m) => (
+            <div key={m.name} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-xs ${m.bg}`}
+                >
+                  {m.initial}
+                </span>
+                <span className="text-[12px] font-medium text-slate-700">{m.name}</span>
+              </div>
+              <GripVertical className="size-3 text-slate-300" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div
+        className="absolute z-10 flex items-center justify-center rounded-full bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm"
         style={{ left: PILL1.x, top: PILL1.y }}
-      />
+      >
+        + User2
+      </div>
 
-      {/* 5. Group Card TA 2 & pil "+ User2" */}
-      <GroupCard
-        members={["user2"]}
-        className="absolute"
+      {/* 5. Group Card TA 2 (Slate/Navy) */}
+      <div
+        className="absolute z-10 overflow-hidden rounded-2xl bg-white shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08),0_8px_10px_-6px_rgba(0,0,0,0.04)] border border-slate-100/90"
         style={{ left: GROUP2.x, top: GROUP2.y, width: GROUP2.w }}
-      />
-      <ActionPill
-        label="+ User2"
-        color={PALETTE.purple.solid}
-        className="absolute"
+      >
+        <div className="flex items-center gap-1.5 bg-slate-700 px-3.5 py-2 text-xs font-semibold text-white">
+          <User className="size-3.5 shrink-0" />
+          <span>Kelompok TA</span>
+        </div>
+        <div className="flex flex-col gap-2 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex size-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white shadow-xs">
+                U
+              </span>
+              <span className="text-[12px] font-medium text-slate-700">user2</span>
+            </div>
+            <GripVertical className="size-3 text-slate-300" />
+          </div>
+        </div>
+      </div>
+      <div
+        className="absolute z-10 flex items-center justify-center rounded-full bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm"
         style={{ left: PILL2.x, top: PILL2.y }}
-      />
+      >
+        + User2
+      </div>
     </div>
   );
 }
