@@ -4,6 +4,7 @@ import { clearSyncedVersions } from "@/storage/remote/versionTracker";
 import { setConflicts } from "@/storage/remote/conflictResolver";
 import { revokeAllResolved } from "@/lib/noteme/imageResolver";
 import { clearFolders } from "@/lib/noteme/folderStore";
+import { clearCanvasLocal } from "@/lib/noteme/canvasStore";
 import { clearScheduleLocal, getScheduleData, loadScheduleLocal } from "@/lib/noteme/scheduleStore";
 import { clearTodoLocal, getTodoData, loadTodoLocal } from "@/lib/noteme/todoStore";
 
@@ -87,6 +88,7 @@ async function doEnsure(userId: string): Promise<void> {
   clearTodoLocal();
   clearScheduleLocal();
   clearFolders();
+  clearCanvasLocal();
   clearSyncedVersions();
   revokeAllResolved();
   writeOwner(userId);

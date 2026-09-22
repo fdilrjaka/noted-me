@@ -4,17 +4,18 @@ Aplikasi catatan kuliah **offline-first**: mata kuliah, halaman per pertemuan, e
 gambar, To Do, jadwal kuliah, tempat sampah, ekspor/impor, dan sinkronisasi antar perangkat lewat akun.
 Catatan tetap bisa dibuka dan diedit tanpa jaringan; akun hanya dibutuhkan untuk sinkronisasi.
 
-This project was built with [Lovable](https://lovable.dev).
+This project was originally scaffolded with [Lovable](https://lovable.dev) and has since been made
+standalone: it builds, runs, and deploys entirely outside Lovable.
 
-**Live app**: https://noted-me.lovable.app
+## Arsitektur
 
-## Build with Lovable
+```
+GitHub  →  Cloudflare Workers  →  NoteMe App  →  Supabase (Auth, Postgres, Storage, Realtime)
+```
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/e30382a3-c099-4eca-9404-e427eb950a87).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Source code tinggal di GitHub, di-deploy sebagai Cloudflare Worker (lewat Nitro), dan backend-nya
+adalah project Supabase pribadi. Tidak ada dependency runtime ke Lovable Cloud, Lovable hosting,
+Lovable preview, atau telemetry Lovable.
 
 ## Stack
 
@@ -41,7 +42,16 @@ npm run dev
 | `VITE_SUPABASE_PROJECT_ID`                            | browser    | Id proyek                                                                       |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`            | server     | Verifikasi token dan cek password di server function                            |
 | `SUPABASE_SERVICE_ROLE_KEY` **(rahasia)**             | server     | Mengganti password lewat kode pemulihan; melewati RLS, jangan pernah ke browser |
-| `LOVABLE_CRON_SECRET`, `LOVABLE_CRON_SECRET_PREVIOUS` | server     | Opsional, autentikasi endpoint cron                                             |
+| `CRON_SECRET`, `CRON_SECRET_PREVIOUS`                 | server     | Opsional, autentikasi endpoint cron (belum dipakai route manapun)               |
+
+Di production (Cloudflare Workers), set variabel di atas lewat Wrangler:
+
+```sh
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
+
+Variabel non-secret (URL, project id, publishable key) bisa masuk ke `[vars]` di `wrangler.json`
+(digenerate otomatis oleh Nitro, lihat `nitro.config.ts`) atau di-set lewat dashboard Cloudflare.
 
 ## Skrip
 
@@ -67,7 +77,7 @@ src/
     remote/          Pull dengan kursor jam server, resolusi konflik, pemetaan baris
     sync-engine/     Alur sync dan pemicunya
   lib/noteme/        Store To Do / jadwal / folder, sanitasi HTML, kebijakan kredensial
-  integrations/      Klien Supabase (digenerate Lovable, jangan diedit langsung)
+  integrations/      Klien Supabase
   import-export/     Ekspor (JSON, Markdown, PDF) dan impor backup
 public/              PWA: manifest, ikon, service worker
 supabase/migrations/ Skema database
@@ -112,8 +122,29 @@ penulisan localStorage. Tiap file berjalan di proses terpisah dengan Supabase pa
 Yang **belum** otomatis: integrasi dengan Postgres/PostgREST/Auth sungguhan dan runtime Workers
 (sudah diverifikasi manual saat pengembangan, belum ada di CI).
 
+## Deploy ke Cloudflare Workers
+
+Build di-generate oleh Nitro (target `cloudflare-module`, lihat `nitro.config.ts`) dan mengeluarkan
+worker siap deploy di `.output/server/`.
+
+```sh
+npm run build      # vite build -> .output/server/{index.mjs, wrangler.json}
+npm run deploy      # wrangler deploy --config .output/server/wrangler.json
+```
+
+Sebelum deploy pertama kali:
+
+1. `npx wrangler login`
+2. Set secret server-only: `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY`
+3. Setelah domain production tersedia, tambahkan domain tersebut ke **Redirect URLs** / allowed
+   origins di Supabase Auth (Authentication → URL Configuration), tanpa menghapus domain lama sampai
+   deployment baru terverifikasi.
+
+`npm run cf:dev` menjalankan build lalu `wrangler dev` untuk uji coba mendekati environment Workers
+sungguhan secara lokal.
+
 ## Catatan lockfile
 
-Ada dua lockfile: `package-lock.json` (npm, dipakai README dan CI) dan `bun.lock` (dikelola Lovable;
-berisi URL registry privat Lovable sehingga tidak bisa dipasang dari luar). Keduanya sengaja
-dibiarkan; jangan hapus salah satunya tanpa memastikan alur Lovable Anda.
+Hanya `package-lock.json` (npm) yang dipakai untuk instalasi dan CI. Lockfile `bun.lock` (dulunya
+dikelola Lovable, menunjuk ke registry privat Lovable) sudah dihapus karena proyek ini tidak lagi
+memakai bun/Lovable untuk instalasi dependency.

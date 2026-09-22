@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   CalendarDays,
+  LayoutDashboard,
   LayoutGrid,
   NotebookText,
   PanelLeftClose,
@@ -14,6 +15,7 @@ import { BrandLogo } from "@/components/noteme/BrandMark";
 import { setSidebarExpanded, toggleSidebar, useSidebarExpanded } from "@/lib/noteme/sidebarStore";
 
 const mainItems: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/", label: "Notes", icon: NotebookText },
   { to: "/todo", label: "To Do List", icon: LayoutGrid },
   { to: "/schedule", label: "Jadwal", icon: CalendarDays },

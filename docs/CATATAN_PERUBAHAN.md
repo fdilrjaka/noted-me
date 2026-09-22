@@ -66,3 +66,8 @@ Akun yang sudah ada belum punya kode: pengguna perlu membuatnya di Pengaturan se
   tidak pernah dirender (halaman subject tidak memasang `BottomNav`) dan tombolnya tidak punya handler,
   tapi ini fitur mobile yang belum selesai dan tercampur dalam komponen navigasi utama.
 - **Baris "segera hadir" di Pengaturan**: keputusan produk, bukan bug.
+
+## Migrasi standalone (lepas dari Lovable, Cloudflare Workers)
+
+- Dilakukan sesuai `Prompt_Migrasi_NoteMe_Standalone.md`. Ringkasan lengkap ada di laporan migrasi
+  yang menyertai commit ini.

@@ -2,7 +2,7 @@
   "name": "noteme-tests",
   "private": true,
   "type": "module",
-  "description": "Tes logika & UI NoteMe. Sengaja punya package.json sendiri agar dependensi tes tidak menyentuh lockfile proyek utama (bun.lock dikelola Lovable).",
+  "description": "Tes logika & UI NoteMe. Sengaja punya package.json sendiri agar dependensi tes tidak menyentuh lockfile proyek utama.",
   "scripts": {
     "test": "tsx --tsconfig ./tsconfig.json --test --test-concurrency=1 \"./**/*.test.mts\""
   },
