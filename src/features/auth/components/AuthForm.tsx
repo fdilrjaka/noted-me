@@ -1,33 +1,14 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import type { useAuthForm } from "../hooks/useAuthForm";
 import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
 
+const INPUT_ICON =
+  "glass-input w-full rounded-2xl py-3 pl-11 pr-4 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 const INPUT =
   "glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.78-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.82Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.88-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.26v3.11C3.24 21.3 7.28 24 12 24Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.27 14.28A7.19 7.19 0 0 1 4.9 12c0-.79.14-1.56.37-2.28V6.61H1.26A11.98 11.98 0 0 0 0 12c0 1.93.46 3.76 1.26 5.39l4.01-3.11Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.23 0 12 0 7.28 0 3.24 2.7 1.26 6.61l4.01 3.11C6.22 6.86 8.87 4.75 12 4.75Z"
-      />
-    </svg>
-  );
-}
 
 export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   const {
@@ -43,16 +24,28 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
     setOtp,
     busy,
     submit,
-    signInWithGoogle,
     resendOtp,
     pendingEmail,
     verifyFor,
   } = form;
+  const [showPassword, setShowPassword] = useState(false);
 
   const title =
-    mode === "in" ? "Masuk" : mode === "up" ? "Buat akun" : mode === "forgot" ? "Lupa password" : "Verifikasi email";
+    mode === "in"
+      ? "Masuk"
+      : mode === "up"
+        ? "Buat akun"
+        : mode === "forgot"
+          ? "Lupa password"
+          : "Verifikasi email";
   const action =
-    mode === "in" ? "Masuk" : mode === "up" ? "Daftar" : mode === "forgot" ? "Kirim kode" : "Verifikasi";
+    mode === "in"
+      ? "Masuk"
+      : mode === "up"
+        ? "Daftar"
+        : mode === "forgot"
+          ? "Kirim kode"
+          : "Verifikasi";
   const enterOn = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") void submit();
   };
@@ -129,53 +122,54 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
       <p className="mt-1 text-sm text-muted-foreground">
         {mode === "forgot"
           ? "Masukkan email akun kamu. Kami kirim kode verifikasi untuk mengatur ulang password."
-          : "Catatan tetap berjalan offline. Akun hanya untuk sinkronisasi antar perangkat."}
+          : "Selamat bergabung menjadi bagian dari NoteMe."}
       </p>
 
-      <button
-        type="button"
-        onClick={() => void signInWithGoogle()}
-        disabled={busy}
-        className="press mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-background py-3 text-sm font-semibold active:scale-95 disabled:opacity-60"
-      >
-        <GoogleIcon />
-        Lanjutkan dengan Google
-      </button>
-
-      <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-        <div className="h-px flex-1 bg-border" />
-        atau
-        <div className="h-px flex-1 bg-border" />
+      <div className="relative mt-5">
+        <Mail className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={mode === "forgot" ? enterOn : undefined}
+          placeholder="E-mail"
+          type="email"
+          autoCapitalize="none"
+          autoComplete="email"
+          className={INPUT_ICON}
+        />
       </div>
 
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={mode === "forgot" ? enterOn : undefined}
-        placeholder="Email"
-        type="email"
-        autoCapitalize="none"
-        autoComplete="email"
-        className={INPUT}
-      />
-
       {mode !== "forgot" && (
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={enterOn}
-          type="password"
-          placeholder="Password"
-          autoComplete={mode === "in" ? "current-password" : "new-password"}
-          className={`${INPUT} mt-2`}
-        />
+        <div className="relative mt-2">
+          <Lock className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={enterOn}
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            autoComplete={mode === "in" ? "current-password" : "new-password"}
+            className={`${INPUT_ICON} pr-11`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="size-4.5" /> : <Eye className="size-4.5" />}
+          </button>
+        </div>
       )}
 
-      {mode !== "in" && mode !== "forgot" && <PasswordHint password={password} className="mt-3 px-1" />}
+      {mode !== "in" && mode !== "forgot" && (
+        <PasswordHint password={password} className="mt-3 px-1" />
+      )}
 
       {mode === "up" && (
         <p className="mt-3 px-1 text-xs text-muted-foreground">
-          Setelah mendaftar, kami kirim kode 6 digit ke email kamu untuk verifikasi sebelum bisa masuk.
+          Setelah mendaftar, kami kirim kode 6 digit ke email kamu untuk verifikasi sebelum bisa
+          masuk.
         </p>
       )}
 

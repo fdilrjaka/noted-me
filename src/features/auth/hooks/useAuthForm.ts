@@ -64,20 +64,6 @@ export function useAuthForm() {
   };
 
   /** Masuk dengan akun Google. Redirect balik ke halaman ini setelah otorisasi. */
-  const signInWithGoogle = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (error) toast.error(error.message);
-      // Kalau sukses, browser di-redirect ke Google — kode di bawah ini tidak sempat jalan.
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const submitSignIn = async () => {
     const clean = normalizeEmail(email);
     if (newEmailError(clean)) {
@@ -205,7 +191,10 @@ export function useAuthForm() {
       if (verifyFor === "signup") {
         // Kalau signUp tadi belum otomatis login, pastikan sesi ada dengan password yang tadi dibuat.
         if (!data.session && pendingPassword) {
-          await supabase.auth.signInWithPassword({ email: pendingEmail, password: pendingPassword });
+          await supabase.auth.signInWithPassword({
+            email: pendingEmail,
+            password: pendingPassword,
+          });
         }
         setPendingPassword("");
         toast.success("Email terverifikasi");
@@ -277,7 +266,6 @@ export function useAuthForm() {
     setOtp,
     busy,
     submit,
-    signInWithGoogle,
     resendOtp,
     pendingEmail,
     verifyFor,
