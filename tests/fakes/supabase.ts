@@ -18,8 +18,17 @@ G.__fake.auth ??= {
   signUps: [] as any[],
   updates: [] as string[],
   metaUpdates: [] as any[],
+  // Kode OTP "terkirim" (dipakai flow lupa password / verifikasi email), keyed by email.
+  otps: new Map<string, { code: string; type: "signup" | "recovery" }>(),
+  otpSeq: 0,
 };
 G.__fake.storage ??= { uploads: [] as any[], failUpload: false };
+// Kode OTP 6-digit yang berbeda tiap dipanggil (dibungkus supaya cocok dengan input asli yang
+// hanya menerima digit dan memotong ke 6 karakter).
+function nextOtpCode(): string {
+  G.__fake.auth.otpSeq = (G.__fake.auth.otpSeq + 1) % 1000000;
+  return String(100000 + G.__fake.auth.otpSeq).slice(-6);
+}
 export const calls = G.__fake.calls;
 export const db = G.__fake.db;
 const tbl = (n: string) => (db.tables[n] ??= new Map());
@@ -163,13 +172,48 @@ export const supabase: any = {
       return { data: { session: { user: { id: u.id, email } } }, error: null };
     },
     updateUser: async ({ password, data }: any) => {
-      if (password !== undefined) G.__fake.auth.updates.push(password);
-      if (data) G.__fake.auth.metaUpdates.push(data);
+      const a = G.__fake.auth;
+      if (password !== undefined) {
+        a.updates.push(password);
+        // Update password yang "tersimpan" untuk user yang sedang punya sesi, supaya login
+        // berikutnya dengan password baru benar-benar tervalidasi.
+        if (a.current) {
+          for (const u of a.users.values()) if (u.id === a.current.id) u.password = password;
+        }
+      }
+      if (data) a.metaUpdates.push(data);
       return { error: null };
     },
     signOut: async () => {
       G.__fake.auth.current = null;
       return { error: null };
+    },
+    // Kirim ulang kode OTP: dipakai baik untuk verifikasi signup maupun lupa password.
+    // Kode baru berbeda dari kode sebelumnya (6 digit, sama seperti input aslinya yang hanya
+    // menerima digit), supaya kode LAMA benar-benar tidak berlaku lagi begitu kode baru diminta.
+    resend: async ({ type, email }: any) => {
+      G.__fake.auth.otps.set(email, { code: nextOtpCode(), type });
+      return { error: null };
+    },
+    // Minta kode reset password dikirim ke email (mode "lupa password").
+    resetPasswordForEmail: async (email: string) => {
+      G.__fake.auth.otps.set(email, { code: nextOtpCode(), type: "recovery" });
+      return { error: null };
+    },
+    // Verifikasi kode 6 digit yang "dikirim" ke email (signup ATAU lupa password).
+    verifyOtp: async ({ email, token, type }: any) => {
+      const a = G.__fake.auth;
+      const rec = a.otps.get(email);
+      if (!rec || rec.type !== type || rec.code !== token) {
+        return { data: { session: null }, error: { message: "Invalid token" } };
+      }
+      // Sengaja TIDAK dihapus di sini: layar "verifikasi" bisa memanggil verifyOtp berulang
+      // (tiap klik "Verifikasi") sebelum password baru lolos validasi lokal, jadi kode yang
+      // sama harus tetap berlaku sampai diganti kode BARU (resend/resetPasswordForEmail).
+      const u = a.users.get(email);
+      const id = u?.id ?? "user-" + (a.users.size + 1);
+      a.current = { id, email };
+      return { data: { session: { user: { id, email } } }, error: null };
     },
   },
   channel: () => {

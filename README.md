@@ -36,13 +36,13 @@ npm run dev
 `.env` yang ada di repo hanya berisi kunci publik (publishable). Rahasia jangan di-commit; simpan di
 `.env.local` atau `.dev.vars` (keduanya sudah di-ignore git).
 
-| Variabel                                              | Dipakai di | Keterangan                                                                      |
-| ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`  | browser    | Klien Supabase                                                                  |
-| `VITE_SUPABASE_PROJECT_ID`                            | browser    | Id proyek                                                                       |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`            | server     | Verifikasi token dan cek password di server function                            |
-| `SUPABASE_SERVICE_ROLE_KEY` **(rahasia)**             | server     | Mengganti password lewat kode pemulihan; melewati RLS, jangan pernah ke browser |
-| `CRON_SECRET`, `CRON_SECRET_PREVIOUS`                 | server     | Opsional, autentikasi endpoint cron (belum dipakai route manapun)               |
+| Variabel                                             | Dipakai di | Keterangan                                                                      |
+| ---------------------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | browser    | Klien Supabase                                                                  |
+| `VITE_SUPABASE_PROJECT_ID`                           | browser    | Id proyek                                                                       |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`           | server     | Verifikasi token dan cek password di server function                            |
+| `SUPABASE_SERVICE_ROLE_KEY` **(rahasia)**            | server     | Mengganti password lewat kode pemulihan; melewati RLS, jangan pernah ke browser |
+| `CRON_SECRET`, `CRON_SECRET_PREVIOUS`                | server     | Opsional, autentikasi endpoint cron (belum dipakai route manapun)               |
 
 Di production (Cloudflare Workers), set variabel di atas lewat Wrangler:
 

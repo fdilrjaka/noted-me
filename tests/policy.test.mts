@@ -1,7 +1,13 @@
 const SRC = new URL("../src", import.meta.url).pathname;
-const { checkPassword, passwordErrorMessage, newUsernameError, normalizeUsername } = await import(
-  `${SRC}/lib/noteme/credentialPolicy.ts`
-);
+const {
+  checkPassword,
+  passwordErrorMessage,
+  MIN_PASSWORD_LENGTH,
+  normalizeEmail,
+  isValidEmail,
+  newEmailError,
+  normalizeUsername,
+} = await import(`${SRC}/lib/noteme/credentialPolicy.ts`);
 let fail = 0;
 const t = (n: string, c: boolean, x = "") => {
   if (!c) {
@@ -9,25 +15,35 @@ const t = (n: string, c: boolean, x = "") => {
     console.log("FAIL", n, x);
   } else console.log("ok  ", n);
 };
-t("tanpa spesial ditolak", checkPassword("abcdef1").includes("special"));
-t("spesial diterima", checkPassword("abc!def").length === 0);
-for (const ch of "!@#$%^&*()_+-=[]{};':\"\\|,.<>/?`~")
-  t(`simbol ${ch} dihitung`, checkPassword("abcde" + ch).length === 0);
-t("spasi BUKAN spesial", checkPassword("abc def").includes("special"));
-t("huruf/angka bukan spesial", checkPassword("Abc12345").includes("special"));
-t("pendek + tanpa spesial -> 2 isu", checkPassword("ab").length === 2);
-t("pesan spesial", /karakter spesial/.test(passwordErrorMessage("abcdef")!));
+
+// --- password: hanya syarat panjang, TIDAK ada syarat karakter spesial lagi ---
+t("password < 6 karakter -> issue 'length'", checkPassword("abc").includes("length"));
+t("password 6+ karakter (huruf saja) -> tidak ada issue", checkPassword("abcdef").length === 0);
 t(
-  "pesan panjang",
-  passwordErrorMessage("a!")!.startsWith("Password minimal 6 karakter") &&
-    !/spesial/.test(passwordErrorMessage("a!")!),
+  "password 6+ karakter (angka saja) -> tidak ada issue",
+  checkPassword("123456").length === 0,
 );
-t("pesan gabungan", /minimal 6 karakter dan/.test(passwordErrorMessage("ab")!));
-t("valid -> null", passwordErrorMessage("abc!123") === null);
-t("username valid", newUsernameError("budi_01") === null);
-t("username spasi ditolak", newUsernameError("budi santoso") !== null);
-t("username @ ditolak (dulu diam-diam dibuang)", newUsernameError("a@b.com") !== null);
-t("username pendek", /minimal/.test(newUsernameError("ab")!));
-t("username kapital ok (di-lowercase)", newUsernameError("Budi") === null);
+t(
+  "password dengan karakter spesial tetap valid (bukan wajib, cuma boleh)",
+  checkPassword("abc!de").length === 0,
+);
+t("pesan panjang", passwordErrorMessage("abc") === `Password minimal ${MIN_PASSWORD_LENGTH} karakter`);
+t("pesan null saat valid", passwordErrorMessage("abcdef") === null);
+
+// --- email: dipakai sebagai identitas login (bukan username) ---
+t("normalizeEmail trim + lowercase", normalizeEmail("  Budi@Noteme.APP  ") === "budi@noteme.app");
+t("email valid", isValidEmail("budi@noteme.app"));
+t("email tanpa @ tidak valid", !isValidEmail("budinoteme.app"));
+t("email tanpa domain tidak valid", !isValidEmail("budi@"));
+t("email dengan spasi tidak valid", !isValidEmail("budi @noteme.app"));
+t("newEmailError null utk email valid", newEmailError("budi@noteme.app") === null);
+t(
+  "newEmailError berisi pesan utk email tidak valid",
+  /alamat email yang valid/.test(newEmailError("bukan-email")!),
+);
+
+// --- normalizeUsername: legacy, hanya dipakai subsistem kode pemulihan LAMA (recovery.server.ts) ---
 t("normalize lenient utk login lama", normalizeUsername(" Budi Santoso ") === "budisantoso");
+t("normalize buang simbol tak dikenal", normalizeUsername("Budi!!01") === "budi01");
+
 process.exit(fail ? 1 : 0);

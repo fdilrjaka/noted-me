@@ -47,6 +47,7 @@ const byPlaceholder = (p: string) =>
   document.querySelector(`input[placeholder^="${p}"]`) as HTMLInputElement;
 const type = async (p: string, v: string) => {
   const el = byPlaceholder(p);
+  if (!el) throw new Error("input tidak ada: " + p);
   const set = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, "value")!.set!;
   await act(async () => {
     set.call(el, v);
@@ -84,173 +85,192 @@ async function unmount() {
   });
 }
 
-// 1) DAFTAR tanpa karakter spesial -> notifikasi, tidak memanggil signUp
+const EMAIL = "budi@noteme.app";
+
+// 1) DAFTAR dengan email tidak valid -> notifikasi, signUp TIDAK dipanggil
 await mount();
 await clickText("Belum punya akun", 50);
 t("berpindah ke mode daftar", !!$("h2") && $("h2")!.textContent === "Buat akun");
-await type("Username", "budi_01");
-await type("Password", "abcdef1");
+await type("E-mail", "bukan-email");
+await type("Password", "abcdef");
+await clickText("Daftar", 200);
 t(
-  "hint: syarat spesial tampil merah setelah mengetik",
+  "email tidak valid -> toast error alamat email",
+  lastToast()?.kind === "error" && /alamat email yang valid/.test(lastToast().msg),
+  lastToast(),
+);
+t("... dan signUp TIDAK dipanggil", A.signUps.length === 0);
+
+// 2) DAFTAR dengan password terlalu pendek
+await type("E-mail", EMAIL);
+await type("Password", "abc");
+t(
+  "hint: syarat panjang tampil merah setelah mengetik pendek",
   !!document.querySelector("li.text-destructive"),
 );
 await clickText("Daftar", 200);
 t(
-  "daftar tanpa spesial -> toast error menyebut karakter spesial",
-  lastToast()?.kind === "error" && /karakter spesial/.test(lastToast().msg),
+  "password < 6 karakter -> toast kebijakan panjang",
+  lastToast()?.kind === "error" && /minimal 6 karakter/.test(lastToast().msg),
   lastToast(),
 );
-t("... dan signUp TIDAK dipanggil", A.signUps.length === 0);
-await type("Password", "abc");
-await clickText("Daftar", 200);
+t("... dan signUp masih TIDAK dipanggil", A.signUps.length === 0);
+await type("Password", "abcdef");
 t(
-  "password pendek + tanpa spesial -> pesan gabungan",
-  /minimal 6 karakter dan/.test(lastToast().msg),
-  lastToast(),
-);
-await type("Password", "abcdef!");
-t(
-  "hint: semua syarat hijau",
-  document.querySelectorAll("li.text-primary").length === 2 &&
+  "hint: syarat panjang jadi hijau setelah 6+ karakter",
+  document.querySelectorAll("li.text-primary").length === 1 &&
     !document.querySelector("li.text-destructive"),
 );
 
-// 2) DAFTAR dengan username tidak sah
-await type("Username", "budi santoso");
-await type("Password", "abcdef!");
-await clickText("Daftar", 200);
+// 3) DAFTAR valid -> sesi langsung dibuat (fake tidak mengharuskan verifikasi email) & masuk ke "/"
+await clickText("Daftar", 300);
 t(
-  "username berspasi ditolak",
-  lastToast()?.kind === "error" &&
-    /Username hanya boleh/.test(lastToast().msg) &&
-    A.signUps.length === 0,
+  "signUp dipanggil sekali dengan email yang benar",
+  A.signUps.length === 1 && A.signUps[0].email === EMAIL,
+  A.signUps,
+);
+t(
+  "berhasil daftar -> toast selamat datang & navigasi ke /",
+  lastToast()?.kind === "success" && g.__navs.length === 1 && g.__navs[0].to === "/",
+  [lastToast(), g.__navs],
+);
+await unmount();
+
+// 4) MASUK dengan password salah -> ditolak, dengan pesan yang ramah (bukan pesan mentah Supabase)
+await mount();
+await type("E-mail", EMAIL);
+await type("Password", "salahbanget");
+await clickText("Masuk", 400);
+t(
+  "password salah -> toast 'Email atau password salah'",
+  lastToast()?.kind === "error" && /Email atau password salah/.test(lastToast().msg),
   lastToast(),
 );
 
-// 3) DAFTAR valid -> dialog kode pemulihan, navigasi ditahan
-await type("Username", "budi_01");
-await type("Password", "Rahasia!1");
-await clickText("Daftar", 1500);
-t("signUp dipanggil sekali", A.signUps.length === 1 && A.signUps[0].email === "budi_01@noteme.app");
-const dialog = $('[role="dialog"]');
-t("dialog kode pemulihan tampil", !!dialog);
-const shown = [...document.querySelectorAll('[role="dialog"] li')].map((l) => l.textContent!);
-t(
-  "10 kode berformat XXXX-XXXX-XXXX-XXXX",
-  shown.length === 10 && shown.every((c) => /^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(c)),
-  shown.slice(0, 2),
-);
-t("navigasi ditahan selama dialog terbuka", g.__navs.length === 0);
-const done = [...document.querySelectorAll("button")].find(
-  (b) => b.textContent === "Selesai",
-) as HTMLButtonElement;
-t("tombol Selesai nonaktif sebelum dicentang", done.disabled === true);
-await act(async () => {
-  (document.querySelector('[role="dialog"] input[type=checkbox]') as HTMLInputElement).click();
-});
-t(
-  "aktif setelah dicentang",
-  (
-    [...document.querySelectorAll("button")].find(
-      (b) => b.textContent === "Selesai",
-    ) as HTMLButtonElement
-  ).disabled === false,
-);
-await clickText("Selesai", 50);
-t(
-  "setelah Selesai: dialog tertutup & navigasi ke /",
-  !$('[role="dialog"]') && g.__navs.length === 1 && g.__navs[0].to === "/",
-);
-const savedCodes = shown;
-await unmount();
-
-// 4) LOGIN akun lama dengan password TANPA karakter spesial tetap berhasil
-A.users.set("lama@noteme.app", { id: "user-legacy", password: "abcdef" });
-await mount();
-await type("Username", "lama");
+// 5) MASUK dengan password benar -> berhasil
 await type("Password", "abcdef");
-await clickText("Masuk", 800);
+await clickText("Masuk", 600);
 t(
-  "login akun lama (password tanpa spesial) tidak diblokir kebijakan",
-  toasts().some((x) => x.kind === "success"),
-  toasts(),
+  "password benar -> berhasil masuk",
+  lastToast()?.kind === "success" && g.__navs.some((n: any) => n.to === "/"),
+  lastToast(),
 );
-t("... dan tidak ada dialog kode (itu hanya saat daftar)", !$('[role="dialog"]'));
 await unmount();
 
-// 5) LUPA PASSWORD
+// 6) LUPA PASSWORD: email tidak valid ditolak sebelum mengirim kode
 await mount();
 await clickText("Lupa password?", 50);
 t(
-  "mode lupa password tampil (field kode + ulangi)",
-  !!byPlaceholder("Kode pemulihan") &&
-    !!byPlaceholder("Ulangi password baru") &&
-    $("h2")!.textContent === "Lupa password",
+  "mode lupa password tampil (hanya field email)",
+  $("h2")!.textContent === "Lupa password" &&
+    !!byPlaceholder("E-mail") &&
+    !byPlaceholder("Password"),
 );
-await type("Username", "budi_01");
-await type("Kode pemulihan", "AAAA-AAAA-AAAA-AAAA");
-await type("Password baru", "Baru!456");
-await type("Ulangi", "Baru!456");
-await clickText("Atur ulang password", 600);
+await type("E-mail", "bukan-email");
+await clickText("Kirim kode", 100);
 t(
-  "kode salah -> pesan generik",
-  lastToast()?.kind === "error" && /salah, atau kode sudah pernah dipakai/.test(lastToast().msg),
+  "email tidak valid di mode lupa password -> toast error",
+  lastToast()?.kind === "error" && /alamat email yang valid/.test(lastToast().msg),
   lastToast(),
 );
-await type("Kode pemulihan", savedCodes[0].toLowerCase().replace(/-/g, " "));
-await type("Password baru", "tanpaspesial9");
-await type("Ulangi", "tanpaspesial9");
-await clickText("Atur ulang password", 300);
+
+// 7) LUPA PASSWORD valid -> kode terkirim, masuk ke mode verifikasi
+await type("E-mail", EMAIL);
+await clickText("Kirim kode", 300);
 t(
-  "password baru tanpa spesial -> notifikasi",
-  /karakter spesial/.test(lastToast().msg),
+  "kode terkirim -> toast sukses & masuk mode verifikasi",
+  lastToast()?.kind === "success" &&
+    /Kode verifikasi dikirim/.test(lastToast().msg) &&
+    $("h2")!.textContent === "Verifikasi email",
   lastToast(),
 );
-await type("Password baru", "Baru!456");
-await type("Ulangi", "Baru!457");
-await clickText("Atur ulang password", 300);
 t(
-  "konfirmasi tidak sama -> notifikasi",
+  "layar verifikasi menampilkan field OTP + password baru + ulangi",
+  !!byPlaceholder("123456") && !!byPlaceholder("Password baru") && !!byPlaceholder("Ulangi"),
+);
+
+// 8) Kode OTP salah -> ditolak
+await type("123456", "000000");
+await type("Password baru", "Baru123");
+await type("Ulangi", "Baru123");
+await clickText("Verifikasi", 200);
+t(
+  "kode OTP salah -> toast 'Kode salah, coba lagi'",
+  lastToast()?.kind === "error" && /Kode salah, coba lagi/.test(lastToast().msg),
+  lastToast(),
+);
+
+// 9) Kode OTP benar tapi password baru terlalu pendek
+const otp1 = A.otps.get(EMAIL).code;
+await type("123456", otp1);
+await type("Password baru", "abc");
+await clickText("Verifikasi", 200);
+t(
+  "OTP benar + password baru terlalu pendek -> toast kebijakan panjang",
+  /minimal 6 karakter/.test(lastToast().msg),
+  lastToast(),
+);
+
+// 10) Kode OTP benar + password baru valid tapi konfirmasi tidak sama
+await type("Password baru", "Baru123");
+await type("Ulangi", "Baru124");
+await clickText("Verifikasi", 200);
+t(
+  "konfirmasi tidak sama -> toast error",
   /Konfirmasi password tidak sama/.test(lastToast().msg),
   lastToast(),
 );
-await type("Ulangi", "Baru!456");
-await clickText("Atur ulang password", 900);
+
+// 11) Kode OTP benar + password baru valid + konfirmasi sama -> berhasil, kembali ke mode Masuk
+await type("Ulangi", "Baru123");
+await clickText("Verifikasi", 600);
 t(
   "reset berhasil -> toast sukses & kembali ke mode Masuk",
   lastToast()?.kind === "success" && $("h2")!.textContent === "Masuk",
   lastToast(),
 );
-t("password di 'server' berubah", A.users.get("budi_01@noteme.app").password === "Baru!456");
-await type("Username", "budi_01");
-await type("Password", "Rahasia!1");
-await clickText("Masuk", 600);
+t("password di 'server' benar-benar berubah", A.users.get(EMAIL).password === "Baru123");
+
+// 12) Password lama tidak bisa dipakai lagi, password baru bisa
+await type("E-mail", EMAIL);
+await type("Password", "abcdef");
+await clickText("Masuk", 400);
 t(
   "password lama tidak bisa dipakai lagi",
-  lastToast()?.kind === "error" && /salah/.test(lastToast().msg),
+  lastToast()?.kind === "error" && /Email atau password salah/.test(lastToast().msg),
   lastToast(),
 );
-await type("Password", "Baru!456");
-await clickText("Masuk", 800);
+await type("Password", "Baru123");
+await clickText("Masuk", 600);
 t("password baru bisa login", lastToast()?.kind === "success", lastToast());
-await clickText("Lupa password?", 10).catch(() => {});
-await unmount();
-await mount();
-await clickText("Lupa password?", 50);
-await type("Username", "budi_01");
-await type("Kode pemulihan", savedCodes[0]);
-await type("Password baru", "Lagi!789");
-await type("Ulangi", "Lagi!789");
-await clickText("Atur ulang password", 700);
-t("kode yang sama tidak bisa dipakai dua kali", lastToast()?.kind === "error", lastToast());
 await unmount();
 
-// 6) GANTI PASSWORD di Settings
+// 13) Kode LAMA tidak berlaku lagi setelah minta kode BARU
+await mount();
+await clickText("Lupa password?", 50);
+await type("E-mail", EMAIL);
+await clickText("Kirim kode", 300);
+const oldOtp = A.otps.get(EMAIL).code;
+await unmount();
+// Minta kode baru lewat sesi berbeda -> kode lama otomatis tidak berlaku lagi.
+await mount();
+await clickText("Lupa password?", 50);
+await type("E-mail", EMAIL);
+await clickText("Kirim kode", 300);
+t("kode baru berbeda dari kode lama", A.otps.get(EMAIL).code !== oldOtp);
+await type("123456", oldOtp); // pakai kode LAMA
+await type("Password baru", "Lagi!999");
+await type("Ulangi", "Lagi!999");
+await clickText("Verifikasi", 500);
+t("kode lama ditolak setelah ada kode baru", lastToast()?.kind === "error", lastToast());
+await unmount();
+
+// 14) GANTI PASSWORD di Settings
 function AcctHarness() {
   g.__acct = useAccountSettings();
   return null;
 }
-A.current = { id: "user-1", email: "budi_01@noteme.app" };
+A.current = { id: A.users.get(EMAIL)!.id, email: EMAIL };
 document.body.innerHTML = "<div id=root></div>";
 root = createRoot(document.getElementById("root")!);
 await act(async () => {
@@ -260,30 +280,32 @@ await act(async () => {
 g.__toasts.length = 0;
 A.updates.length = 0;
 await act(async () => {
-  g.__acct.setNewPassword("abcdefg");
+  g.__acct.setNewPassword("abc");
 });
 await act(async () => {
   await g.__acct.changePassword();
 });
 t(
-  "ganti password tanpa spesial -> notifikasi & TIDAK dikirim",
-  /karakter spesial/.test(lastToast()?.msg ?? "") && A.updates.length === 0,
+  "ganti password terlalu pendek -> notifikasi & TIDAK dikirim",
+  /minimal 6 karakter/.test(lastToast()?.msg ?? "") && A.updates.length === 0,
   [lastToast(), A.updates],
 );
 await act(async () => {
-  g.__acct.setNewPassword("abc!efg");
+  g.__acct.setNewPassword("passwordbaru");
 });
 await act(async () => {
   await g.__acct.changePassword();
 });
 t(
   "ganti password sah -> updateUser dipanggil",
-  A.updates.length === 1 && A.updates[0] === "abc!efg",
+  A.updates.length === 1 && A.updates[0] === "passwordbaru",
   A.updates,
 );
+
+// 15) Kode pemulihan (backup offline) di Settings — fitur berbeda dari OTP email di atas
 t(
-  "kartu pemulihan: sisa kode terbaca dari server",
-  g.__acct.recoveryRemaining === 9,
+  "belum ada kode pemulihan dibuat -> sisa 0",
+  g.__acct.recoveryRemaining === 0,
   g.__acct.recoveryRemaining,
 );
 await act(async () => {
@@ -293,18 +315,18 @@ await act(async () => {
   await g.__acct.generateCodes();
 });
 t(
-  "buat kode baru dgn password salah ditolak",
+  "buat kode baru dengan password saat-ini yang salah -> ditolak",
   lastToast()?.kind === "error" && g.__acct.generatedCodes === null,
   lastToast(),
 );
 await act(async () => {
-  g.__acct.setRecoveryPassword("Baru!456");
+  g.__acct.setRecoveryPassword("passwordbaru");
 });
 await act(async () => {
   await g.__acct.generateCodes();
 });
 t(
-  "buat kode baru dgn password benar -> 10 kode",
+  "buat kode baru dengan password saat-ini yang benar -> 10 kode",
   g.__acct.generatedCodes?.length === 10 && g.__acct.recoveryRemaining === 10,
   g.__acct.generatedCodes?.length,
 );

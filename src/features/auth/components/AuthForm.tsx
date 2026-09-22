@@ -6,9 +6,9 @@ import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
 
 const INPUT_ICON =
-  "glass-input w-full rounded-2xl py-3 pl-11 pr-4 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
+  "w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-colors";
 const INPUT =
-  "glass-input w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-colors";
 
 export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   const {
@@ -46,16 +46,20 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
         : mode === "forgot"
           ? "Kirim kode"
           : "Verifikasi";
+
   const enterOn = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") void submit();
   };
 
   if (mode === "verify") {
     return (
-      <div className="glass-card spring-in mt-6 rounded-3xl p-6">
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Masukkan kode 6 digit yang dikirim ke <span className="font-medium">{pendingEmail}</span>.
+      <div className="w-[420px] bg-white rounded-[2rem] shadow-xl p-10 z-10 relative">
+        <h2 className="text-slate-300 text-sm font-semibold mb-1 uppercase tracking-wider">
+          {title}
+        </h2>
+        <p className="text-slate-500 text-sm mb-6">
+          Masukkan kode 6 digit yang dikirim ke{" "}
+          <span className="font-semibold text-slate-700">{pendingEmail}</span>.
         </p>
 
         <input
@@ -65,18 +69,18 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
           placeholder="123456"
           inputMode="numeric"
           autoComplete="one-time-code"
-          className={`${INPUT} mt-5 text-center font-mono text-lg tracking-[0.5em]`}
+          className={`${INPUT} mt-2 text-center font-mono text-xl tracking-[0.5em]`}
         />
 
         {verifyFor === "recovery" && (
-          <>
+          <div className="space-y-3 mt-3">
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               placeholder="Password baru"
               autoComplete="new-password"
-              className={`${INPUT} mt-2`}
+              className={INPUT}
             />
             <input
               value={confirmPassword}
@@ -85,48 +89,52 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
               type="password"
               placeholder="Ulangi password baru"
               autoComplete="new-password"
-              className={`${INPUT} mt-2`}
+              className={INPUT}
             />
-            <PasswordHint password={password} className="mt-3 px-1" />
-          </>
+            <PasswordHint password={password} className="mt-2 px-1" />
+          </div>
         )}
 
         <button
           disabled={busy}
           onClick={() => void submit()}
-          className="press mt-4 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground active:scale-95 disabled:opacity-60"
+          className="w-full bg-[#3B4254] text-white font-medium py-3.5 rounded-2xl mt-6 hover:bg-slate-700 transition-colors disabled:opacity-60"
         >
           {busy ? "Memproses…" : action}
         </button>
 
-        <button
-          onClick={() => void resendOtp()}
-          disabled={busy}
-          className="press-sm mt-3 w-full text-center text-sm text-muted-foreground disabled:opacity-60"
-        >
-          Kirim ulang kode
-        </button>
-        <button
-          onClick={() => setMode("in")}
-          className="press-sm mt-1 w-full text-center text-sm text-muted-foreground"
-        >
-          Batal
-        </button>
+        <div className="mt-6 flex flex-col items-center space-y-2 text-sm text-slate-500">
+          <button
+            onClick={() => void resendOtp()}
+            disabled={busy}
+            className="hover:text-slate-800 underline transition-colors disabled:opacity-60"
+          >
+            Kirim ulang kode
+          </button>
+          <button
+            onClick={() => setMode("in")}
+            className="hover:text-slate-800 underline transition-colors"
+          >
+            Batal
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="glass-card spring-in mt-6 rounded-3xl p-6">
-      <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="w-[420px] bg-white rounded-[2rem] shadow-xl p-10 z-10 relative">
+      <h2 className="text-slate-300 text-sm font-semibold mb-1 uppercase tracking-wider">
+        {title}
+      </h2>
+      <p className="text-slate-500 text-sm mb-6">
         {mode === "forgot"
           ? "Masukkan email akun kamu. Kami kirim kode verifikasi untuk mengatur ulang password."
           : "Selamat bergabung menjadi bagian dari NoteMe."}
       </p>
 
-      <div className="relative mt-5">
-        <Mail className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative mt-4">
+        <Mail className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -140,8 +148,8 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
       </div>
 
       {mode !== "forgot" && (
-        <div className="relative mt-2">
-          <Lock className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative mt-3">
+          <Lock className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -149,15 +157,15 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             autoComplete={mode === "in" ? "current-password" : "new-password"}
-            className={`${INPUT_ICON} pr-11`}
+            className={`${INPUT_ICON} pr-12`}
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
           >
-            {showPassword ? <EyeOff className="size-4.5" /> : <Eye className="size-4.5" />}
+            {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
           </button>
         </div>
       )}
@@ -167,7 +175,7 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
       )}
 
       {mode === "up" && (
-        <p className="mt-3 px-1 text-xs text-muted-foreground">
+        <p className="mt-3 px-1 text-xs text-slate-400">
           Setelah mendaftar, kami kirim kode 6 digit ke email kamu untuk verifikasi sebelum bisa
           masuk.
         </p>
@@ -176,52 +184,57 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
       <button
         disabled={busy}
         onClick={() => void submit()}
-        className="press mt-4 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground active:scale-95 disabled:opacity-60"
+        className="w-full bg-[#3B4254] text-white font-medium py-3.5 rounded-2xl mt-6 hover:bg-slate-700 transition-colors disabled:opacity-60"
       >
         {busy ? "Memproses…" : action}
       </button>
 
-      {mode === "in" && (
-        <button
-          onClick={() => setMode("forgot")}
-          className="press-sm mt-3 w-full text-center text-sm text-muted-foreground"
-        >
-          <span className="font-semibold text-primary underline underline-offset-2">
+      <div className="mt-6 flex flex-col items-center space-y-3 text-sm text-slate-500">
+        {mode === "in" && (
+          <button
+            onClick={() => setMode("forgot")}
+            className="underline hover:text-slate-800 transition-colors"
+          >
             Lupa password?
-          </span>
-        </button>
-      )}
-
-      <button
-        onClick={() => setMode(mode === "in" ? "up" : "in")}
-        className="press-sm mt-3 w-full text-center text-sm text-muted-foreground"
-      >
-        {mode === "in" ? (
-          <>
-            Belum punya akun?{" "}
-            <span className="font-semibold text-primary underline underline-offset-2">Daftar</span>
-          </>
-        ) : mode === "up" ? (
-          <>
-            Sudah punya akun?{" "}
-            <span className="font-semibold text-primary underline underline-offset-2">Masuk</span>
-          </>
-        ) : (
-          <>
-            Ingat password?{" "}
-            <span className="font-semibold text-primary underline underline-offset-2">
-              Kembali masuk
-            </span>
-          </>
+          </button>
         )}
-      </button>
-      <Link
-        to="/"
-        onClick={() => setGuestMode()}
-        className="press-sm mt-3 block text-center text-sm text-primary underline"
-      >
-        Lanjut tanpa akun
-      </Link>
+
+        <button
+          onClick={() => setMode(mode === "in" ? "up" : "in")}
+          className="hover:text-slate-800 transition-colors"
+        >
+          {mode === "in" ? (
+            <>
+              Belum punya akun?{" "}
+              <span className="font-semibold text-slate-700 underline underline-offset-2">
+                Daftar
+              </span>
+            </>
+          ) : mode === "up" ? (
+            <>
+              Sudah punya akun?{" "}
+              <span className="font-semibold text-slate-700 underline underline-offset-2">
+                Masuk
+              </span>
+            </>
+          ) : (
+            <>
+              Ingat password?{" "}
+              <span className="font-semibold text-slate-700 underline underline-offset-2">
+                Kembali masuk
+              </span>
+            </>
+          )}
+        </button>
+
+        <Link
+          to="/"
+          onClick={() => setGuestMode()}
+          className="underline hover:text-slate-800 transition-colors"
+        >
+          Lanjut tanpa akun
+        </Link>
+      </div>
     </div>
   );
 }

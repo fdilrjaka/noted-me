@@ -200,11 +200,11 @@ const mk = async (h: any, user = "u1", email = "budi@noteme.app") =>
   const bad = await R.resetPasswordWithCode(h.env, {
     username: "budi",
     code: r.codes[0],
-    newPassword: "tanpaspesial1",
+    newPassword: "abc",
   });
   t(
-    "password tanpa karakter spesial ditolak di server",
-    !bad.ok && bad.reason === "password_policy" && /spesial/.test(bad.message),
+    "password terlalu pendek ditolak di server",
+    !bad.ok && bad.reason === "password_policy" && /minimal 6 karakter/.test(bad.message),
   );
   t(
     "penolakan kebijakan tidak menghabiskan kode / tidak dihitung percobaan",

@@ -7,11 +7,6 @@ import { CollabIllustration } from "./components/CollabIllustration";
 /**
  * Halaman login mandiri — ini satu-satunya tempat untuk masuk/daftar. Tidak ada halaman
  * "edit profil" terpisah: setelah login, semua urusan profil/akun ada di Settings.
- *
- * Box login SELALU di tengah/kanan layar (bukan di dalam layout Sidebar/BottomNav biasa), dan
- * ini yang tampil pertama kali setelah animasi pembuka kalau belum ada sesi (lihat guard di
- * routes/index.tsx). Kalau ternyata sudah ada sesi (mis. buka /auth manual saat sudah login),
- * langsung dilempar ke dashboard.
  */
 export function AuthPage() {
   const { user, loading } = useSession();
@@ -22,8 +17,7 @@ export function AuthPage() {
   return <AuthScreen />;
 }
 
-// Kertas kotak-kotak (grid paper) sebagai latar, meniru referensi desain: garis tipis abu-abu
-// di atas gradasi biru-keabuan lembut.
+// Kertas kotak-kotak (grid paper) latar belakang
 const GRID_BACKGROUND =
   "linear-gradient(rgba(100,116,139,0.14) 1px, transparent 1px), " +
   "linear-gradient(90deg, rgba(100,116,139,0.14) 1px, transparent 1px)";
@@ -33,13 +27,14 @@ function AuthScreen() {
 
   return (
     <main
-      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-10 safe-top safe-bottom-lg"
+      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-6 py-10 safe-top safe-bottom-lg"
       style={{
         backgroundColor: "#c7d2de",
         backgroundImage: GRID_BACKGROUND,
         backgroundSize: "36px 36px",
       }}
     >
+      {/* Soft Radial Overlay */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -50,7 +45,7 @@ function AuthScreen() {
       />
 
       <div
-        className="relative flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+        className="relative flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8 z-10"
         style={
           {
             "--card": "#ffffff",
@@ -64,20 +59,24 @@ function AuthScreen() {
           } as React.CSSProperties
         }
       >
-        <div className="hidden max-w-md flex-col lg:flex">
+        {/* Sapaan Teks & Ilustrasi Kiri (Layar Desktop / LG+) */}
+        <div className="hidden max-w-xl flex-col lg:flex flex-1">
           <h1 className="text-5xl font-bold leading-tight tracking-tight text-slate-700">
             Selamat Datang
             <br />
             di NoteMe!
           </h1>
-          <p className="mt-5 text-lg text-slate-600">
+          <p className="mt-3 text-lg text-slate-600">
             Selamat bergabung menjadi bagian dari NoteMe.
           </p>
-          <div className="mt-10">
+
+          {/* Ilustrasi Kanvas & Kursor */}
+          <div className="mt-6 w-full">
             <CollabIllustration />
           </div>
         </div>
 
+        {/* Sapaan Teks Atas (Layar Mobile / HP) */}
         <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
           <h1 className="text-2xl font-bold tracking-tight text-slate-700">
             Selamat Datang di NoteMe!
@@ -87,7 +86,8 @@ function AuthScreen() {
           </p>
         </div>
 
-        <div className="w-full max-w-sm">
+        {/* Box Form Login Kanan */}
+        <div className="w-full max-w-md flex justify-center lg:justify-end">
           <AuthForm form={form} />
         </div>
       </div>
