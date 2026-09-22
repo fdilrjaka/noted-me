@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { KeyRound, LogOut, Lock, Pencil, ShieldCheck } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Camera, KeyRound, LogOut, Lock, Pencil, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { syncAndSignOut } from "@/features/auth/signOut";
 import { PasswordHint } from "@/features/auth/components/PasswordHint";
 import { RecoveryCodesDialog } from "@/features/auth/components/RecoveryCodesDialog";
+import { useAvatarUpload } from "@/features/auth/hooks/useAvatarUpload";
 import { OwnerAvatar } from "@/features/todo/components/OwnerAvatar";
 import { useTodoOwner } from "@/features/todo/hooks/useTodoOwner";
+import { clearGuestMode } from "@/lib/noteme/guestMode";
 import { darkBtn } from "./buttonStyles";
 import type { useAccountSettings } from "../hooks/useAccountSettings";
 import type { SettingsDraft } from "../hooks/useSettingsDraft";
@@ -34,9 +36,12 @@ export function AccountSection({
   account: ReturnType<typeof useAccountSettings>;
 }) {
   const { user } = useSession();
+  const navigate = useNavigate();
   const owner = useTodoOwner();
   const [editingPassword, setEditingPassword] = useState(false);
-  const username = user?.email?.replace("@noteme.app", "") ?? "";
+  const emailLabel = user?.email ?? "";
+  const { fileInputRef, avatarUrl, uploadingPhoto, handlePickPhoto, handleRemovePhoto } =
+    useAvatarUpload(user);
   const {
     newPassword,
     setNewPassword,
@@ -51,22 +56,72 @@ export function AccountSection({
     clearGeneratedCodes,
   } = account;
 
+  const handleSignOut = async () => {
+    let ok = true;
+    if (user) {
+      ok = await syncAndSignOut(user.id);
+    } else {
+      await supabase.auth.signOut();
+    }
+    if (!ok) return;
+    clearGuestMode();
+    toast.success("Keluar — catatan tetap ada di perangkat");
+    void navigate({ to: "/auth" });
+  };
+
   return (
     <>
       <section id="sec-akun" className="scroll-mt-4">
         <h2 className="text-xl font-bold tracking-tight">Account & Profile</h2>
         <div className="mt-4 flex items-center gap-4">
-          <OwnerAvatar owner={owner} className="size-20 text-3xl" />
+          <div className="relative flex-none">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Foto profil"
+                className="size-20 rounded-full object-cover"
+              />
+            ) : (
+              <OwnerAvatar owner={owner} className="size-20 text-3xl" />
+            )}
+            {user && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Ubah foto profil"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="press-sm absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:scale-90 disabled:opacity-60"
+                >
+                  <Camera className="size-3.5" />
+                </button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    aria-label="Hapus foto profil"
+                    onClick={() => void handleRemovePhoto()}
+                    className="press-sm absolute -top-1 -right-1 flex size-7 items-center justify-center rounded-full bg-input text-foreground active:scale-90"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => void handlePickPhoto(e.target.files?.[0])}
+                />
+              </>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-bold">{user ? owner.name : "Belum login"}</p>
-            {username && <p className="truncate text-sm text-muted-foreground">@{username}</p>}
+            {emailLabel && <p className="truncate text-sm text-muted-foreground">{emailLabel}</p>}
             {draft.studentId.trim() && (
               <p className="truncate text-sm text-muted-foreground">ID {draft.studentId.trim()}</p>
             )}
           </div>
-          <Link to="/auth" className={`${darkBtn} flex-none`}>
-            Edit Profil
-          </Link>
         </div>
 
         <h3 className="mb-3 mt-7 text-lg font-semibold">Informasi Dasar</h3>
@@ -84,8 +139,8 @@ export function AccountSection({
               <Pencil className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </Row>
-          <Row label="Username">
-            <input value={username ? `@${username}` : ""} readOnly disabled className={inputCls} />
+          <Row label="Email">
+            <input value={emailLabel} readOnly disabled className={inputCls} />
           </Row>
           <Row label="Kata Sandi">
             <div className="relative">
@@ -204,7 +259,7 @@ export function AccountSection({
         <div className="mt-4 rounded-2xl border border-destructive/30 bg-destructive/5 p-3">
           <p className="mb-2 text-xs font-semibold uppercase text-destructive">Zona Berbahaya</p>
           <button
-            onClick={() => void (user ? syncAndSignOut(user.id) : supabase.auth.signOut())}
+            onClick={() => void handleSignOut()}
             className="press-sm flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2 text-sm font-medium active:scale-95"
           >
             <LogOut className="size-4" /> Keluar

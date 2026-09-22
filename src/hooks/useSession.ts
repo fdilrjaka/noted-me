@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeUsername } from "@/lib/noteme/credentialPolicy";
+import { clearGuestMode } from "@/lib/noteme/guestMode";
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,6 +12,9 @@ export function useSession() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
       setLoading(false);
+      // Ada sesi (login manual, verifikasi OTP, atau redirect balik dari Google OAuth): pastikan
+      // flag "lanjut tanpa akun" tidak nyangkut, supaya logout berikutnya balik ke halaman login.
+      if (next) clearGuestMode();
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);

@@ -1,9 +1,5 @@
 import { Check, Circle } from "lucide-react";
-import {
-  MIN_PASSWORD_LENGTH,
-  SPECIAL_CHAR_EXAMPLES,
-  checkPassword,
-} from "@/lib/noteme/credentialPolicy";
+import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/noteme/credentialPolicy";
 
 /**
  * Daftar syarat password yang ikut berubah saat user mengetik. Belum mengetik = abu-abu netral;
@@ -21,10 +17,6 @@ export function PasswordHint({
   const typed = password.length > 0;
   const items = [
     { ok: !issues.includes("length"), text: `Minimal ${MIN_PASSWORD_LENGTH} karakter` },
-    {
-      ok: !issues.includes("special"),
-      text: `Minimal 1 karakter spesial (${SPECIAL_CHAR_EXAMPLES})`,
-    },
   ];
 
   return (

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Dashboard } from "@/features/dashboard";
+import { RequireSessionOrGuest } from "@/components/noteme/RequireSessionOrGuest";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,5 +13,9 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-  component: Dashboard,
+  component: () => (
+    <RequireSessionOrGuest>
+      <Dashboard />
+    </RequireSessionOrGuest>
+  ),
 });

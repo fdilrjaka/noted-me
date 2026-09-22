@@ -1,15 +1,5 @@
 import { format, isBefore, isToday, isTomorrow, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import type { TodoCategoryId } from "@/lib/noteme/todoStore";
-
-/** Warna tetap per kategori todo, dipakai di pie chart ringkasan (SummaryPanel). */
-export const CATEGORY_COLORS: Record<TodoCategoryId, string> = {
-  project: "#3b82f6",
-  "tugas-kuliah": "#f97316",
-  organisasi: "#eab308",
-  pribadi: "#22c55e",
-  lainnya: "#a855f7",
-};
 
 /** Warna kolom (header + bar progres), dipakai bergilir sesuai urutan section. */
 export const SECTION_COLORS = ["#3b82f6", "#f97316", "#eab308", "#22c55e", "#a855f7"] as const;
