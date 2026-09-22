@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { syncNow } from "@/storage/sync-engine/syncNow";
 import { ensureLocalOwner, localDataBelongsToOther } from "@/storage/local/localOwner";
 import { clearGuestMode } from "@/lib/noteme/guestMode";
+import { markWelcomeIntroPending } from "@/lib/noteme/welcomeIntro";
 import { newEmailError, normalizeEmail, passwordErrorMessage } from "@/lib/noteme/credentialPolicy";
 
 /**
@@ -60,6 +61,7 @@ export function useAuthForm() {
       }
     }
     toast.success("Selamat datang");
+    markWelcomeIntroPending();
     void navigate({ to: "/" });
   };
 

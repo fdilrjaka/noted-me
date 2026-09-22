@@ -4,6 +4,7 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import type { useAuthForm } from "../hooks/useAuthForm";
 import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
+import { markWelcomeIntroPending } from "@/lib/noteme/welcomeIntro";
 
 const INPUT_ICON =
   "w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-12 pr-4 text-[15px] text-foreground placeholder:text-muted-foreground outline-none backdrop-blur-sm focus:border-primary focus:ring-1 focus:ring-primary transition-colors";
@@ -224,7 +225,10 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
         <Link
           to="/"
-          onClick={() => setGuestMode()}
+          onClick={() => {
+            setGuestMode();
+            markWelcomeIntroPending();
+          }}
           className="underline hover:text-foreground transition-colors"
         >
           Lanjut tanpa akun

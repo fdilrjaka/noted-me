@@ -19,15 +19,15 @@ const t = (n: string, c: boolean, x = "") => {
 // --- password: hanya syarat panjang, TIDAK ada syarat karakter spesial lagi ---
 t("password < 6 karakter -> issue 'length'", checkPassword("abc").includes("length"));
 t("password 6+ karakter (huruf saja) -> tidak ada issue", checkPassword("abcdef").length === 0);
-t(
-  "password 6+ karakter (angka saja) -> tidak ada issue",
-  checkPassword("123456").length === 0,
-);
+t("password 6+ karakter (angka saja) -> tidak ada issue", checkPassword("123456").length === 0);
 t(
   "password dengan karakter spesial tetap valid (bukan wajib, cuma boleh)",
   checkPassword("abc!de").length === 0,
 );
-t("pesan panjang", passwordErrorMessage("abc") === `Password minimal ${MIN_PASSWORD_LENGTH} karakter`);
+t(
+  "pesan panjang",
+  passwordErrorMessage("abc") === `Password minimal ${MIN_PASSWORD_LENGTH} karakter`,
+);
 t("pesan null saat valid", passwordErrorMessage("abcdef") === null);
 
 // --- email: dipakai sebagai identitas login (bukan username) ---

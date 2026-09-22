@@ -123,6 +123,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   useBackgroundHue();
   useAutoTheme();
   useEffect(() => {
@@ -131,7 +132,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeWipeOverlay />
-      <SplashIntro />
+      {/* Logo splash "NoteMe." cuma untuk pemuatan awal aplikasi — tidak ditampilkan lagi
+          di halaman login, supaya halaman login bersih tanpa logo. */}
+      {pathname !== "/auth" && <SplashIntro />}
       <ServiceWorkerRegistrar />
       <RouteTransition />
       <ConflictDialog />

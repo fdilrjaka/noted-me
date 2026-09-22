@@ -22,7 +22,7 @@ function AuthScreen() {
 
   return (
     <main
-      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-6 py-10 safe-top safe-bottom-lg bg-background"
+      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-6 py-10 safe-top safe-bottom-lg bg-white"
       style={{
         // Titik-titik kanvas tak terbatas — sama persis dengan pola di CanvasSurface,
         // bukan garis kotak-kotak, supaya halaman login terasa seperti "sebelum masuk kanvas".
@@ -40,7 +40,7 @@ function AuthScreen() {
           opacity: 0.5,
         }}
       />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/60" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/60" />
 
       <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
         {/* Sapaan Teks & Ilustrasi Kiri (Layar Desktop / LG+) */}

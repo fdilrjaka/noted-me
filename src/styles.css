@@ -271,3 +271,16 @@ html[data-theme="dark"] {
     background-position: center center;
   }
 }
+
+/* Animasi mengetik untuk layar sapaan "Welcome!" setelah login/lanjut tanpa akun. */
+@keyframes noteme-welcome-typing {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes noteme-welcome-caret {
+  50% {
+    border-color: transparent;
+  }
+}
