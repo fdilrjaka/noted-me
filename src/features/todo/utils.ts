@@ -8,6 +8,15 @@ export function sectionColor(index: number): string {
   return SECTION_COLORS[index % SECTION_COLORS.length]!;
 }
 
+/** Warna tetap per kategori todo, dipakai di pie chart ringkasan (SummaryPanel). */
+export const CATEGORY_COLORS: Record<string, string> = {
+  project: "#3b82f6",
+  "tugas-kuliah": "#f97316",
+  organisasi: "#eab308",
+  pribadi: "#22c55e",
+  lainnya: "#a855f7",
+};
+
 export type DeadlineInfo = { text: string; overdue: boolean; soon: boolean };
 
 export function deadlineLabel(deadline: string | null): DeadlineInfo | null {
