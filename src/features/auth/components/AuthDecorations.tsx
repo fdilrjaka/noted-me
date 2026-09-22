@@ -167,15 +167,15 @@ export function AuthDecorations() {
 
       {/* Kontrol zoom & fullscreen + widget karakter — pojok kanan bawah */}
       <div className="absolute bottom-6 right-6 hidden items-center gap-2 sm:flex">
-        <div className="flex items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 px-2 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur-xl">
+        <div className="flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-foreground/80 shadow-md">
           <Minus className="size-3.5" />
           <span className="px-1">100%</span>
           <Plus className="size-3.5" />
         </div>
-        <span className="flex size-8 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 text-muted-foreground shadow-sm backdrop-blur-xl">
+        <span className="flex size-8 items-center justify-center rounded-full border border-slate-300 bg-white text-foreground/80 shadow-md">
           <Maximize2 className="size-3.5" />
         </span>
-        <span className="flex size-8 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 text-amber-500 shadow-sm backdrop-blur-xl">
+        <span className="flex size-8 items-center justify-center rounded-full border border-slate-300 bg-white text-amber-500 shadow-md">
           <Smile className="size-4" />
         </span>
       </div>

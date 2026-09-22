@@ -142,12 +142,14 @@ function GroupCard({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  // Tidak pakai hijau & oranye gelap (kebaca "merah gelap" di layar kecil) —
+  // avatar cukup biru, ungu, pink, kuning, dan abu supaya tetap kontras & cerah.
   const colors = [
     PALETTE.blue.solid,
-    PALETTE.orange.solid,
-    PALETTE.green.solid,
     PALETTE.purple.solid,
     PALETTE.pink.solid,
+    PALETTE.yellow.solid,
+    PALETTE.slate.solid,
   ];
   return (
     <div
@@ -211,12 +213,39 @@ function connectorPath(from: { x: number; y: number }, to: { x: number; y: numbe
   return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`;
 }
 
+/** Titik bulat kecil di ujung garis konektor — penanda kalau garisnya sudah
+ * "tersambung" pas ke tepi kartu tujuan, bukan cuma berhenti begitu saja. */
+function ConnectorDot({ x, y, color }: { x: number; y: number; color: string }) {
+  return (
+    <>
+      <circle cx={x} cy={y} r="5" fill="white" />
+      <circle cx={x} cy={y} r="5" fill="none" stroke={color} strokeWidth="2.5" />
+      <circle cx={x} cy={y} r="2" fill={color} />
+    </>
+  );
+}
+
 export function CollabIllustration() {
-  const todoToGroup1 = connectorPath(rightMid(TODO), leftMid(GROUP1));
-  const trackerToGroup2 = connectorPath(rightMid(TRACKER), leftMid(GROUP2));
-  const deadlinesToGroup2 = connectorPath(rightMid(DEADLINES), leftMid(GROUP2));
-  const group1ToPill1 = `M ${GROUP1.x + 56} ${GROUP1.y + GROUP1.h} V ${PILL1.y + 8}`;
-  const group2ToPill2 = `M ${GROUP2.x + 56} ${GROUP2.y + GROUP2.h} V ${PILL2.y + 8}`;
+  const todoStart = rightMid(TODO);
+  const todoEnd = leftMid(GROUP1);
+  const trackerStart = rightMid(TRACKER);
+  const trackerEnd = leftMid(GROUP2);
+  const deadlinesStart = rightMid(DEADLINES);
+  const deadlinesEnd = leftMid(GROUP2);
+  const group1PillStart = { x: GROUP1.x + 56, y: GROUP1.y + GROUP1.h };
+  const group1PillEnd = { x: GROUP1.x + 56, y: PILL1.y + 8 };
+  const group2PillStart = { x: GROUP2.x + 56, y: GROUP2.y + GROUP2.h };
+  const group2PillEnd = { x: GROUP2.x + 56, y: PILL2.y + 8 };
+
+  const todoToGroup1 = connectorPath(todoStart, todoEnd);
+  const trackerToGroup2 = connectorPath(trackerStart, trackerEnd);
+  const deadlinesToGroup2 = connectorPath(deadlinesStart, deadlinesEnd);
+  const group1ToPill1 = `M ${group1PillStart.x} ${group1PillStart.y} V ${group1PillEnd.y}`;
+  const group2ToPill2 = `M ${group2PillStart.x} ${group2PillStart.y} V ${group2PillEnd.y}`;
+
+  const BLUE = "#93c5fd";
+  const ORANGE = "#fdba74";
+  const PURPLE = "#c4b5fd";
 
   return (
     <div
@@ -225,17 +254,30 @@ export function CollabIllustration() {
       aria-hidden="true"
     >
       {/* Garis konektor melengkung berwarna, meniru "kabel" penghubung kartu di referensi —
-          titik ujungnya dihitung dari kotak posisi kartu di atas, jadi selalu nempel pas. */}
+          titik ujungnya dihitung dari kotak posisi kartu di atas, jadi selalu nempel pas dan
+          nyambung utuh (bukan putus-putus). Tiap ujung dikasih bulatan kecil sebagai penanda
+          sudah tersambung ke kartu tujuannya. */}
       <svg
         className="absolute inset-0 size-full pointer-events-none"
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         fill="none"
       >
-        <path d={todoToGroup1} stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round" />
-        <path d={trackerToGroup2} stroke="#fdba74" strokeWidth="2.5" strokeLinecap="round" />
-        <path d={deadlinesToGroup2} stroke="#fdba74" strokeWidth="2.5" strokeLinecap="round" />
-        <path d={group1ToPill1} stroke="#c4b5fd" strokeWidth="2.5" strokeLinecap="round" />
-        <path d={group2ToPill2} stroke="#c4b5fd" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={todoToGroup1} stroke={BLUE} strokeWidth="2.5" strokeLinecap="round" />
+        <path d={trackerToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+        <path d={deadlinesToGroup2} stroke={ORANGE} strokeWidth="2.5" strokeLinecap="round" />
+        <path d={group1ToPill1} stroke={PURPLE} strokeWidth="2.5" strokeLinecap="round" />
+        <path d={group2ToPill2} stroke={PURPLE} strokeWidth="2.5" strokeLinecap="round" />
+
+        <ConnectorDot x={todoStart.x} y={todoStart.y} color={BLUE} />
+        <ConnectorDot x={todoEnd.x} y={todoEnd.y} color={BLUE} />
+        <ConnectorDot x={trackerStart.x} y={trackerStart.y} color={ORANGE} />
+        <ConnectorDot x={trackerEnd.x} y={trackerEnd.y} color={ORANGE} />
+        <ConnectorDot x={deadlinesStart.x} y={deadlinesStart.y} color={ORANGE} />
+        <ConnectorDot x={deadlinesEnd.x} y={deadlinesEnd.y} color={ORANGE} />
+        <ConnectorDot x={group1PillStart.x} y={group1PillStart.y} color={PURPLE} />
+        <ConnectorDot x={group1PillEnd.x} y={group1PillEnd.y} color={PURPLE} />
+        <ConnectorDot x={group2PillStart.x} y={group2PillStart.y} color={PURPLE} />
+        <ConnectorDot x={group2PillEnd.x} y={group2PillEnd.y} color={PURPLE} />
       </svg>
 
       {/* 1. Card To-Do List */}
