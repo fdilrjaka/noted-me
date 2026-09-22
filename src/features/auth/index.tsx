@@ -7,7 +7,7 @@ import { AuthDecorations } from "./components/AuthDecorations";
 
 /**
  * Halaman login NoteMe dengan tampilan infinite canvas putih bersih,
- * ilustrasi node alur kerja kolaboratif profesional, dan form login modern.
+ * ilustrasi alur node kolaboratif profesional, live cursors, dan form login modern.
  */
 export function AuthPage() {
   const { user, loading } = useSession();
@@ -33,7 +33,7 @@ function AuthScreen() {
       <AuthDecorations />
 
       <div className="relative z-10 flex w-full max-w-7xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
-        {/* Kolom Kiri: Sapaan Judul & Ilustrasi Node Kanvas Kolaboratif (Desktop) */}
+        {/* Kolom Kiri: Sapaan Judul, Ilustrasi Node Kanvas Kolaboratif & Live Cursors */}
         <div className="hidden max-w-2xl flex-col lg:flex flex-1 pl-4">
           <div className="relative">
             <h1 className="text-4xl xl:text-5xl font-extrabold tracking-[-0.03em] text-slate-900 leading-[1.12]">
@@ -59,13 +59,13 @@ function AuthScreen() {
             Selamat bergabung menjadi bagian dari NoteMe.
           </p>
 
-          {/* Ilustrasi Node Kanvas & Kabel Konektor */}
+          {/* Ilustrasi Node Kanvas, Garis Konektor Lengkap & Live Cursors */}
           <div className="mt-5 w-full">
             <CollabIllustration />
           </div>
         </div>
 
-        {/* Sapaan Teks Atas (Layar Mobile) */}
+        {/* Sapaan Teks Ater (Layar Mobile) */}
         <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Selamat Datang di NoteMe!
@@ -75,7 +75,7 @@ function AuthScreen() {
           </p>
         </div>
 
-        {/* Kartu Form Login Kanan */}
+        {/* Kartu Form Login Kanan (terhubung dengan port kabel kanvas) */}
         <div className="w-full max-w-[420px] flex justify-center lg:justify-end">
           <AuthForm form={form} />
         </div>

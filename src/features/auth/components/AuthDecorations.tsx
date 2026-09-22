@@ -1,13 +1,4 @@
-import {
-  LayoutGrid,
-  Maximize2,
-  Minus,
-  Plus,
-  Settings,
-  Smile,
-  Sparkles,
-  Play,
-} from "lucide-react";
+import { LayoutGrid, Maximize2, Minus, Plus, Settings, Smile, Sparkles, Play } from "lucide-react";
 
 /**
  * Sticky note kertas tempel dekoratif dengan sudut lipatan dan tulisan tangan.

@@ -71,6 +71,13 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   if (mode === "verify") {
     return (
       <div className={CARD}>
+        {/* Port konektor yang terhubung dengan garis kanvas */}
+        <div className="absolute -left-2 top-16 hidden lg:flex size-4 items-center justify-center pointer-events-none">
+          <span className="size-3 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center shadow-xs">
+            <span className="size-1 rounded-full bg-indigo-500" />
+          </span>
+        </div>
+
         <div className="mb-1 flex items-center gap-3">
           <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-blue-50 text-blue-600">
             <TitleIcon className="size-4.5" />
@@ -141,6 +148,13 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
 
   return (
     <div className={CARD}>
+      {/* Port konektor di sisi kiri kartu yang menyambung dengan garis kanvas */}
+      <div className="absolute -left-2 top-16 hidden lg:flex size-4 items-center justify-center pointer-events-none">
+        <span className="size-3 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center shadow-xs">
+          <span className="size-1 rounded-full bg-indigo-500" />
+        </span>
+      </div>
+
       <div className="mb-2 flex items-center gap-3">
         <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-blue-50 text-blue-600">
           <TitleIcon className="size-4.5" />

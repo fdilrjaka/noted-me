@@ -3,7 +3,6 @@ import { CheckSquare, BarChart2, Calendar, Users, User, GripVertical } from "luc
 
 /**
  * Kartu mini bergaya node kanvas NoteMe.
- * Didesain proporsional, bersih, dan modern mengikuti estetika canvas profesional.
  */
 function MiniCard({
   title,
@@ -68,29 +67,72 @@ function MiniCard({
   );
 }
 
+/**
+ * Komponen live cursor kolaboratif bergaya Figma/Miro.
+ */
+function LiveCursor({
+  x,
+  y,
+  name,
+  color,
+  className = "",
+}: {
+  x: number;
+  y: number;
+  name: string;
+  color: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`absolute pointer-events-none z-30 flex items-start select-none transition-transform duration-300 ${className}`}
+      style={{ left: x, top: y }}
+    >
+      <svg
+        className="size-4.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
+        viewBox="0 0 24 24"
+        fill={color}
+        stroke="white"
+        strokeWidth="1.5"
+      >
+        <path d="M5.5 3.2L18.8 12.3C19.7 12.9 19.3 14.3 18.2 14.4L13.1 14.8L16.2 21.2C16.6 22 15.7 22.8 14.9 22.4L11.8 16.7L8.6 20.3C7.9 21.1 6.6 20.6 6.6 19.5L5.5 3.2Z" />
+      </svg>
+      <span
+        className="ml-1 -mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm whitespace-nowrap"
+        style={{ backgroundColor: color }}
+      >
+        {name}
+      </span>
+    </div>
+  );
+}
+
 const VIEW_W = 660;
 const VIEW_H = 480;
 
 // Posisi & dimensi node-node kanvas
 const CATATAN = { x: 28, y: 220, w: 72, h: 28 };
-const TODO = { x: 140, y: 32, w: 180, h: 140 };
-const TRACKER = { x: 130, y: 198, w: 186, h: 128 };
-const DEADLINES = { x: 140, y: 348, w: 180, h: 120 };
+const TODO = { x: 136, y: 32, w: 184, h: 140 };
+const TRACKER = { x: 136, y: 198, w: 184, h: 128 };
+const DEADLINES = { x: 136, y: 348, w: 184, h: 120 };
 
-const GROUP1 = { x: 382, y: 22, w: 184, h: 180 };
-const GROUP2 = { x: 382, y: 272, w: 184, h: 108 };
+const GROUP1 = { x: 388, y: 22, w: 184, h: 180 };
+const GROUP2 = { x: 388, y: 272, w: 184, h: 108 };
 
-const PILL1 = { x: 424, y: GROUP1.y + GROUP1.h + 12 };
-const PILL2 = { x: 424, y: GROUP2.y + GROUP2.h + 12 };
-
-// Titik akhir kabel yang mengarah masuk ke form login
-const AUTH_TARGET = { x: 650, y: 110 };
+const PILL1 = { x: 445, y: GROUP1.y + GROUP1.h + 16, w: 70, h: 26 };
+const PILL2 = { x: 445, y: GROUP2.y + GROUP2.h + 16, w: 70, h: 26 };
 
 function rightMid(b: { x: number; y: number; w: number; h: number }) {
   return { x: b.x + b.w, y: b.y + b.h / 2 };
 }
 function leftMid(b: { x: number; y: number; w: number; h: number }) {
   return { x: b.x, y: b.y + b.h / 2 };
+}
+function bottomMid(b: { x: number; y: number; w: number; h: number }) {
+  return { x: b.x + b.w / 2, y: b.y + b.h };
+}
+function topMid(b: { x: number; y: number; w: number; h: number }) {
+  return { x: b.x + b.w / 2, y: b.y };
 }
 
 function curvePath(from: { x: number; y: number }, to: { x: number; y: number }, curviness = 0.5) {
@@ -120,15 +162,27 @@ export function CollabIllustration() {
   const deadlinesRight = rightMid(DEADLINES);
   const group2Left = leftMid(GROUP2);
 
-  const catatanToTracker = curvePath(catatanRight, trackerLeft);
-  const todoToGroup1 = curvePath(todoRight, group1Left);
-  const trackerToGroup2 = curvePath(trackerRight, group2Left);
-  const deadlinesToGroup2 = curvePath(deadlinesRight, group2Left);
-  const group1ToAuth = curvePath(group1Right, AUTH_TARGET, 0.55);
+  const group1Bottom = bottomMid(GROUP1);
+  const pill1Top = topMid(PILL1);
+
+  const group2Bottom = bottomMid(GROUP2);
+  const pill2Top = topMid(PILL2);
+
+  // Jalur konektor yang terhubung sempurna tanpa celah:
+  // 1. Dari Catatan ke Tracker
+  const catatanToTracker = curvePath(catatanRight, trackerLeft, 0.45);
+  // 2. Dari To-Do List langsung menyambung ke Kelompok TA (top)
+  const todoToGroup1 = curvePath(todoRight, group1Left, 0.45);
+  // 3. Dari Tracker & Deadlines langsung menyambung ke Kelompok TA 2 (dark)
+  const trackerToGroup2 = curvePath(trackerRight, group2Left, 0.45);
+  const deadlinesToGroup2 = curvePath(deadlinesRight, group2Left, 0.45);
+  // 4. Dari Kelompok TA langsung menyambung ke kartu form login di kanan
+  const group1ToAuth = curvePath(group1Right, { x: VIEW_W + 4, y: 92 }, 0.5);
 
   const BLUE = "#3b82f6";
   const ORANGE = "#f97316";
   const PURPLE = "#8b5cf6";
+  const EMERALD = "#10b981";
 
   return (
     <div
@@ -136,7 +190,7 @@ export function CollabIllustration() {
       style={{ height: VIEW_H }}
       aria-hidden="true"
     >
-      {/* Kabel-kabel konektor kanvas yang presisi, halus, dan elegan */}
+      {/* Kabel-kabel konektor kanvas yang tersambung penuh dan presisi */}
       <svg
         className="absolute inset-0 size-full overflow-visible pointer-events-none"
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
@@ -145,43 +199,45 @@ export function CollabIllustration() {
         <defs>
           <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#8b5cf6" />
-            <stop offset="100%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#6366f1" />
           </linearGradient>
         </defs>
 
-        {/* Kabel kiri dari Catatan ke Tracker */}
-        <path
-          d="M 0 234 Q 18 234, 28 234"
-          stroke={ORANGE}
-          strokeWidth="1.75"
-          strokeLinecap="round"
-        />
+        {/* 1. Kabel Catatan ke Tracker */}
         <path d={catatanToTracker} stroke={ORANGE} strokeWidth="1.75" strokeLinecap="round" />
 
-        {/* Kabel To-Do ke Kelompok TA 1 */}
+        {/* 2. Kabel To-Do ke Kelompok TA 1 */}
         <path d={todoToGroup1} stroke={BLUE} strokeWidth="1.75" strokeLinecap="round" />
 
-        {/* Kabel Tracker ke Kelompok TA 2 */}
+        {/* 3. Kabel Tracker ke Kelompok TA 2 */}
         <path d={trackerToGroup2} stroke={ORANGE} strokeWidth="1.75" strokeLinecap="round" />
 
-        {/* Kabel Deadlines ke Kelompok TA 2 */}
+        {/* 4. Kabel Deadlines ke Kelompok TA 2 */}
         <path d={deadlinesToGroup2} stroke={ORANGE} strokeWidth="1.75" strokeLinecap="round" />
 
-        {/* Kabel vertikal dari Group ke Pill */}
-        <path
-          d={`M ${GROUP1.x + 60} ${GROUP1.y + GROUP1.h} V ${PILL1.y + 6}`}
-          stroke={PURPLE}
-          strokeWidth="1.75"
-          strokeLinecap="round"
-        />
-        <path
-          d={`M ${GROUP2.x + 60} ${GROUP2.y + GROUP2.h} V ${PILL2.y + 6}`}
+        {/* 5. Kabel vertikal dari Group1 ke + User2 (tersambung rapat) */}
+        <line
+          x1={group1Bottom.x}
+          y1={group1Bottom.y}
+          x2={pill1Top.x}
+          y2={pill1Top.y}
           stroke={PURPLE}
           strokeWidth="1.75"
           strokeLinecap="round"
         />
 
-        {/* Kabel utama dari Kelompok TA 1 ke arah form login */}
+        {/* 6. Kabel vertikal dari Group2 ke + User2 (tersambung rapat) */}
+        <line
+          x1={group2Bottom.x}
+          y1={group2Bottom.y}
+          x2={pill2Top.x}
+          y2={pill2Top.y}
+          stroke={PURPLE}
+          strokeWidth="1.75"
+          strokeLinecap="round"
+        />
+
+        {/* 7. Kabel utama dari Kelompok TA yang mengalir dan tersambung ke kotak login */}
         <path
           d={group1ToAuth}
           stroke="url(#purpleGradient)"
@@ -189,16 +245,41 @@ export function CollabIllustration() {
           strokeLinecap="round"
         />
 
-        {/* Connector dots */}
+        {/* Port konektor di setiap titik temu agar tidak terputus */}
         <ConnectorDot x={catatanRight.x} y={catatanRight.y} color={ORANGE} />
         <ConnectorDot x={trackerLeft.x} y={trackerLeft.y} color={ORANGE} />
+        <ConnectorDot x={trackerRight.x} y={trackerRight.y} color={ORANGE} />
         <ConnectorDot x={todoRight.x} y={todoRight.y} color={BLUE} />
         <ConnectorDot x={group1Left.x} y={group1Left.y} color={BLUE} />
-        <ConnectorDot x={group1Right.x} y={group1Right.y} color={PURPLE} />
-        <ConnectorDot x={trackerRight.x} y={trackerRight.y} color={ORANGE} />
-        <ConnectorDot x={group2Left.x} y={group2Left.y} color={ORANGE} />
         <ConnectorDot x={deadlinesRight.x} y={deadlinesRight.y} color={ORANGE} />
+        <ConnectorDot x={group2Left.x} y={group2Left.y} color={ORANGE} />
+        <ConnectorDot x={group1Bottom.x} y={group1Bottom.y} color={PURPLE} />
+        <ConnectorDot x={pill1Top.x} y={pill1Top.y} color={PURPLE} />
+        <ConnectorDot x={group2Bottom.x} y={group2Bottom.y} color={PURPLE} />
+        <ConnectorDot x={pill2Top.x} y={pill2Top.y} color={PURPLE} />
+        <ConnectorDot x={group1Right.x} y={group1Right.y} color={PURPLE} />
       </svg>
+
+      {/* Live Multiplayer Cursors */}
+      <LiveCursor
+        x={280}
+        y={48}
+        name="Fadhil"
+        color={EMERALD}
+        className="animate-pulse"
+      />
+      <LiveCursor
+        x={500}
+        y={140}
+        name="Sarah"
+        color={PURPLE}
+      />
+      <LiveCursor
+        x={240}
+        y={280}
+        name="Budi"
+        color={ORANGE}
+      />
 
       {/* 0. Pill Mini "Catatan" di sisi kiri */}
       <div
@@ -310,7 +391,7 @@ export function CollabIllustration() {
       </div>
       <div
         className="absolute z-10 flex items-center justify-center rounded-full bg-indigo-600 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-2xs"
-        style={{ left: PILL1.x, top: PILL1.y }}
+        style={{ left: PILL1.x, top: PILL1.y, width: PILL1.w, height: PILL1.h }}
       >
         + User2
       </div>
@@ -338,7 +419,7 @@ export function CollabIllustration() {
       </div>
       <div
         className="absolute z-10 flex items-center justify-center rounded-full bg-indigo-600 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-2xs"
-        style={{ left: PILL2.x, top: PILL2.y }}
+        style={{ left: PILL2.x, top: PILL2.y, width: PILL2.w, height: PILL2.h }}
       >
         + User2
       </div>
