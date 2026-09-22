@@ -46,42 +46,20 @@ function ActionPill({
   label,
   color,
   className = "",
+  style,
 }: {
   label: string;
   color: string;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <span
-      className={`pointer-events-none absolute z-20 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow-sm ${className}`}
-      style={{ backgroundColor: color }}
+      className={`pointer-events-none z-20 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold text-white shadow-sm ${className}`}
+      style={{ ...style, backgroundColor: color }}
     >
       {label}
     </span>
-  );
-}
-
-/** Tumpukan avatar bulat kecil (anggota kelompok), warna diturunkan dari palet node. */
-function AvatarStack({ names }: { names: string[] }) {
-  const colors = [
-    PALETTE.blue.solid,
-    PALETTE.orange.solid,
-    PALETTE.green.solid,
-    PALETTE.purple.solid,
-    PALETTE.pink.solid,
-  ];
-  return (
-    <div className="flex -space-x-1.5">
-      {names.map((n, i) => (
-        <span
-          key={n + i}
-          className="flex size-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm"
-          style={{ backgroundColor: colors[i % colors.length] }}
-        >
-          {n[0]?.toUpperCase()}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -98,6 +76,7 @@ function MiniCard({
   footer,
   footerColor,
   className = "",
+  style,
 }: {
   title: string;
   color: keyof typeof PALETTE;
@@ -107,11 +86,13 @@ function MiniCard({
   footer?: string;
   footerColor?: string;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const c = PALETTE[color];
   return (
     <div
-      className={`w-44 overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
+      style={style}
     >
       <div
         className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white"
@@ -152,7 +133,15 @@ function MiniCard({
   );
 }
 
-function GroupCard({ members, className = "" }: { members: string[]; className?: string }) {
+function GroupCard({
+  members,
+  className = "",
+  style,
+}: {
+  members: string[];
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   const colors = [
     PALETTE.blue.solid,
     PALETTE.orange.solid,
@@ -162,7 +151,8 @@ function GroupCard({ members, className = "" }: { members: string[]; className?:
   ];
   return (
     <div
-      className={`w-44 overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
+      className={`overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
+      style={style}
     >
       <div
         className="px-3 py-1.5 text-[12px] font-semibold text-white"
@@ -192,20 +182,60 @@ function GroupCard({ members, className = "" }: { members: string[]; className?:
  * di kanvas tak terbatas — kartunya meniru gaya NodeShell asli (bilah judul solid,
  * badan putih, shadow lembut) supaya tidak terasa seperti mockup generik.
  */
+/** Kotak posisi (x, y, lebar, tinggi) tiap kartu — dipakai bareng untuk penempatan
+ * kartu ITU SENDIRI dan untuk menghitung titik ujung garis konektor, supaya garis
+ * selalu nempel pas di tepi kartu (tidak ada celah/putus seperti sebelumnya). */
+const TODO = { x: 180, y: 96, w: 176, h: 156 };
+const TRACKER = { x: 180, y: 268, w: 176, h: 132 };
+const DEADLINES = { x: 180, y: 416, w: 176, h: 132 };
+const GROUP1 = { x: 424, y: 64, w: 176, h: 176 };
+const GROUP2 = { x: 424, y: 334, w: 176, h: 92 };
+const PILL1 = { x: 452, y: GROUP1.y + GROUP1.h + 14 };
+const PILL2 = { x: 452, y: GROUP2.y + GROUP2.h + 14 };
+const VIEW_W = 640;
+const VIEW_H = 580;
+
+const rightMid = (b: { x: number; y: number; w: number; h: number }) => ({
+  x: b.x + b.w,
+  y: b.y + b.h / 2,
+});
+const leftMid = (b: { x: number; y: number; w: number; h: number }) => ({
+  x: b.x,
+  y: b.y + b.h / 2,
+});
+
+/** Garis kurva mulus dari tepi kanan kartu A ke tepi kiri kartu B — kontrol
+ * poin di tengah horizontal supaya lengkungannya rapi seperti "kabel" pada referensi. */
+function connectorPath(from: { x: number; y: number }, to: { x: number; y: number }) {
+  const midX = (from.x + to.x) / 2;
+  return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`;
+}
+
 export function CollabIllustration() {
+  const todoToGroup1 = connectorPath(rightMid(TODO), leftMid(GROUP1));
+  const trackerToGroup2 = connectorPath(rightMid(TRACKER), leftMid(GROUP2));
+  const deadlinesToGroup2 = connectorPath(rightMid(DEADLINES), leftMid(GROUP2));
+  const group1ToPill1 = `M ${GROUP1.x + 56} ${GROUP1.y + GROUP1.h} V ${PILL1.y + 8}`;
+  const group2ToPill2 = `M ${GROUP2.x + 56} ${GROUP2.y + GROUP2.h} V ${PILL2.y + 8}`;
+
   return (
-    <div className="relative hidden h-[34rem] w-full max-w-xl lg:block" aria-hidden="true">
-      {/* Garis konektor melengkung berwarna, meniru "kabel" penghubung kartu di referensi. */}
+    <div
+      className="relative hidden w-full max-w-2xl lg:block"
+      style={{ height: VIEW_H }}
+      aria-hidden="true"
+    >
+      {/* Garis konektor melengkung berwarna, meniru "kabel" penghubung kartu di referensi —
+          titik ujungnya dihitung dari kotak posisi kartu di atas, jadi selalu nempel pas. */}
       <svg
         className="absolute inset-0 size-full pointer-events-none"
-        viewBox="0 0 560 560"
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         fill="none"
       >
-        <path d="M 190 150 C 300 150, 300 90, 420 90" stroke="#93c5fd" strokeWidth="2.5" />
-        <path d="M 190 300 C 300 300, 320 260, 420 250" stroke="#fdba74" strokeWidth="2.5" />
-        <path d="M 190 410 C 300 410, 320 340, 420 330" stroke="#fdba74" strokeWidth="2.5" />
-        <path d="M 420 150 C 460 150, 460 250, 460 250" stroke="#c4b5fd" strokeWidth="2.5" />
-        <path d="M 420 410 C 460 410, 460 350, 460 350" stroke="#c4b5fd" strokeWidth="2.5" />
+        <path d={todoToGroup1} stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={trackerToGroup2} stroke="#fdba74" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={deadlinesToGroup2} stroke="#fdba74" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={group1ToPill1} stroke="#c4b5fd" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={group2ToPill2} stroke="#c4b5fd" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
 
       {/* 1. Card To-Do List */}
@@ -214,7 +244,8 @@ export function CollabIllustration() {
         color="blue"
         pill="Lihat"
         footer="+ Add"
-        className="absolute left-[180px] top-[100px]"
+        className="absolute"
+        style={{ left: TODO.x, top: TODO.y, width: TODO.w }}
       />
 
       {/* 2. Card Tracker */}
@@ -224,7 +255,8 @@ export function CollabIllustration() {
         lines={2}
         pill="Lihat"
         footer="+ Buat"
-        className="absolute left-[180px] top-[260px]"
+        className="absolute"
+        style={{ left: TRACKER.x, top: TRACKER.y, width: TRACKER.w }}
       />
 
       {/* 3. Card Deadlines */}
@@ -235,26 +267,34 @@ export function CollabIllustration() {
         pill="Mandiri"
         footer="Detail"
         footerColor={PALETTE.slate.solid}
-        className="absolute left-[180px] top-[410px]"
+        className="absolute"
+        style={{ left: DEADLINES.x, top: DEADLINES.y, width: DEADLINES.w }}
       />
 
       {/* 4. Group Card TA 1 & pil "+ User2" */}
       <GroupCard
         members={["Asri", "Budi", "Clara", "Dika"]}
-        className="absolute left-[410px] top-[70px]"
+        className="absolute"
+        style={{ left: GROUP1.x, top: GROUP1.y, width: GROUP1.w }}
       />
       <ActionPill
         label="+ User2"
         color={PALETTE.purple.solid}
-        className="left-[430px] top-[228px]"
+        className="absolute"
+        style={{ left: PILL1.x, top: PILL1.y }}
       />
 
       {/* 5. Group Card TA 2 & pil "+ User2" */}
-      <GroupCard members={["user2"]} className="absolute left-[410px] top-[330px]" />
+      <GroupCard
+        members={["user2"]}
+        className="absolute"
+        style={{ left: GROUP2.x, top: GROUP2.y, width: GROUP2.w }}
+      />
       <ActionPill
         label="+ User2"
         color={PALETTE.purple.solid}
-        className="left-[430px] top-[420px]"
+        className="absolute"
+        style={{ left: PILL2.x, top: PILL2.y }}
       />
     </div>
   );
