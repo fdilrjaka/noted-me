@@ -11,8 +11,7 @@ const INPUT =
   "w-full rounded-2xl border border-white/70 bg-white/60 px-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground outline-none backdrop-blur-sm focus:border-primary focus:ring-1 focus:ring-primary transition-colors";
 const BUTTON =
   "w-full rounded-2xl bg-primary py-3.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60";
-const CARD =
-  "glass-card w-[420px] rounded-3xl p-10 shadow-xl relative z-10";
+const CARD = "glass-card w-[420px] rounded-3xl p-10 shadow-xl relative z-10";
 
 export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   const {

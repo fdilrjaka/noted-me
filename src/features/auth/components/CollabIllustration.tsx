@@ -43,7 +43,13 @@ function Cursor({
 
 /** Tumpukan avatar bulat kecil (anggota kelompok), warna diturunkan dari palet node. */
 function AvatarStack({ names }: { names: string[] }) {
-  const colors = [PALETTE.blue.solid, PALETTE.orange.solid, PALETTE.green.solid, PALETTE.purple.solid, PALETTE.pink.solid];
+  const colors = [
+    PALETTE.blue.solid,
+    PALETTE.orange.solid,
+    PALETTE.green.solid,
+    PALETTE.purple.solid,
+    PALETTE.pink.solid,
+  ];
   return (
     <div className="flex -space-x-1.5">
       {names.map((n, i) => (
@@ -112,7 +118,13 @@ function MiniCard({
 }
 
 function GroupCard({ members, className = "" }: { members: string[]; className?: string }) {
-  const colors = [PALETTE.blue.solid, PALETTE.orange.solid, PALETTE.green.solid, PALETTE.purple.solid, PALETTE.pink.solid];
+  const colors = [
+    PALETTE.blue.solid,
+    PALETTE.orange.solid,
+    PALETTE.green.solid,
+    PALETTE.purple.solid,
+    PALETTE.pink.solid,
+  ];
   return (
     <div
       className={`w-44 overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] z-10 ${className}`}
@@ -154,27 +166,89 @@ export function CollabIllustration() {
         viewBox="0 0 560 560"
         fill="none"
       >
-        <path d="M 40 300 C 110 300, 110 150, 190 150" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-        <path d="M 40 300 C 110 300, 110 300, 190 300" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-        <path d="M 40 300 C 110 300, 110 450, 190 450" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path
+          d="M 40 300 C 110 300, 110 150, 190 150"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M 40 300 C 110 300, 110 300, 190 300"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M 40 300 C 110 300, 110 450, 190 450"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+          fill="none"
+        />
         <path d="M 190 180 V 270" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-        <path d="M 330 150 C 370 150, 370 110, 420 110" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-        <path d="M 330 300 C 370 300, 370 370, 420 370" stroke="#cbd5e1" strokeWidth="2" fill="none" />
+        <path
+          d="M 330 150 C 370 150, 370 110, 420 110"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M 330 300 C 370 300, 370 370, 420 370"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+          fill="none"
+        />
         <path d="M 420 350 V 230" stroke="#cbd5e1" strokeWidth="2" fill="none" />
       </svg>
 
       {/* 1. Card To-Do List & Cursor Adit */}
-      <MiniCard title="To-Do List" color="blue" pill="Live" className="absolute left-[180px] top-[100px]" />
-      <Cursor color={CURSOR_COLORS.blue} label="Adit" rotate={-25} className="left-[280px] top-[165px]" />
+      <MiniCard
+        title="To-Do List"
+        color="blue"
+        pill="Live"
+        className="absolute left-[180px] top-[100px]"
+      />
+      <Cursor
+        color={CURSOR_COLORS.blue}
+        label="Adit"
+        rotate={-25}
+        className="left-[280px] top-[165px]"
+      />
 
       {/* 2. Card Tracker & Cursor Budi + Clara */}
-      <MiniCard title="Tracker" color="orange" lines={2} pill="Live" className="absolute left-[180px] top-[260px]" />
-      <Cursor color={CURSOR_COLORS.orange} label="Budi" rotate={0} className="left-[285px] top-[320px]" />
-      <Cursor color={CURSOR_COLORS.green} label="Clara" rotate={20} className="left-[140px] top-[350px]" />
+      <MiniCard
+        title="Tracker"
+        color="orange"
+        lines={2}
+        pill="Live"
+        className="absolute left-[180px] top-[260px]"
+      />
+      <Cursor
+        color={CURSOR_COLORS.orange}
+        label="Budi"
+        rotate={0}
+        className="left-[285px] top-[320px]"
+      />
+      <Cursor
+        color={CURSOR_COLORS.green}
+        label="Clara"
+        rotate={20}
+        className="left-[140px] top-[350px]"
+      />
 
       {/* 3. Card Deadline & Cursor Doni */}
-      <MiniCard title="Deadline" color="yellow" lines={2} pill="Manual" className="absolute left-[180px] top-[410px]" />
-      <Cursor color={CURSOR_COLORS.slate} label="Doni" rotate={35} className="left-[290px] top-[475px]" />
+      <MiniCard
+        title="Deadline"
+        color="yellow"
+        lines={2}
+        pill="Manual"
+        className="absolute left-[180px] top-[410px]"
+      />
+      <Cursor
+        color={CURSOR_COLORS.slate}
+        label="Doni"
+        rotate={35}
+        className="left-[290px] top-[475px]"
+      />
 
       {/* 4. Group Card TA 1 & Avatar Stack */}
       <GroupCard members={["Adit", "Budi", "Clara"]} className="absolute left-[410px] top-[70px]" />
@@ -184,7 +258,12 @@ export function CollabIllustration() {
 
       {/* 5. Group Card TA 2 & Cursor user2 */}
       <GroupCard members={["user2"]} className="absolute left-[410px] top-[330px]" />
-      <Cursor color={CURSOR_COLORS.purple} label="user2" rotate={-10} className="left-[420px] top-[425px]" />
+      <Cursor
+        color={CURSOR_COLORS.purple}
+        label="user2"
+        rotate={-10}
+        className="left-[420px] top-[425px]"
+      />
     </div>
   );
 }
