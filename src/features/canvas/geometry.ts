@@ -106,6 +106,55 @@ export function nearestSide(r: Rect, p: Point): Side {
   return dy > 0 ? "bottom" : "top";
 }
 
+/** Titik terdekat di sekeliling (perimeter) kotak node terhadap sebuah titik p. */
+export function nearestPerimeterPoint(r: Rect, p: Point): { point: Point; side: Side } {
+  const clampedX = clamp(p.x, r.x, r.x + r.w);
+  const clampedY = clamp(p.y, r.y, r.y + r.h);
+
+  const dLeft = Math.abs(p.x - r.x);
+  const dRight = Math.abs(p.x - (r.x + r.w));
+  const dTop = Math.abs(p.y - r.y);
+  const dBottom = Math.abs(p.y - (r.y + r.h));
+
+  const minD = Math.min(dLeft, dRight, dTop, dBottom);
+
+  if (minD === dLeft) {
+    return { point: { x: r.x, y: clampedY }, side: "left" };
+  } else if (minD === dRight) {
+    return { point: { x: r.x + r.w, y: clampedY }, side: "right" };
+  } else if (minD === dTop) {
+    return { point: { x: clampedX, y: r.y }, side: "top" };
+  } else {
+    return { point: { x: clampedX, y: r.y + r.h }, side: "bottom" };
+  }
+}
+
+/** Cari node target yang dekat atau berada di bawah pointer saat menarik garis koneksi. */
+export function findConnectTarget(
+  rects: Map<string, Rect>,
+  hidden: Set<string>,
+  fromId: string,
+  p: Point,
+  snapDistance = 70,
+): { id: string; point: Point; side: Side } | null {
+  let closest: { id: string; point: Point; side: Side; dist: number } | null = null;
+
+  rects.forEach((r, id) => {
+    if (id === fromId || hidden.has(id)) return;
+    const isInside = p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+    const { point, side } = nearestPerimeterPoint(r, p);
+    const dist = Math.hypot(p.x - point.x, p.y - point.y);
+
+    if (isInside || dist <= snapDistance) {
+      if (!closest || dist < closest.dist) {
+        closest = { id, point, side, dist: isInside ? 0 : dist };
+      }
+    }
+  });
+
+  return closest ? { id: closest.id, point: closest.point, side: closest.side } : null;
+}
+
 export function boundsOf(rects: Rect[]): Rect | null {
   if (rects.length === 0) return null;
   let x1 = Infinity;
@@ -134,7 +183,6 @@ export function fitViewport(rect: Rect, view: Size, padding = 64, maxZoom = 1.25
   };
 }
 
-/** Viewport yang memusatkan sebuah titik dunia di tengah layar. */
 export function centerOn(p: Point, view: Size, zoom: number): Viewport {
   return { zoom, x: view.w / 2 - p.x * zoom, y: view.h / 2 - p.y * zoom };
 }
@@ -168,10 +216,6 @@ function flow(
 const byPosition = (a: { rect: Rect }, b: { rect: Rect }) =>
   a.rect.y - b.rect.y || a.rect.x - b.rect.x;
 
-/**
- * "Rapikan Otomatis": node di dalam frame disusun berderet rapi di dalam frame-nya (tinggi frame
- * menyesuaikan), node di luar frame disusun berderet di bawah semua frame. Node terkunci diam.
- */
 export function autoArrange(nodes: CanvasNode[], sizes: Record<string, Size>): CanvasNode[] {
   const positions = new Map<string, Point>();
   const frameHeights = new Map<string, number>();

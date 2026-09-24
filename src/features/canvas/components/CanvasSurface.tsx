@@ -20,10 +20,13 @@ import {
   containedIds,
   draftPath,
   edgePath,
+  findConnectTarget,
   hiddenByCollapse,
+  nearestPerimeterPoint,
   nearestSide,
   nodeRect,
   rectsIntersect,
+  type Point,
   type Rect,
   type Size,
 } from "../geometry";
@@ -41,7 +44,13 @@ type Drag =
       origin: Map<string, { x: number; y: number }>;
     }
   | { kind: "marquee"; startWorld: { x: number; y: number }; current: { x: number; y: number } }
-  | { kind: "connect"; from: string; fromSide: Side; to: { x: number; y: number } }
+  | {
+      kind: "connect";
+      from: string;
+      fromSide: Side;
+      to: { x: number; y: number };
+      snapTarget: { id: string; point: Point; side: Side } | null;
+    }
   | {
       kind: "resize";
       id: string;
@@ -54,7 +63,6 @@ export type CanvasSurfaceHandle = {
   viewSize: () => Size;
 };
 
-/** Ganjalan supaya klik tidak dianggap "seret" kalau geseran cuma beberapa piksel. */
 const DRAG_THRESHOLD = 3;
 
 export function CanvasSurface({
@@ -73,7 +81,6 @@ export function CanvasSurface({
   selected: Set<string>;
   onSelect: (ids: Set<string>) => void;
   editable: boolean;
-  /** Alat aktif dari floating toolbar: "pan" memaksa geser kanvas walau editable. */
   tool: "select" | "pan";
   onReady: (handle: CanvasSurfaceHandle) => void;
 }) {
@@ -115,7 +122,7 @@ export function CanvasSurface({
     return m;
   }, [nodes, sizes]);
 
-  // ---- wheel: pan (trackpad dua jari) & zoom (ctrl/cmd + wheel atau pinch) ----------------
+  // Wheel zoom / pan
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -138,7 +145,6 @@ export function CanvasSurface({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // ---- pointer: pan / marquee-select / move node(s) / connect / resize -------------------
   const startPan = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({
@@ -169,11 +175,13 @@ export function CanvasSurface({
   const onHandleDown = (e: React.PointerEvent, nodeId: string, side: Side) => {
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const startPt = screenToWorld(e.clientX, e.clientY);
     setDrag({
       kind: "connect",
       from: nodeId,
       fromSide: side,
-      to: screenToWorld(e.clientX, e.clientY),
+      to: startPt,
+      snapTarget: null,
     });
     draggedRef.current = true;
   };
@@ -216,7 +224,6 @@ export function CanvasSurface({
       const n = nodes.find((nn) => nn.id === id);
       if (n) origin.set(id, { x: n.x, y: n.y });
     }
-    // Menyeret frame yang tidak sedang diseleksi ikut menyeret isinya.
     if (node.kind === "frame" && !selected.has(nodeId)) {
       for (const id of containedIds(node, nodes, sizes)) {
         const n = nodes.find((nn) => nn.id === id);
@@ -252,7 +259,13 @@ export function CanvasSurface({
         draggedRef.current = true;
         setDrag({ ...drag, current: screenToWorld(e.clientX, e.clientY) });
       } else if (drag.kind === "connect") {
-        setDrag({ ...drag, to: screenToWorld(e.clientX, e.clientY) });
+        const mouseWorld = screenToWorld(e.clientX, e.clientY);
+        const target = findConnectTarget(rects, hidden, drag.from, mouseWorld, 70);
+        setDrag({
+          ...drag,
+          to: target ? target.point : mouseWorld,
+          snapTarget: target,
+        });
       } else if (drag.kind === "resize") {
         const w = screenToWorld(e.clientX, e.clientY);
         const dw = w.x - drag.startWorld.x;
@@ -263,6 +276,7 @@ export function CanvasSurface({
         });
       }
     };
+
     const onUp = (e: PointerEvent) => {
       if (drag.kind === "marquee") {
         const a = drag.startWorld;
@@ -282,24 +296,29 @@ export function CanvasSurface({
           onSelect(new Set());
         }
       } else if (drag.kind === "connect") {
-        const target = document
-          .elementsFromPoint(e.clientX, e.clientY)
-          .find((el) => el.hasAttribute("data-node-id"))
-          ?.getAttribute("data-node-id");
-        if (target && target !== drag.from) {
-          const r = rects.get(target);
-          if (r) {
+        if (drag.snapTarget) {
+          addEdge({
+            from: drag.from,
+            fromSide: drag.fromSide,
+            to: drag.snapTarget.id,
+            toSide: drag.snapTarget.side,
+          });
+        } else {
+          const mouseWorld = screenToWorld(e.clientX, e.clientY);
+          const fallback = findConnectTarget(rects, hidden, drag.from, mouseWorld, 60);
+          if (fallback) {
             addEdge({
               from: drag.from,
               fromSide: drag.fromSide,
-              to: target,
-              toSide: nearestSide(r, drag.to),
+              to: fallback.id,
+              toSide: fallback.side,
             });
           }
         }
       }
       setDrag(null);
     };
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -392,13 +411,33 @@ export function CanvasSurface({
             );
           })}
           {drag?.kind === "connect" && rects.get(drag.from) && (
-            <path
-              d={draftPath(rects.get(drag.from)!, drag.fromSide, drag.to)}
-              fill="none"
-              stroke={PALETTE.blue.solid}
-              strokeWidth={2}
-              strokeDasharray="6 4"
-            />
+            <>
+              <path
+                d={draftPath(rects.get(drag.from)!, drag.fromSide, drag.to)}
+                fill="none"
+                stroke={PALETTE.blue.solid}
+                strokeWidth={2.5}
+                strokeDasharray="6 4"
+              />
+              {drag.snapTarget && (
+                <g className="pointer-events-none">
+                  <circle
+                    cx={drag.snapTarget.point.x}
+                    cy={drag.snapTarget.point.y}
+                    r={12}
+                    fill="rgba(59, 130, 246, 0.25)"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                  />
+                  <circle
+                    cx={drag.snapTarget.point.x}
+                    cy={drag.snapTarget.point.y}
+                    r={5}
+                    fill="#2563eb"
+                  />
+                </g>
+              )}
+            </>
           )}
           <defs>
             <marker
@@ -417,7 +456,11 @@ export function CanvasSurface({
         {visibleNodes
           .filter((n) => n.kind !== "frame")
           .map((n) => (
-            <div key={n.id} onPointerDown={(e) => onNodeDown(e, n.id)}>
+            <div
+              key={n.id}
+              onPointerDown={(e) => onNodeDown(e, n.id)}
+              className={drag?.kind === "connect" && drag.snapTarget?.id === n.id ? "ring-4 ring-primary/60 rounded-2xl transition-all" : ""}
+            >
               <NodeView node={n} selected={selected.has(n.id)} onSize={onSize} />
               {selected.has(n.id) && editable && !n.pinned && n.kind !== "sticky" && (
                 <ResizeCorner rect={rects.get(n.id)!} onDown={(e) => onResizeDown(e, n.id)} />
@@ -444,8 +487,6 @@ export function CanvasSurface({
   );
 }
 
-/** Handle koneksi tak-terlihat yang mengambang di atas node (NodeShell sudah punya versi visual;
- * ini duplikat posisi absolut supaya area tarik tetap presisi walau ukuran node berubah). */
 function HandleLayer({
   id,
   rect,

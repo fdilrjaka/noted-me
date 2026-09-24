@@ -12,7 +12,6 @@ import { PALETTE } from "../palette";
 
 export type OnSize = (id: string, size: Size) => void;
 
-/** Lapor ukuran DOM node ke kanvas (dipakai untuk garis koneksi, minimap, dan rapikan otomatis). */
 export function useReportSize(id: string, onSize: OnSize) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -27,7 +26,6 @@ export function useReportSize(id: string, onSize: OnSize) {
   return ref;
 }
 
-/** Judul yang bisa diedit dengan klik ganda. */
 export function EditableTitle({
   value,
   onCommit,
@@ -151,12 +149,13 @@ export function NodeShell({
   node: CanvasNode;
   selected: boolean;
   onSize: OnSize;
-  /** "live" = data tersambung ke halaman asli, "manual" = data milik dashboard. */
   pill: "live" | "manual";
   children: ReactNode;
 }) {
   const ref = useReportSize(node.id, onSize);
   const color = PALETTE[node.color];
+  const scale = Math.max(0.9, Math.min(2.2, node.w / 300));
+
   return (
     <div
       ref={ref}
@@ -167,6 +166,7 @@ export function NodeShell({
         top: node.y,
         width: node.w,
         ...(node.h !== null ? { height: node.h } : {}),
+        fontSize: `${scale * 14}px`,
       }}
     >
       <div

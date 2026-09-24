@@ -5,7 +5,6 @@ import { NodeShell, type OnSize } from "./NodeShell";
 const btn =
   "press-sm rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10";
 
-/** Tabel sederhana manual: baris pertama diperlakukan sebagai header. */
 export function TableNodeView({
   node,
   selected,
@@ -19,10 +18,14 @@ export function TableNodeView({
   const rows = node.cells.length;
   const cols = node.cells[0]?.length ?? 0;
   const set = (cells: string[][]) => patchNode(node.id, { cells });
+  const scale = Math.max(0.9, Math.min(2.0, node.w / 280));
 
   return (
     <NodeShell node={node} selected={selected} onSize={onSize} pill="manual">
-      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/10">
+      <div
+        className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/10"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         {node.cells.map((row, r) => (
           <div
             key={r}
@@ -42,7 +45,8 @@ export function TableNodeView({
                   )
                 }
                 aria-label={`Sel baris ${r + 1} kolom ${c + 1}`}
-                className={`min-w-0 flex-1 border-slate-200 bg-transparent px-2 py-1.5 text-xs outline-none focus:bg-primary/10 dark:border-white/10 ${
+                style={{ fontSize: "1em", padding: `${scale * 6}px ${scale * 8}px` }}
+                className={`min-w-0 flex-1 border-slate-200 bg-transparent outline-none focus:bg-primary/10 dark:border-white/10 ${
                   r === 0 ? "font-semibold" : ""
                 } ${c > 0 ? "border-l" : ""} ${r > 0 ? "border-t" : ""}`}
               />
@@ -50,11 +54,16 @@ export function TableNodeView({
           </div>
         ))}
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-1">
+      <div
+        className="mt-1.5 flex flex-wrap gap-1"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <button
           type="button"
           className={btn}
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             checkpoint();
             set([...node.cells, Array.from({ length: cols }, () => "")]);
           }}
@@ -64,7 +73,9 @@ export function TableNodeView({
         <button
           type="button"
           className={btn}
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             checkpoint();
             set(node.cells.map((r) => [...r, ""]));
           }}
@@ -75,7 +86,9 @@ export function TableNodeView({
           type="button"
           className={btn}
           disabled={rows <= 1}
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             checkpoint();
             set(node.cells.slice(0, -1));
           }}
@@ -86,7 +99,9 @@ export function TableNodeView({
           type="button"
           className={btn}
           disabled={cols <= 1}
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             checkpoint();
             set(node.cells.map((r) => r.slice(0, -1)));
           }}

@@ -2,7 +2,6 @@ import { checkpoint, patchNode, type StickyCanvasNode } from "@/lib/noteme/canva
 import { PALETTE } from "../palette";
 import { ConnectHandles, PinRemove, useReportSize, type OnSize } from "./NodeShell";
 
-/** Sticky note manual (isinya milik dashboard, tidak terhubung ke halaman lain). */
 export function StickyNodeView({
   node,
   selected,
@@ -14,6 +13,8 @@ export function StickyNodeView({
 }) {
   const ref = useReportSize(node.id, onSize);
   const c = PALETTE[node.color];
+  const scale = Math.max(0.9, Math.min(2.2, node.w / 240));
+
   return (
     <div
       ref={ref}
@@ -27,7 +28,10 @@ export function StickyNodeView({
         }`}
         style={{ backgroundColor: c.soft, color: c.ink, cursor: node.pinned ? "default" : "grab" }}
       >
-        <div className="absolute right-1.5 top-1.5 flex opacity-0 transition-opacity group-hover:opacity-100">
+        <div
+          className="absolute right-1.5 top-1.5 flex opacity-0 transition-opacity group-hover:opacity-100"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <PinRemove node={node} light={false} />
         </div>
         <textarea
@@ -36,7 +40,8 @@ export function StickyNodeView({
           onChange={(e) => patchNode(node.id, { text: e.target.value })}
           placeholder="Tulis ide atau catatan…"
           aria-label="Isi sticky note"
-          className="h-full w-full resize-none bg-transparent text-sm leading-snug outline-none placeholder:opacity-50"
+          style={{ fontSize: `${scale * 14}px` }}
+          className="h-full w-full resize-none bg-transparent leading-relaxed outline-none placeholder:opacity-50"
         />
         <span
           data-resize={node.id}
