@@ -7,10 +7,28 @@ import {
   type CanvasNode,
   type Side,
 } from "@/lib/noteme/canvasStore";
-import type { Size } from "../geometry";
+import { clamp, type Size } from "../geometry";
 import { PALETTE } from "../palette";
 
 export type OnSize = (id: string, size: Size) => void;
+
+/**
+ * Menghitung skala konten node secara seimbang dari lebar dan tinggi:
+ * - Menggunakan rasio gabungan lebar dan tinggi agar konten tidak terpotong saat pipih/pendek
+ * - Meredam skala agar tidak membesar berlebihan atau terlalu kecil
+ * - Dibatasi ketat di rentang 0.8x - 1.65x
+ */
+export function computeNodeScale(
+  w: number,
+  h: number | null,
+  base: { w: number; h: number } = { w: 300, h: 240 },
+): number {
+  const rw = w / (base.w || 300);
+  const rh = h !== null && h > 0 ? h / (base.h || 240) : rw;
+  const raw = h !== null ? Math.min(rw, rh * 1.08, Math.sqrt(rw * rh)) : rw;
+  const factor = raw >= 1 ? 1 + (raw - 1) * 0.46 : 1 - (1 - raw) * 0.44;
+  return clamp(Math.round(factor * 100) / 100, 0.8, 1.65);
+}
 
 export function useReportSize(id: string, onSize: OnSize) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -99,14 +117,12 @@ export function ConnectHandles({ id, visible }: { id: string; visible: boolean }
 export function PinRemove({ node, light = true }: { node: CanvasNode; light?: boolean }) {
   const tone = light ? "hover:bg-white/25" : "hover:bg-black/10";
   return (
-    <div className="flex items-center gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
+    <>
       <button
         type="button"
         aria-label={node.pinned ? "Lepas kunci posisi" : "Kunci posisi"}
         title={node.pinned ? "Lepas kunci posisi" : "Kunci posisi"}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
+        onClick={() => {
           checkpoint();
           patchNode(node.id, { pinned: !node.pinned });
         }}
@@ -118,16 +134,12 @@ export function PinRemove({ node, light = true }: { node: CanvasNode; light?: bo
         type="button"
         aria-label="Hapus dari dashboard"
         title="Hapus dari dashboard (data aslinya tidak ikut terhapus)"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          removeNodes([node.id]);
-        }}
+        onClick={() => removeNodes([node.id])}
         className={`press-sm flex size-6 flex-none items-center justify-center rounded-full ${tone}`}
       >
         <X className="size-3.5" />
       </button>
-    </div>
+    </>
   );
 }
 
@@ -154,7 +166,7 @@ export function NodeShell({
 }) {
   const ref = useReportSize(node.id, onSize);
   const color = PALETTE[node.color];
-  const scale = Math.max(0.9, Math.min(2.2, node.w / 300));
+  const scale = computeNodeScale(node.w, node.h);
 
   return (
     <div
@@ -166,17 +178,23 @@ export function NodeShell({
         top: node.y,
         width: node.w,
         ...(node.h !== null ? { height: node.h } : {}),
-        fontSize: `${scale * 14}px`,
       }}
     >
       <div
         className={`flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_6px_20px_rgba(15,23,42,0.12)] ring-2 dark:bg-slate-900 ${
           selected ? "ring-primary" : "ring-transparent"
         }`}
+        style={{
+          fontSize: `${Math.round(13 * scale)}px`,
+        }}
       >
         <div
-          className="flex items-center gap-1.5 px-3.5 py-2 text-white"
-          style={{ backgroundColor: color.solid, cursor: node.pinned ? "default" : "grab" }}
+          className="flex items-center gap-1.5 text-white"
+          style={{
+            backgroundColor: color.solid,
+            cursor: node.pinned ? "default" : "grab",
+            padding: `${Math.round(7 * scale)}px ${Math.round(12 * scale)}px`,
+          }}
         >
           <EditableTitle
             value={node.title}
@@ -184,7 +202,7 @@ export function NodeShell({
               checkpoint();
               patchNode(node.id, { title });
             }}
-            className="text-[15px]"
+            className="font-semibold"
           />
           {pill === "live" ? (
             <LivePill />
@@ -195,7 +213,12 @@ export function NodeShell({
           )}
           <PinRemove node={node} />
         </div>
-        <div className="min-h-0 flex-1 p-3">{children}</div>
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+          style={{ padding: `${Math.round(12 * scale)}px` }}
+        >
+          {children}
+        </div>
       </div>
       <ConnectHandles id={node.id} visible={selected} />
     </div>

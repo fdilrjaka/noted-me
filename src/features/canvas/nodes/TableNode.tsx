@@ -1,9 +1,9 @@
 import { checkpoint, patchNode, type TableCanvasNode } from "@/lib/noteme/canvasStore";
 import { PALETTE } from "../palette";
-import { NodeShell, type OnSize } from "./NodeShell";
+import { NodeShell, computeNodeScale, type OnSize } from "./NodeShell";
 
 const btn =
-  "press-sm rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10";
+  "press-sm rounded-md font-medium text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10";
 
 export function TableNodeView({
   node,
@@ -18,96 +18,112 @@ export function TableNodeView({
   const rows = node.cells.length;
   const cols = node.cells[0]?.length ?? 0;
   const set = (cells: string[][]) => patchNode(node.id, { cells });
-  const scale = Math.max(0.9, Math.min(2.0, node.w / 280));
+
+  const scale = computeNodeScale(node.w, node.h, { w: 320, h: 220 });
 
   return (
     <NodeShell node={node} selected={selected} onSize={onSize} pill="manual">
-      <div
-        className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/10"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {node.cells.map((row, r) => (
-          <div
-            key={r}
-            className="flex"
-            style={r === 0 ? { backgroundColor: `${color}22` } : undefined}
+      <div className="flex h-full flex-col gap-2">
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-200 dark:border-white/10">
+          <table className="w-full border-collapse">
+            <tbody>
+              {node.cells.map((row, r) => (
+                <tr
+                  key={r}
+                  style={r === 0 ? { backgroundColor: `${color}22` } : undefined}
+                  className="border-b border-slate-200 last:border-b-0 dark:border-white/10"
+                >
+                  {row.map((cell, c) => (
+                    <td
+                      key={c}
+                      className={`border-r border-slate-200 p-0 last:border-r-0 dark:border-white/10 ${
+                        r === 0 ? "font-semibold" : ""
+                      }`}
+                    >
+                      <input
+                        value={cell}
+                        onFocus={checkpoint}
+                        onChange={(e) =>
+                          set(
+                            node.cells.map((rw, ri) =>
+                              ri === r ? rw.map((v, ci) => (ci === c ? e.target.value : v)) : rw,
+                            ),
+                          )
+                        }
+                        aria-label={`Sel baris ${r + 1} kolom ${c + 1}`}
+                        style={{
+                          fontSize: `${Math.round(12 * scale)}px`,
+                          padding: `${Math.round(5 * scale)}px ${Math.round(8 * scale)}px`,
+                        }}
+                        className="w-full min-w-16 bg-transparent outline-none focus:bg-primary/10"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <button
+            type="button"
+            className={btn}
+            style={{
+              fontSize: `${Math.max(10, Math.round(11 * scale))}px`,
+              padding: `${Math.round(2 * scale)}px ${Math.round(7 * scale)}px`,
+            }}
+            onClick={() => {
+              checkpoint();
+              set([...node.cells, Array.from({ length: cols }, () => "")]);
+            }}
           >
-            {row.map((cell, c) => (
-              <input
-                key={c}
-                value={cell}
-                onFocus={checkpoint}
-                onChange={(e) =>
-                  set(
-                    node.cells.map((rw, ri) =>
-                      ri === r ? rw.map((v, ci) => (ci === c ? e.target.value : v)) : rw,
-                    ),
-                  )
-                }
-                aria-label={`Sel baris ${r + 1} kolom ${c + 1}`}
-                style={{ fontSize: "1em", padding: `${scale * 6}px ${scale * 8}px` }}
-                className={`min-w-0 flex-1 border-slate-200 bg-transparent outline-none focus:bg-primary/10 dark:border-white/10 ${
-                  r === 0 ? "font-semibold" : ""
-                } ${c > 0 ? "border-l" : ""} ${r > 0 ? "border-t" : ""}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div
-        className="mt-1.5 flex flex-wrap gap-1"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className={btn}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            checkpoint();
-            set([...node.cells, Array.from({ length: cols }, () => "")]);
-          }}
-        >
-          + Baris
-        </button>
-        <button
-          type="button"
-          className={btn}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            checkpoint();
-            set(node.cells.map((r) => [...r, ""]));
-          }}
-        >
-          + Kolom
-        </button>
-        <button
-          type="button"
-          className={btn}
-          disabled={rows <= 1}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            checkpoint();
-            set(node.cells.slice(0, -1));
-          }}
-        >
-          − Baris
-        </button>
-        <button
-          type="button"
-          className={btn}
-          disabled={cols <= 1}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            checkpoint();
-            set(node.cells.map((r) => r.slice(0, -1)));
-          }}
-        >
-          − Kolom
-        </button>
+            + Baris
+          </button>
+          <button
+            type="button"
+            className={btn}
+            style={{
+              fontSize: `${Math.max(10, Math.round(11 * scale))}px`,
+              padding: `${Math.round(2 * scale)}px ${Math.round(7 * scale)}px`,
+            }}
+            onClick={() => {
+              checkpoint();
+              set(node.cells.map((r) => [...r, ""]));
+            }}
+          >
+            + Kolom
+          </button>
+          <button
+            type="button"
+            className={btn}
+            disabled={rows <= 1}
+            style={{
+              fontSize: `${Math.max(10, Math.round(11 * scale))}px`,
+              padding: `${Math.round(2 * scale)}px ${Math.round(7 * scale)}px`,
+            }}
+            onClick={() => {
+              checkpoint();
+              set(node.cells.slice(0, -1));
+            }}
+          >
+            − Baris
+          </button>
+          <button
+            type="button"
+            className={btn}
+            disabled={cols <= 1}
+            style={{
+              fontSize: `${Math.max(10, Math.round(11 * scale))}px`,
+              padding: `${Math.round(2 * scale)}px ${Math.round(7 * scale)}px`,
+            }}
+            onClick={() => {
+              checkpoint();
+              set(node.cells.map((r) => r.slice(0, -1)));
+            }}
+          >
+            − Kolom
+          </button>
+        </div>
       </div>
     </NodeShell>
   );

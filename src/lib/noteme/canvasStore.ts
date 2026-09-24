@@ -1,13 +1,5 @@
 import { useSyncExternalStore } from "react";
 
-/**
- * Dashboard (infinite canvas). Isinya HANYA tata letak visual: posisi node, frame, garis
- * koneksi, dan viewport. Data asli (task, jadwal, catatan) tetap milik store masing-masing —
- * node "Live" cuma menyimpan referensi (kategori / mata kuliah) dan membaca datanya langsung,
- * jadi mengubah di dashboard = mengubah di halaman aslinya. Seperti folderStore, kanvas ini
- * disimpan lokal (localStorage) dan tidak ikut skema sync Supabase.
- */
-
 export type Side = "top" | "right" | "bottom" | "left";
 export type ColorKey = "blue" | "orange" | "green" | "purple" | "red" | "yellow" | "pink" | "slate";
 export const COLOR_KEYS: ColorKey[] = [
@@ -26,11 +18,9 @@ type Base = {
   x: number;
   y: number;
   w: number;
-  /** Tinggi eksplisit (frame, sticky). null = mengikuti isi node. */
   h: number | null;
   title: string;
   color: ColorKey;
-  /** Terkunci: tidak bisa digeser. */
   pinned: boolean;
 };
 
@@ -57,8 +47,10 @@ export type CanvasEdge = {
   id: string;
   from: string;
   fromSide: Side;
+  fromRatio?: number;
   to: string;
   toSide: Side;
+  toRatio?: number;
 };
 
 export type CanvasDoc = { nodes: CanvasNode[]; edges: CanvasEdge[] };
@@ -74,7 +66,6 @@ export function canvasUid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-/** Isi awal supaya dashboard tidak kosong saat pertama dibuka. */
 function seedState(): State {
   const frameId = canvasUid();
   const schedule: CanvasNode = {
@@ -165,7 +156,7 @@ function writeNow() {
   try {
     window.localStorage.setItem(KEY, JSON.stringify({ v: 1, ...state }));
   } catch {
-    // Penyimpanan lokal penuh/diblokir — tata letak cuma tidak tersimpan, tidak perlu toast.
+    // ignore local storage full
   }
 }
 
@@ -219,7 +210,6 @@ export function loadCanvas() {
   notify();
 }
 
-/** Buang tata letak lokal (data akun lain) — dashboard kembali ke isi awal. */
 export function clearCanvasLocal() {
   loaded = true;
   past = [];
@@ -228,7 +218,7 @@ export function clearCanvasLocal() {
   try {
     window.localStorage.removeItem(KEY);
   } catch {
-    // abaikan
+    // ignore
   }
   notify();
 }
@@ -256,7 +246,6 @@ export function useCanvasViewport(): Viewport {
   );
 }
 
-/** "undo:redo" dalam bentuk string supaya snapshot-nya stabil untuk useSyncExternalStore. */
 export function useCanvasHistory(): { canUndo: boolean; canRedo: boolean } {
   const key = useSyncExternalStore(
     subscribe,
@@ -270,9 +259,6 @@ export function getCanvasDoc() {
   return state.doc;
 }
 
-// ---- riwayat (undo / redo) ---------------------------------------------------------------
-
-/** Simpan kondisi sekarang ke riwayat. Panggil SEBELUM mengubah (sekali per aksi/gesture). */
 export function checkpoint() {
   if (past[past.length - 1] === state.doc) return;
   past.push(state.doc);
@@ -299,8 +285,6 @@ export function redo() {
   notify();
 }
 
-// ---- perubahan ---------------------------------------------------------------------------
-
 function mutate(fn: (doc: CanvasDoc) => CanvasDoc) {
   const next = fn(state.doc);
   if (next === state.doc) return;
@@ -320,7 +304,6 @@ export function addNode(node: CanvasNode) {
   mutate((d) => ({ ...d, nodes: [...d.nodes, node] }));
 }
 
-/** Ubah field node. Panggil checkpoint() dulu kalau ini aksi baru yang perlu bisa di-undo. */
 export function patchNode(id: string, patch: Record<string, unknown>) {
   mutate((d) => ({
     ...d,
@@ -353,24 +336,38 @@ export function removeNodes(ids: string[]) {
   }));
 }
 
-/** Naikkan node ke lapisan paling atas (tanpa masuk riwayat). */
 export function bringToFront(id: string) {
   mutate((d) => {
     const idx = d.nodes.findIndex((n) => n.id === id);
     if (idx === -1 || idx === d.nodes.length - 1) return d;
     const node = d.nodes[idx]!;
-    if (node.kind === "frame") return d; // frame selalu di lapisan bawah
+    if (node.kind === "frame") return d;
     return { ...d, nodes: [...d.nodes.slice(0, idx), ...d.nodes.slice(idx + 1), node] };
   });
 }
 
 export function addEdge(edge: Omit<CanvasEdge, "id">) {
-  const exists = state.doc.edges.some(
-    (e) => (e.from === edge.from && e.to === edge.to) || (e.from === edge.to && e.to === edge.from),
+  if (edge.from === edge.to) return;
+  // Cegah duplikasi persis sama
+  const exact = state.doc.edges.some(
+    (e) =>
+      e.from === edge.from &&
+      e.to === edge.to &&
+      e.fromSide === edge.fromSide &&
+      e.toSide === edge.toSide,
   );
-  if (exists || edge.from === edge.to) return;
+  if (exact) return;
   checkpoint();
-  mutate((d) => ({ ...d, edges: [...d.edges, { ...edge, id: canvasUid() }] }));
+  mutate((d) => {
+    // Jika sudah ada sambungan searah sebelumnya, perbarui posisinya agar rapi
+    const idx = d.edges.findIndex((e) => e.from === edge.from && e.to === edge.to);
+    if (idx !== -1) {
+      const updated = [...d.edges];
+      updated[idx] = { ...edge, id: updated[idx]!.id };
+      return { ...d, edges: updated };
+    }
+    return { ...d, edges: [...d.edges, { ...edge, id: canvasUid() }] };
+  });
 }
 
 export function removeEdge(id: string) {

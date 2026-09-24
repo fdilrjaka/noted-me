@@ -20,15 +20,13 @@ import {
   containedIds,
   draftPath,
   edgePath,
-  findConnectTarget,
+  findSnapTarget,
   hiddenByCollapse,
-  nearestPerimeterPoint,
-  nearestSide,
   nodeRect,
   rectsIntersect,
-  type Point,
   type Rect,
   type Size,
+  type SnapTarget,
 } from "../geometry";
 import { NodeView } from "../nodes";
 import { FrameNodeView } from "../nodes/FrameNodeView";
@@ -49,7 +47,7 @@ type Drag =
       from: string;
       fromSide: Side;
       to: { x: number; y: number };
-      snapTarget: { id: string; point: Point; side: Side } | null;
+      snapTarget: SnapTarget | null;
     }
   | {
       kind: "resize";
@@ -122,7 +120,7 @@ export function CanvasSurface({
     return m;
   }, [nodes, sizes]);
 
-  // Wheel zoom / pan
+  // ---- wheel: pan & zoom -----------------------------------------------------------------
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -145,6 +143,7 @@ export function CanvasSurface({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  // ---- pointer handlers ------------------------------------------------------------------
   const startPan = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDrag({
@@ -175,12 +174,12 @@ export function CanvasSurface({
   const onHandleDown = (e: React.PointerEvent, nodeId: string, side: Side) => {
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    const startPt = screenToWorld(e.clientX, e.clientY);
+    const startWorld = screenToWorld(e.clientX, e.clientY);
     setDrag({
       kind: "connect",
       from: nodeId,
       fromSide: side,
-      to: startPt,
+      to: startWorld,
       snapTarget: null,
     });
     draggedRef.current = true;
@@ -192,7 +191,7 @@ export function CanvasSurface({
     if (!node) return;
     checkpoint();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    const r = rects.get(id)!;
+    const r = rects.get(id) ?? { x: node.x, y: node.y, w: node.w, h: node.h ?? 180 };
     setDrag({
       kind: "resize",
       id,
@@ -204,10 +203,37 @@ export function CanvasSurface({
 
   const onNodeDown = (e: React.PointerEvent, nodeId: string) => {
     if (!editable || tool === "pan") return;
-    const target = e.target as HTMLElement | null;
-    if (target?.closest("button, input, textarea, select, [data-resize], [data-handle-node]")) {
+
+    // 1. Cek apakah klik berasal langsung dari handle koneksi
+    const handleEl = (e.target as HTMLElement).closest("[data-handle-side]");
+    if (handleEl) {
+      const side = handleEl.getAttribute("data-handle-side") as Side;
+      if (side) {
+        onHandleDown(e, nodeId, side);
+        return;
+      }
+    }
+
+    // 2. Cek apakah klik berasal dari handle resize
+    const resizeEl = (e.target as HTMLElement).closest("[data-resize]");
+    if (resizeEl) {
+      const resizeId = resizeEl.getAttribute("data-resize") || nodeId;
+      onResizeDown(e, resizeId);
       return;
     }
+
+    // 3. Hindari membajak interaksi form / tombol di dalam node
+    const targetTag = (e.target as HTMLElement).tagName;
+    if (
+      targetTag === "INPUT" ||
+      targetTag === "TEXTAREA" ||
+      targetTag === "SELECT" ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest("a")
+    ) {
+      return;
+    }
+
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || node.pinned) {
       if (node?.pinned) onSelect(new Set([nodeId]));
@@ -259,20 +285,17 @@ export function CanvasSurface({
         draggedRef.current = true;
         setDrag({ ...drag, current: screenToWorld(e.clientX, e.clientY) });
       } else if (drag.kind === "connect") {
-        const mouseWorld = screenToWorld(e.clientX, e.clientY);
-        const target = findConnectTarget(rects, hidden, drag.from, mouseWorld, 70);
-        setDrag({
-          ...drag,
-          to: target ? target.point : mouseWorld,
-          snapTarget: target,
-        });
+        const w = screenToWorld(e.clientX, e.clientY);
+        // Snapping real-time di sekitar perimeter node/tabel terdekat
+        const snap = findSnapTarget(w, drag.from, nodes, rects, hidden, 80);
+        setDrag({ ...drag, to: w, snapTarget: snap });
       } else if (drag.kind === "resize") {
         const w = screenToWorld(e.clientX, e.clientY);
         const dw = w.x - drag.startWorld.x;
         const dh = w.y - drag.startWorld.y;
         patchNode(drag.id, {
-          w: Math.max(160, Math.round(drag.startSize.w + dw)),
-          h: Math.max(80, Math.round(drag.startSize.h + dh)),
+          w: Math.max(180, Math.round(drag.startSize.w + dw)),
+          h: Math.max(90, Math.round(drag.startSize.h + dh)),
         });
       }
     };
@@ -296,24 +319,18 @@ export function CanvasSurface({
           onSelect(new Set());
         }
       } else if (drag.kind === "connect") {
-        if (drag.snapTarget) {
+        const w = screenToWorld(e.clientX, e.clientY);
+        // Sambungkan langsung menggunakan snapTarget aktif atau fallback koordinat kanvas
+        const target = drag.snapTarget ?? findSnapTarget(w, drag.from, nodes, rects, hidden, 95);
+        if (target && target.nodeId !== drag.from) {
           addEdge({
             from: drag.from,
             fromSide: drag.fromSide,
-            to: drag.snapTarget.id,
-            toSide: drag.snapTarget.side,
+            fromRatio: 0.5,
+            to: target.nodeId,
+            toSide: target.side,
+            toRatio: target.ratio,
           });
-        } else {
-          const mouseWorld = screenToWorld(e.clientX, e.clientY);
-          const fallback = findConnectTarget(rects, hidden, drag.from, mouseWorld, 60);
-          if (fallback) {
-            addEdge({
-              from: drag.from,
-              fromSide: drag.fromSide,
-              to: fallback.id,
-              toSide: fallback.side,
-            });
-          }
         }
       }
       setDrag(null);
@@ -395,7 +412,7 @@ export function CanvasSurface({
             const a = rects.get(e.from);
             const b = rects.get(e.to);
             if (!a || !b || hidden.has(e.from) || hidden.has(e.to)) return null;
-            const { d } = edgePath(a, e.fromSide, b, e.toSide);
+            const { d } = edgePath(a, e.fromSide, b, e.toSide, e.fromRatio, e.toRatio);
             return (
               <path
                 key={e.id}
@@ -410,35 +427,67 @@ export function CanvasSurface({
               />
             );
           })}
+
+          {/* Garis koneksi interaktif saat ditarik */}
           {drag?.kind === "connect" && rects.get(drag.from) && (
             <>
               <path
-                d={draftPath(rects.get(drag.from)!, drag.fromSide, drag.to)}
+                d={
+                  drag.snapTarget
+                    ? draftPath(
+                        rects.get(drag.from)!,
+                        drag.fromSide,
+                        drag.snapTarget.point,
+                        drag.snapTarget.side,
+                      )
+                    : draftPath(rects.get(drag.from)!, drag.fromSide, drag.to, null)
+                }
                 fill="none"
                 stroke={PALETTE.blue.solid}
                 strokeWidth={2.5}
                 strokeDasharray="6 4"
               />
+
+              {/* Indikator Snapping Mulus & Highlight Target Node */}
               {drag.snapTarget && (
                 <g className="pointer-events-none">
+                  {rects.get(drag.snapTarget.nodeId) && (
+                    <rect
+                      x={rects.get(drag.snapTarget.nodeId)!.x - 3}
+                      y={rects.get(drag.snapTarget.nodeId)!.y - 3}
+                      width={rects.get(drag.snapTarget.nodeId)!.w + 6}
+                      height={rects.get(drag.snapTarget.nodeId)!.h + 6}
+                      rx={18}
+                      fill="none"
+                      stroke={PALETTE.blue.solid}
+                      strokeWidth={2}
+                      strokeDasharray="5 3"
+                      className="opacity-70 animate-pulse"
+                    />
+                  )}
+                  {/* Lingkaran luar snap yang berkedip halus */}
                   <circle
                     cx={drag.snapTarget.point.x}
                     cy={drag.snapTarget.point.y}
-                    r={12}
+                    r={9}
                     fill="rgba(59, 130, 246, 0.25)"
-                    stroke="#2563eb"
+                    stroke={PALETTE.blue.solid}
                     strokeWidth={2}
                   />
+                  {/* Titik pusat snap */}
                   <circle
                     cx={drag.snapTarget.point.x}
                     cy={drag.snapTarget.point.y}
-                    r={5}
-                    fill="#2563eb"
+                    r={4}
+                    fill="#ffffff"
+                    stroke="#2563eb"
+                    strokeWidth={2}
                   />
                 </g>
               )}
             </>
           )}
+
           <defs>
             <marker
               id="canvas-arrow"
@@ -456,11 +505,7 @@ export function CanvasSurface({
         {visibleNodes
           .filter((n) => n.kind !== "frame")
           .map((n) => (
-            <div
-              key={n.id}
-              onPointerDown={(e) => onNodeDown(e, n.id)}
-              className={drag?.kind === "connect" && drag.snapTarget?.id === n.id ? "ring-4 ring-primary/60 rounded-2xl transition-all" : ""}
-            >
+            <div key={n.id} onPointerDown={(e) => onNodeDown(e, n.id)}>
               <NodeView node={n} selected={selected.has(n.id)} onSize={onSize} />
               {selected.has(n.id) && editable && !n.pinned && n.kind !== "sticky" && (
                 <ResizeCorner rect={rects.get(n.id)!} onDown={(e) => onResizeDown(e, n.id)} />
@@ -507,6 +552,8 @@ function HandleLayer({
       {(["top", "right", "bottom", "left"] as Side[]).map((side) => (
         <span
           key={side}
+          data-handle-node={id}
+          data-handle-side={side}
           onPointerDown={(e) => onDown(e, id, side)}
           className="absolute z-20 size-4 cursor-crosshair rounded-full"
           style={{ left: rect.x + pos[side].left, top: rect.y + pos[side].top }}
@@ -520,7 +567,7 @@ function ResizeCorner({ rect, onDown }: { rect: Rect; onDown: (e: React.PointerE
   return (
     <span
       onPointerDown={onDown}
-      className="absolute z-20 size-4 cursor-nwse-resize rounded-full border-2 border-primary bg-white"
+      className="absolute z-20 size-4 cursor-nwse-resize rounded-full border-2 border-primary bg-white shadow"
       style={{ left: rect.x + rect.w - 8, top: rect.y + rect.h - 8 }}
     />
   );

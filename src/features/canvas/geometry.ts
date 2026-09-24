@@ -12,7 +12,6 @@ const DEFAULT_FRAME_H = 400;
 
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** Kotak node di koordinat dunia (tinggi node otomatis diambil dari hasil ukur DOM). */
 export function nodeRect(n: CanvasNode, sizes: Record<string, Size>): Rect {
   if (n.kind === "frame") {
     return { x: n.x, y: n.y, w: n.w, h: n.collapsed ? FRAME_HEADER_H : (n.h ?? DEFAULT_FRAME_H) };
@@ -28,7 +27,6 @@ const centerOf = (r: Rect): Point => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 const inside = (r: Rect, p: Point) =>
   p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
-/** Node (non-frame) yang titik tengahnya berada di dalam frame. */
 export function containedIds(
   frame: FrameCanvasNode,
   nodes: CanvasNode[],
@@ -40,7 +38,6 @@ export function containedIds(
     .map((n) => n.id);
 }
 
-/** Node yang disembunyikan karena berada di dalam frame yang sedang dilipat. */
 export function hiddenByCollapse(nodes: CanvasNode[], sizes: Record<string, Size>): Set<string> {
   const hidden = new Set<string>();
   for (const n of nodes) {
@@ -62,17 +59,125 @@ const DIR: Record<Side, Point> = {
   left: { x: -1, y: 0 },
 };
 
-export function anchorPoint(r: Rect, side: Side): Point {
+export function anchorPoint(r: Rect, side: Side, ratio = 0.5): Point {
+  const t = clamp(ratio, 0.05, 0.95);
   switch (side) {
     case "top":
-      return { x: r.x + r.w / 2, y: r.y };
+      return { x: r.x + r.w * t, y: r.y };
     case "bottom":
-      return { x: r.x + r.w / 2, y: r.y + r.h };
+      return { x: r.x + r.w * t, y: r.y + r.h };
     case "left":
-      return { x: r.x, y: r.y + r.h / 2 };
+      return { x: r.x, y: r.y + r.h * t };
     case "right":
-      return { x: r.x + r.w, y: r.y + r.h / 2 };
+      return { x: r.x + r.w, y: r.y + r.h * t };
   }
+}
+
+/** Titik perimeter terdekat pada persegi panjang dari posisi sembarang p */
+export function nearestPerimeterPoint(
+  r: Rect,
+  p: Point,
+): { side: Side; ratio: number; point: Point } {
+  const topX = clamp(p.x, r.x, r.x + r.w);
+  const topPt = { x: topX, y: r.y };
+  const topDist = Math.hypot(p.x - topPt.x, p.y - topPt.y);
+
+  const btmX = clamp(p.x, r.x, r.x + r.w);
+  const btmPt = { x: btmX, y: r.y + r.h };
+  const btmDist = Math.hypot(p.x - btmPt.x, p.y - btmPt.y);
+
+  const leftY = clamp(p.y, r.y, r.y + r.h);
+  const leftPt = { x: r.x, y: leftY };
+  const leftDist = Math.hypot(p.x - leftPt.x, p.y - leftPt.y);
+
+  const rightY = clamp(p.y, r.y, r.y + r.h);
+  const rightPt = { x: r.x + r.w, y: rightY };
+  const rightDist = Math.hypot(p.x - rightPt.x, p.y - rightPt.y);
+
+  let side: Side = "top";
+  let minDist = topDist;
+  let pt = topPt;
+
+  if (btmDist < minDist) {
+    minDist = btmDist;
+    side = "bottom";
+    pt = btmPt;
+  }
+  if (leftDist < minDist) {
+    minDist = leftDist;
+    side = "left";
+    pt = leftPt;
+  }
+  if (rightDist < minDist) {
+    minDist = rightDist;
+    side = "right";
+    pt = rightPt;
+  }
+
+  let ratio =
+    side === "top" || side === "bottom"
+      ? r.w > 0 ? (pt.x - r.x) / r.w : 0.5
+      : r.h > 0 ? (pt.y - r.y) / r.h : 0.5;
+
+  // Magnet halus jika mendekati titik tengah sisi (0.42 - 0.58)
+  if (Math.abs(ratio - 0.5) < 0.08) {
+    ratio = 0.5;
+    if (side === "top" || side === "bottom") pt.x = r.x + r.w * 0.5;
+    else pt.y = r.y + r.h * 0.5;
+  }
+
+  ratio = clamp(ratio, 0.05, 0.95);
+
+  return { side, ratio, point: pt };
+}
+
+export type SnapTarget = {
+  nodeId: string;
+  side: Side;
+  ratio: number;
+  point: Point;
+  distance: number;
+};
+
+/** Mencari target snap terdekat secara konsisten di sekeliling node/tabel */
+export function findSnapTarget(
+  to: Point,
+  fromId: string,
+  nodes: CanvasNode[],
+  rects: Map<string, Rect>,
+  hidden: Set<string>,
+  maxSnapDist = 80,
+): SnapTarget | null {
+  let best: SnapTarget | null = null;
+  let minScore = Infinity;
+
+  for (const node of nodes) {
+    if (node.id === fromId || hidden.has(node.id) || node.kind === "frame") continue;
+    const r = rects.get(node.id);
+    if (!r) continue;
+
+    const peri = nearestPerimeterPoint(r, to);
+    const dist = Math.hypot(to.x - peri.point.x, to.y - peri.point.y);
+
+    const isInside =
+      to.x >= r.x && to.x <= r.x + r.w && to.y >= r.y && to.y <= r.y + r.h;
+
+    // Jika kursor berada di dalam kotak node, jadikan jarak 0 agar selalu tertangkap
+    const score = isInside ? 0 : dist;
+
+    if (score <= maxSnapDist && score < minScore) {
+      minScore = score;
+      best = {
+        nodeId: node.id,
+        side: peri.side,
+        ratio: peri.ratio,
+        point: peri.point,
+        distance: score,
+      };
+    }
+  }
+
+  return best;
 }
 
 function curve(p0: Point, s0: Side, p1: Point, s1: Side | null) {
@@ -88,71 +193,33 @@ function curve(p0: Point, s0: Side, p1: Point, s1: Side | null) {
   return { d, mid };
 }
 
-export function edgePath(a: Rect, aSide: Side, b: Rect, bSide: Side) {
-  return curve(anchorPoint(a, aSide), aSide, anchorPoint(b, bSide), bSide);
+export function edgePath(
+  a: Rect,
+  aSide: Side,
+  b: Rect,
+  bSide: Side,
+  aRatio = 0.5,
+  bRatio = 0.5,
+) {
+  return curve(anchorPoint(a, aSide, aRatio), aSide, anchorPoint(b, bSide, bRatio), bSide);
 }
 
-/** Garis sementara saat menarik koneksi dari sebuah handle ke posisi pointer. */
-export function draftPath(a: Rect, aSide: Side, to: Point) {
-  return curve(anchorPoint(a, aSide), aSide, to, null).d;
+export function draftPath(
+  a: Rect,
+  aSide: Side,
+  to: Point,
+  targetSide: Side | null = null,
+  fromRatio = 0.5,
+) {
+  return curve(anchorPoint(a, aSide, fromRatio), aSide, to, targetSide).d;
 }
 
-/** Sisi node yang paling dekat ke sebuah titik (dipakai saat melepas garis ke node tujuan). */
 export function nearestSide(r: Rect, p: Point): Side {
   const c = centerOf(r);
   const dx = (p.x - c.x) / (r.w / 2 || 1);
   const dy = (p.y - c.y) / (r.h / 2 || 1);
   if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? "right" : "left";
   return dy > 0 ? "bottom" : "top";
-}
-
-/** Titik terdekat di sekeliling (perimeter) kotak node terhadap sebuah titik p. */
-export function nearestPerimeterPoint(r: Rect, p: Point): { point: Point; side: Side } {
-  const clampedX = clamp(p.x, r.x, r.x + r.w);
-  const clampedY = clamp(p.y, r.y, r.y + r.h);
-
-  const dLeft = Math.abs(p.x - r.x);
-  const dRight = Math.abs(p.x - (r.x + r.w));
-  const dTop = Math.abs(p.y - r.y);
-  const dBottom = Math.abs(p.y - (r.y + r.h));
-
-  const minD = Math.min(dLeft, dRight, dTop, dBottom);
-
-  if (minD === dLeft) {
-    return { point: { x: r.x, y: clampedY }, side: "left" };
-  } else if (minD === dRight) {
-    return { point: { x: r.x + r.w, y: clampedY }, side: "right" };
-  } else if (minD === dTop) {
-    return { point: { x: clampedX, y: r.y }, side: "top" };
-  } else {
-    return { point: { x: clampedX, y: r.y + r.h }, side: "bottom" };
-  }
-}
-
-/** Cari node target yang dekat atau berada di bawah pointer saat menarik garis koneksi. */
-export function findConnectTarget(
-  rects: Map<string, Rect>,
-  hidden: Set<string>,
-  fromId: string,
-  p: Point,
-  snapDistance = 70,
-): { id: string; point: Point; side: Side } | null {
-  let closest: { id: string; point: Point; side: Side; dist: number } | null = null;
-
-  rects.forEach((r, id) => {
-    if (id === fromId || hidden.has(id)) return;
-    const isInside = p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
-    const { point, side } = nearestPerimeterPoint(r, p);
-    const dist = Math.hypot(p.x - point.x, p.y - point.y);
-
-    if (isInside || dist <= snapDistance) {
-      if (!closest || dist < closest.dist) {
-        closest = { id, point, side, dist: isInside ? 0 : dist };
-      }
-    }
-  });
-
-  return closest ? { id: closest.id, point: closest.point, side: closest.side } : null;
 }
 
 export function boundsOf(rects: Rect[]): Rect | null {
