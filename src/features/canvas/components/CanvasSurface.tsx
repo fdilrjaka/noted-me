@@ -196,6 +196,10 @@ export function CanvasSurface({
 
   const onNodeDown = (e: React.PointerEvent, nodeId: string) => {
     if (!editable || tool === "pan") return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button, input, textarea, select, [data-resize], [data-handle-node]")) {
+      return;
+    }
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || node.pinned) {
       if (node?.pinned) onSelect(new Set([nodeId]));

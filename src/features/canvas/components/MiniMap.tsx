@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { CanvasNode, Viewport } from "@/lib/noteme/canvasStore";
 import { X } from "lucide-react";
 import { boundsOf, clamp, nodeRect, type Size } from "../geometry";
 import { PALETTE } from "../palette";
 
-const MAP_W = 200;
-const MAP_H = 130;
-const PAD = 120;
+const MAP_W = 210;
+const MAP_H = 140;
+const PAD = 100;
 
 export function MiniMap({
   nodes,
@@ -23,45 +23,97 @@ export function MiniMap({
   onJump: (viewport: Viewport) => void;
   onClose: () => void;
 }) {
+  const isDraggingRef = useRef(false);
+
+  // Hitung bounding box canvas yang mencakup node dan viewport saat ini
   const bounds = useMemo(() => {
-    const b = boundsOf(nodes.map((n) => nodeRect(n, sizes)));
-    if (!b) return { x: 0, y: 0, w: 800, h: 600 };
-    return { x: b.x - PAD, y: b.y - PAD, w: b.w + PAD * 2, h: b.h + PAD * 2 };
-  }, [nodes, sizes]);
+    const allRects = nodes.map((n) => nodeRect(n, sizes));
+    const vpWorldRect = {
+      x: -viewport.x / viewport.zoom,
+      y: -viewport.y / viewport.zoom,
+      w: viewSize.w / viewport.zoom,
+      h: viewSize.h / viewport.zoom,
+    };
+    const b = boundsOf([...allRects, vpWorldRect]);
+    if (!b) return { x: 0, y: 0, w: 1200, h: 800 };
+    return {
+      x: b.x - PAD,
+      y: b.y - PAD,
+      w: Math.max(b.w + PAD * 2, 800),
+      h: Math.max(b.h + PAD * 2, 500),
+    };
+  }, [nodes, sizes, viewport, viewSize]);
 
   const scale = Math.min(MAP_W / bounds.w, MAP_H / bounds.h);
-  const toMap = (wx: number, wy: number) => ({
-    x: (wx - bounds.x) * scale,
-    y: (wy - bounds.y) * scale,
-  });
+  const offsetX = (MAP_W - bounds.w * scale) / 2;
+  const offsetY = (MAP_H - bounds.h * scale) / 2;
 
-  const viewportBox = (() => {
+  const toMap = useCallback(
+    (wx: number, wy: number) => ({
+      x: offsetX + (wx - bounds.x) * scale,
+      y: offsetY + (wy - bounds.y) * scale,
+    }),
+    [bounds, scale, offsetX, offsetY],
+  );
+
+  const viewportBox = useMemo(() => {
     const topLeft = { x: -viewport.x / viewport.zoom, y: -viewport.y / viewport.zoom };
     const p0 = toMap(topLeft.x, topLeft.y);
     return {
-      ...p0,
+      x: p0.x,
+      y: p0.y,
       w: (viewSize.w / viewport.zoom) * scale,
       h: (viewSize.h / viewport.zoom) * scale,
     };
-  })();
+  }, [viewport, viewSize, scale, toMap]);
 
-  const jumpTo = (e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const wx = bounds.x + mx / scale;
-    const wy = bounds.y + my / scale;
-    onJump({
-      zoom: viewport.zoom,
-      x: viewSize.w / 2 - wx * viewport.zoom,
-      y: viewSize.h / 2 - wy * viewport.zoom,
-    });
+  const handlePointer = useCallback(
+    (clientX: number, clientY: number, svgEl: SVGSVGElement) => {
+      const rect = svgEl.getBoundingClientRect();
+      const mx = clientX - rect.left - offsetX;
+      const my = clientY - rect.top - offsetY;
+      const wx = bounds.x + mx / scale;
+      const wy = bounds.y + my / scale;
+      onJump({
+        zoom: viewport.zoom,
+        x: viewSize.w / 2 - wx * viewport.zoom,
+        y: viewSize.h / 2 - wy * viewport.zoom,
+      });
+    },
+    [bounds, scale, offsetX, offsetY, viewport.zoom, viewSize, onJump],
+  );
+
+  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    const svgEl = e.currentTarget;
+    svgEl.setPointerCapture(e.pointerId);
+    handlePointer(e.clientX, e.clientY, svgEl);
   };
 
+  const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!isDraggingRef.current) return;
+    handlePointer(e.clientX, e.clientY, e.currentTarget);
+  };
+
+  const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    isDraggingRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const frames = nodes.filter((n) => n.kind === "frame");
+  const regularNodes = nodes.filter((n) => n.kind !== "frame");
+
   return (
-    <div className="pointer-events-auto overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/85">
-      <div className="flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
-        Mini-map
+    <div className="pointer-events-auto overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/90">
+      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5 text-xs font-semibold text-muted-foreground dark:border-white/5">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-primary" />
+          Mini-map
+        </span>
         <button
           type="button"
           aria-label="Sembunyikan mini-map"
@@ -71,38 +123,65 @@ export function MiniMap({
           <X className="size-3.5" />
         </button>
       </div>
+
       <svg
         width={MAP_W}
         height={MAP_H}
-        onClick={jumpTo}
-        role="button"
-        aria-label="Lompat ke posisi di kanvas"
-        className="cursor-pointer bg-slate-50 dark:bg-slate-800/60"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        role="application"
+        aria-label="Navigasi mini-map interaktif"
+        className="cursor-crosshair bg-slate-50/80 transition-colors select-none dark:bg-slate-800/50"
       >
-        {nodes
-          .filter((n) => n.kind !== "frame")
-          .map((n) => {
-            const r = nodeRect(n, sizes);
-            const p = toMap(r.x, r.y);
-            return (
+        {/* Render Frame Nodes sebagai area pembatas (seperti Figma frame) */}
+        {frames.map((f) => {
+          const r = nodeRect(f, sizes);
+          const p = toMap(r.x, r.y);
+          const c = PALETTE[f.color].solid;
+          return (
+            <g key={f.id}>
               <rect
-                key={n.id}
                 x={p.x}
                 y={p.y}
-                width={Math.max(2, r.w * scale)}
-                height={Math.max(2, r.h * scale)}
-                rx={1.5}
-                fill={PALETTE[n.color].solid}
-                opacity={0.85}
+                width={Math.max(4, r.w * scale)}
+                height={Math.max(4, r.h * scale)}
+                rx={3}
+                fill={`${c}1a`}
+                stroke={c}
+                strokeWidth={1}
+                strokeDasharray="3 2"
               />
-            );
-          })}
+            </g>
+          );
+        })}
+
+        {/* Render Regular Nodes */}
+        {regularNodes.map((n) => {
+          const r = nodeRect(n, sizes);
+          const p = toMap(r.x, r.y);
+          return (
+            <rect
+              key={n.id}
+              x={p.x}
+              y={p.y}
+              width={Math.max(3, r.w * scale)}
+              height={Math.max(3, r.h * scale)}
+              rx={2}
+              fill={PALETTE[n.color].solid}
+              opacity={0.9}
+            />
+          );
+        })}
+
+        {/* Viewport Box (Figma-style active camera viewport) */}
         <rect
-          x={clamp(viewportBox.x, 0, MAP_W)}
-          y={clamp(viewportBox.y, 0, MAP_H)}
-          width={Math.min(viewportBox.w, MAP_W)}
-          height={Math.min(viewportBox.h, MAP_H)}
-          fill="none"
+          x={viewportBox.x}
+          y={viewportBox.y}
+          width={viewportBox.w}
+          height={viewportBox.h}
+          rx={2}
+          fill="rgba(59, 130, 246, 0.12)"
           stroke="#3b82f6"
           strokeWidth={1.5}
         />

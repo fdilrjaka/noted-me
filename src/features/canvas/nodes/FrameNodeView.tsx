@@ -38,7 +38,9 @@ export function FrameNodeView({ node, selected }: { node: FrameCanvasNode; selec
           type="button"
           aria-label={node.collapsed ? "Buka frame" : "Lipat frame"}
           title={node.collapsed ? "Buka frame" : "Lipat frame"}
-          onClick={() => {
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
             checkpoint();
             patchNode(node.id, { collapsed: !node.collapsed });
           }}

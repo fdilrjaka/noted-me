@@ -101,12 +101,14 @@ export function ConnectHandles({ id, visible }: { id: string; visible: boolean }
 export function PinRemove({ node, light = true }: { node: CanvasNode; light?: boolean }) {
   const tone = light ? "hover:bg-white/25" : "hover:bg-black/10";
   return (
-    <>
+    <div className="flex items-center gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
       <button
         type="button"
         aria-label={node.pinned ? "Lepas kunci posisi" : "Kunci posisi"}
         title={node.pinned ? "Lepas kunci posisi" : "Kunci posisi"}
-        onClick={() => {
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
           checkpoint();
           patchNode(node.id, { pinned: !node.pinned });
         }}
@@ -118,12 +120,16 @@ export function PinRemove({ node, light = true }: { node: CanvasNode; light?: bo
         type="button"
         aria-label="Hapus dari dashboard"
         title="Hapus dari dashboard (data aslinya tidak ikut terhapus)"
-        onClick={() => removeNodes([node.id])}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          removeNodes([node.id]);
+        }}
         className={`press-sm flex size-6 flex-none items-center justify-center rounded-full ${tone}`}
       >
         <X className="size-3.5" />
       </button>
-    </>
+    </div>
   );
 }
 
