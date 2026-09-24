@@ -6,7 +6,6 @@ import {
   noteImageRow,
   subjectRow,
   pageRow,
-  type Row,
 } from "@/storage/remote/rowMappers";
 import { uploadImageBlob } from "@/storage/remote/imageSync";
 import { decodeCursor, nextCursor, pullChanges } from "@/storage/remote/pull";
@@ -20,19 +19,10 @@ import {
   getConflicts,
   setConflicts,
   upsertConflicts,
-  mergePageContent,
 } from "@/storage/remote/conflictResolver";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Bandingin timestamp lewat epoch-ms, BUKAN string mentah. Di koneksi mobile yang
-// kurang stabil, `updated_at` yang balik dari Supabase kadang beda presisi/format
-// string-nya dibanding yang kita kirim (mis. trailing zero beda), walau detik/ms-nya
-// SAMA PERSIS. Kalau dibandingin sebagai string, itu keanggep "beda" → dikira remote
-// berubah dari device lain → picu auto-merge palsu ke diri sendiri berulang-ulang tiap
-// sync (inilah yang bikin catatan numpuk "— Versi dari perangkat ini —" terus-terusan
-// di hp walau cuma satu device yang ngetik). Bandingin sebagai angka epoch biar aman
-// dari perbedaan format string yang gak relevan.
 function sameInstant(a: string, b: string): boolean {
   if (a === b) return true;
   const ta = Date.parse(a);
@@ -61,8 +51,9 @@ function mergeRemote<T extends { id: string; updated_at: string; dirty: boolean 
       byId.set(incoming.id, incoming);
       continue;
     }
-    // Never overwrite un-synced local edits that are newer than the server copy.
-    if (existing.dirty && isAtLeast(existing.updated_at, incoming.updated_at)) continue;
+    // Jangan pernah menimpa catatan jika lokal masih dirty, atau jika
+    // timestamp lokal sudah lebih baru/sama dengan data dari remote.
+    if (existing.dirty || isAtLeast(existing.updated_at, incoming.updated_at)) continue;
     byId.set(incoming.id, incoming);
   }
   return [...byId.values()];
@@ -82,10 +73,6 @@ async function doSync(userId: string, full: boolean) {
   const before = getData();
   const since = full ? "1970-01-01T00:00:00.000Z" : decodeCursor(before.lastPull);
 
-  // Pull duluan SEBELUM push, supaya kita bisa lihat apakah row yang mau kita push
-  // ternyata sudah diubah duluan sama device lain sejak terakhir kita sync.
-  // Ditarik per halaman (bukan satu query) supaya tidak kepotong batas 1000 baris, dan
-  // kursornya dari jam server (lihat storage/remote/pull.ts).
   const [subjectsRes, pagesRes, imagesRes] = await Promise.all([
     pullChanges("subjects", since),
     pullChanges("pages", since),
@@ -96,66 +83,45 @@ async function doSync(userId: string, full: boolean) {
   const dirtyPages = before.pages.filter((p) => p.dirty);
   const dirtyImages = before.images.filter((i) => i.dirty);
 
-  // Deteksi konflik: page masih dirty (edit lokal belum ke-push) TAPI baris yang sama
-  // di server juga sudah berubah (updated_at beda) sejak terakhir kita pull — berarti
-  // diedit di device lain. Row ini gak boleh di-push atau ditimpa diam-diam; tahan dulu
-  // dan biarin dialog konflik yang nentuin (timpa/gabung), bukan last-write-wins.
   const remotePagesById = new Map(pagesRes.rows.map((r) => [String(r["id"]), r]));
   const conflictIds = new Set<string>();
   const newConflicts: PageConflict[] = [];
-  // Konflik yang ketemu saat KEDUA sisi sempat online terus (bukan hasil edit offline) —
-  // ini kasus normal "dua device lagi ngetik bareng". Gak perlu nanya user tiap kali;
-  // otomatis digabung (setelan pabrik) biar live-typing gak keganggu dialog tiap beberapa
-  // detik. `editedOffline` cuma nyala kalau edit lokal itu sempat kesentuh saat offline —
-  // di situ kita gak yakin versi mana yang paling "lengkap", jadi tetap tanya lewat dialog.
-  const autoMerged = new Map<string, Page>();
+
   for (const local of dirtyPages) {
     const row = remotePagesById.get(local.id);
     if (!row) continue;
     const remote = buildPage(row);
     if (sameInstant(remote.updated_at, local.updated_at)) continue;
-    // Remote persis sama dengan versi yang KITA sendiri terakhir push berhasil →
-    // itu cuma gaung dari overlap window `since`, bukan edit dari device lain.
+
     const synced = getSyncedVersion(local.id);
     if (synced != null && sameInstant(remote.updated_at, synced)) continue;
-    if (local.editedOffline) {
-      conflictIds.add(local.id);
-      newConflicts.push({ id: local.id, local, remote });
-    } else {
-      autoMerged.set(local.id, {
-        ...local,
-        content: mergePageContent(local, remote),
-        updated_at: new Date().toISOString(),
-        dirty: true,
-        editedOffline: false,
-      });
+
+    // Jika konten lokal sudah mencakup atau identik dengan remote, tidak perlu digabung
+    const localContent = local.content.trim();
+    const remoteContent = remote.content.trim();
+    if (localContent === remoteContent || localContent.includes(remoteContent)) {
+      continue;
     }
+
+    // Hindari auto-merge otomatis yang menyisipkan banner duplikasi ke dokumen.
+    // Jika benar-benar ada perubahan terpisah dari perangkat lain, tampilkan dialog
+    // agar pengguna bisa memilih (Timpa atau Gabung).
+    conflictIds.add(local.id);
+    newConflicts.push({ id: local.id, local, remote });
   }
+
   upsertConflicts(newConflicts);
-  // Tulis hasil auto-merge ke store SEKARANG (bukan nanti di akhir fungsi), supaya tidak
-  // ketiban balik oleh versi lama pas `current = getData()` dipanggil setelah push di bawah.
-  if (autoMerged.size) {
-    const cur = getData();
-    setData({ ...cur, pages: cur.pages.map((p) => autoMerged.get(p.id) ?? p) });
-  }
-  // Konflik yang sebelumnya pending tapi ternyata sudah gak dirty lagi lokal (mis. sudah
-  // diresolve dari device/tab lain) gak perlu terus nyangkut di daftar.
+
   if (getConflicts().length) {
     const stillDirty = new Set(dirtyPages.map((p) => p.id));
     setConflicts(getConflicts().filter((c) => stillDirty.has(c.id)));
   }
 
   const pushableSubjects = dirtySubjects;
-  // PENTING: jangan push konten dari `dirtyPages` (snapshot SEBELUM await pull di atas).
-  // Kalau user lanjut ngetik selama pull nunggu network, snapshot itu sudah basi — push versi
-  // basi ini bikin server sempat punya konten lama, yang lalu ketarik balik di sync berikutnya
-  // dan dikira "edit dari device lain" (padahal cuma diri sendiri, ketinggalan cepat). Ambil
-  // ulang versi ter-update dari store SEKARANG, tepat sebelum push, biar yang terkirim benar2
-  // yang terbaru.
   const freshPagesById = new Map(getData().pages.map((p) => [p.id, p]));
   const pushablePages = dirtyPages
     .filter((p) => !conflictIds.has(p.id))
-    .map((p) => autoMerged.get(p.id) ?? freshPagesById.get(p.id) ?? p);
+    .map((p) => freshPagesById.get(p.id) ?? p);
 
   if (pushableSubjects.length) {
     const { error } = await supabase
@@ -168,20 +134,20 @@ async function doSync(userId: string, full: boolean) {
       .from("pages")
       .upsert(pushablePages.map((p) => pageRow(p, userId)) as any);
     if (error) throw error;
+
+    // Perbarui baseline versi yang berhasil di-push saat ini juga
+    for (const p of pushablePages) {
+      markPageSynced(p.id, p.updated_at);
+    }
+    persistSyncedVersions();
   }
 
-  // Gambar butuh langkah ekstra sebelum upsert row metadatanya: pastikan blob-nya
-  // beneran sudah ada di bucket Storage dulu. Row yang gagal disini tetap dirty dan
-  // akan dicoba lagi di sync berikutnya — tidak melempar error yang membatalkan
-  // seluruh sync (biar teks tetap kesync walau satu-dua gambar lagi bermasalah).
   const imagesToUpsert: typeof before.images = [];
   const skippedImageIds = new Set<string>();
   for (const image of dirtyImages) {
     if (image.deleted) {
       if (image.storage_path) {
         const { error } = await supabase.storage.from("note-images").remove([image.storage_path]);
-        // Best-effort — kalau hapus dari Storage gagal, tetap lanjut upsert row
-        // `deleted: true` supaya device lain berhenti nampilin gambar ini.
         if (error) console.error("gagal hapus gambar dari storage", error);
       }
       imagesToUpsert.push(image);
@@ -191,10 +157,8 @@ async function doSync(userId: string, full: boolean) {
       imagesToUpsert.push(image);
       continue;
     }
-    // storage_path masih null → belum pernah keupload, coba upload dari blob lokal.
     const blob = await getImageBlob(image.id);
     if (!blob) {
-      // Blob lokal gak ada (kasus aneh/corrupt) — skip, biarkan tetap dirty.
       skippedImageIds.add(image.id);
       continue;
     }
@@ -218,8 +182,6 @@ async function doSync(userId: string, full: boolean) {
   const pushedImages = new Map(imagesToUpsert.map((i) => [i.id, i.storage_path]));
 
   const current = getData();
-  // Clear dirty flags only for rows unchanged since we pushed them. Page-page yang lagi
-  // konflik (conflictIds) sengaja gak masuk pushedPages di atas, jadi tetap dirty di sini.
   const subjects = current.subjects.map((s) => {
     const pushedAt = pushedSubjects.get(s.id);
     return pushedAt != null && sameInstant(pushedAt, s.updated_at) ? { ...s, dirty: false } : s;
@@ -245,11 +207,12 @@ async function doSync(userId: string, full: boolean) {
       updated_at: new Date(String(row["updated_at"])).toISOString(),
       dirty: false,
     })),
-    // Baris yang lagi konflik sengaja dibuang dari batch remote di sini, supaya
-    // gak diam-diam nimpa versi lokal yang lagi nunggu keputusan user.
+    // Abaikan baris yang sedang dalam status konflik atau baris yang baru saja berhasil di-push
     pages: mergeRemote(
       pages,
-      pagesRes.rows.filter((row) => !conflictIds.has(String(row["id"]))),
+      pagesRes.rows.filter(
+        (row) => !conflictIds.has(String(row["id"])) && !pushedPages.has(String(row["id"])),
+      ),
       buildPage,
     ),
     images: mergeRemote(images, imagesRes.rows, (row) => ({
@@ -263,10 +226,6 @@ async function doSync(userId: string, full: boolean) {
     lastPull: nextCursor(before.lastPull, [subjectsRes, pagesRes, imagesRes]),
   };
 
-  // Perbarui baseline "udah sama antara lokal & server" buat tiap page yang gak lagi
-  // dirty (baik karena baru sukses ke-push, atau baru kepull dari device lain) —
-  // ini yang dipakai sync berikutnya buat gak salah kira gaung push sendiri sebagai
-  // konflik. Page yang lagi konflik sengaja dilewatin, baseline-nya tetap yang lama.
   for (const p of next.pages) {
     if (!p.dirty) markPageSynced(p.id, p.updated_at);
   }
