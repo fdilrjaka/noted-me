@@ -2,12 +2,11 @@ import { Navigate } from "@tanstack/react-router";
 import { useSession } from "@/hooks/useSession";
 import { useAuthForm } from "./hooks/useAuthForm";
 import { AuthForm } from "./components/AuthForm";
-import { CollabIllustration } from "./components/CollabIllustration";
-import { AuthDecorations } from "./components/AuthDecorations";
+import KineticGrid from "@/components/ui/kinetic-grid";
 
 /**
- * Halaman login NoteMe dengan tampilan infinite canvas putih bersih,
- * ilustrasi alur node kolaboratif profesional, live cursors, dan form login modern.
+ * Halaman login NoteMe dengan background Kinetic Grid interaktif
+ * (grid yang melengkung mengikuti kursor dan beriak saat diklik).
  */
 export function AuthPage() {
   const { user, loading } = useSession();
@@ -22,64 +21,37 @@ function AuthScreen() {
   const form = useAuthForm();
 
   return (
-    <main
-      className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6 sm:py-12 safe-top safe-bottom-lg bg-white selection:bg-slate-900 selection:text-white"
-      style={{
-        backgroundImage: "radial-gradient(#cbd5e1 1.2px, transparent 1.2px)",
-        backgroundSize: "24px 24px",
-      }}
-    >
-      {/* Dekorasi kanvas: floating dock kiri, sticky notes, zoom widget pojok kanan */}
-      <AuthDecorations />
-
-      <div className="relative z-10 flex w-full max-w-7xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
-        {/* Kolom Kiri: Sapaan Judul, Ilustrasi Node Kanvas Kolaboratif & Live Cursors */}
-        <div className="hidden max-w-2xl flex-col lg:flex flex-1 pl-4">
-          <div className="relative">
-            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-[-0.03em] text-slate-900 leading-[1.12]">
+    <KineticGrid className="min-h-dvh selection:bg-white selection:text-black">
+      <main className="relative flex min-h-dvh w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-12 safe-top safe-bottom-lg">
+        <div className="flex w-full max-w-7xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+          {/* Sapaan (desktop) */}
+          <div className="hidden max-w-2xl flex-1 flex-col pl-4 lg:flex">
+            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-[-0.03em] text-white leading-[1.12]">
               Selamat Datang
               <br />
               di NoteMe!
             </h1>
-            {/* Aksen doodle halus di samping judul */}
-            <svg
-              className="absolute -top-3 left-[275px] h-7 w-7 text-sky-400/80 pointer-events-none select-none"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <path d="M7 17L12 7" />
-              <path d="M14 19L19 9" />
-            </svg>
+            <p className="mt-3 text-[15px] font-normal text-white/50 leading-relaxed">
+              Selamat bergabung menjadi bagian dari NoteMe.
+            </p>
           </div>
 
-          <p className="mt-3 text-[15px] font-normal text-slate-500 leading-relaxed">
-            Selamat bergabung menjadi bagian dari NoteMe.
-          </p>
+          {/* Sapaan (mobile) */}
+          <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Selamat Datang di NoteMe!
+            </h1>
+            <p className="mt-1.5 text-xs sm:text-sm text-white/50">
+              Selamat bergabung menjadi bagian dari NoteMe.
+            </p>
+          </div>
 
-          {/* Ilustrasi Node Kanvas, Garis Konektor Lengkap & Live Cursors */}
-          <div className="mt-5 w-full">
-            <CollabIllustration />
+          {/* Kartu form login */}
+          <div className="w-full max-w-[420px] flex justify-center lg:justify-end">
+            <AuthForm form={form} />
           </div>
         </div>
-
-        {/* Sapaan Teks Ater (Layar Mobile) */}
-        <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-            Selamat Datang di NoteMe!
-          </h1>
-          <p className="mt-1.5 text-xs sm:text-sm text-slate-500">
-            Selamat bergabung menjadi bagian dari NoteMe.
-          </p>
-        </div>
-
-        {/* Kartu Form Login Kanan (terhubung dengan port kabel kanvas) */}
-        <div className="w-full max-w-[420px] flex justify-center lg:justify-end">
-          <AuthForm form={form} />
-        </div>
-      </div>
-    </main>
+      </main>
+    </KineticGrid>
   );
 }
