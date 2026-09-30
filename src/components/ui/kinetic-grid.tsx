@@ -178,7 +178,7 @@ export default function KineticGrid({
 
       // Update ripples
       for (let i = ripples.length - 1; i >= 0; i--) {
-        const r = ripples[i];
+        const r = ripples[i]!;
         const age = (now - r.born) / 1000;
         r.radius = Math.max(0, age * 400);
         r.opacity = Math.max(0, 1 - age * 1.2);
@@ -208,8 +208,8 @@ export default function KineticGrid({
             cols,
             rows,
           );
-          pts[row][col] = pt;
-          prox[row][col] = proximity;
+          pts[row]![col] = pt;
+          prox[row]![col] = proximity;
         }
       }
 
@@ -229,17 +229,17 @@ export default function KineticGrid({
 
       for (let row = 0; row < rows; row++)
         for (let col = 0; col < cols - 1; col++)
-          drawSeg(pts[row][col], pts[row][col + 1], prox[row][col], prox[row][col + 1]);
+          drawSeg(pts[row]![col]!, pts[row]![col + 1]!, prox[row]![col]!, prox[row]![col + 1]!);
 
       for (let col = 0; col < cols; col++)
         for (let row = 0; row < rows - 1; row++)
-          drawSeg(pts[row][col], pts[row + 1][col], prox[row][col], prox[row + 1][col]);
+          drawSeg(pts[row]![col]!, pts[row + 1]![col]!, prox[row]![col]!, prox[row + 1]![col]!);
 
       // ── Intersection nodes ────────────────────────────────────────────────
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          const p = pts[row][col];
-          const pr = prox[row][col];
+          const p = pts[row]![col]!;
+          const pr = prox[row]![col]!;
           const t = pr * pr * (3 - 2 * pr); // smoothstep
           const r = lerpN(NODE_BASE_RADIUS, NODE_ACTIVE_RADIUS, t);
 
@@ -351,10 +351,7 @@ export default function KineticGrid({
         className,
       )}
     >
-      <canvas
-        ref={canvasRef}
-        className="fixed inset-0 w-full h-full z-0 pointer-events-none"
-      />
+      <canvas ref={canvasRef} className="fixed inset-0 w-full h-full z-0 pointer-events-none" />
 
       <div className="relative z-10 w-full h-full">{children}</div>
     </div>

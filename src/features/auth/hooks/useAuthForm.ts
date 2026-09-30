@@ -6,6 +6,7 @@ import { syncNow } from "@/storage/sync-engine/syncNow";
 import { ensureLocalOwner, localDataBelongsToOther } from "@/storage/local/localOwner";
 import { clearGuestMode } from "@/lib/noteme/guestMode";
 import { markWelcomeIntroPending } from "@/lib/noteme/welcomeIntro";
+import { setRememberMe } from "@/integrations/supabase/previewAuthStorage";
 import { newEmailError, normalizeEmail, passwordErrorMessage } from "@/lib/noteme/credentialPolicy";
 
 /**
@@ -23,6 +24,10 @@ export function useAuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [rememberMe, setRememberMeState] = useState(true);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   // Mode form sebelum masuk ke layar verifikasi, supaya tombol "kembali" tahu harus ke mana.
@@ -78,6 +83,7 @@ export function useAuthForm() {
     }
     setBusy(true);
     try {
+      setRememberMe(rememberMe);
       const { error } = await supabase.auth.signInWithPassword({ email: clean, password });
       if (error) {
         const msg = error.message.toLowerCase();
@@ -104,6 +110,11 @@ export function useAuthForm() {
   };
 
   const submitSignUp = async () => {
+    const name = fullName.trim();
+    if (!name) {
+      toast.error("Nama lengkap wajib diisi");
+      return;
+    }
     const clean = normalizeEmail(email);
     const emailError = newEmailError(clean);
     if (emailError) {
@@ -115,9 +126,26 @@ export function useAuthForm() {
       toast.error(passwordError);
       return;
     }
+    if (password !== confirmPassword) {
+      toast.error("Konfirmasi password tidak sama");
+      return;
+    }
+    if (!agreeTerms) {
+      toast.error("Setujui Terms of Service dan Privacy Policy dulu");
+      return;
+    }
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email: clean, password });
+      setRememberMe(true);
+      // Nama disimpan sebagai `nickname` (dipakai app untuk nama tampilan) + `full_name`.
+      const cleanPhone = phone.trim();
+      const { data, error } = await supabase.auth.signUp({
+        email: clean,
+        password,
+        options: {
+          data: { nickname: name, full_name: name, ...(cleanPhone ? { phone: cleanPhone } : {}) },
+        },
+      });
       if (error) {
         const msg = error.message.toLowerCase();
         if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
@@ -264,6 +292,14 @@ export function useAuthForm() {
     setPassword,
     confirmPassword,
     setConfirmPassword,
+    fullName,
+    setFullName,
+    phone,
+    setPhone,
+    rememberMe,
+    setRememberMe: setRememberMeState,
+    agreeTerms,
+    setAgreeTerms,
     otp,
     setOtp,
     busy,

@@ -1,29 +1,60 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  UserPlus,
-  LogIn,
-  KeyRound,
-  ShieldCheck,
-  ArrowRight,
-} from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, Phone, ShieldCheck } from "lucide-react";
 import type { useAuthForm } from "../hooks/useAuthForm";
 import { PasswordHint } from "./PasswordHint";
 import { setGuestMode } from "@/lib/noteme/guestMode";
 import { markWelcomeIntroPending } from "@/lib/noteme/welcomeIntro";
 
-const INPUT_ICON =
-  "w-full rounded-xl border border-slate-200/90 bg-white py-3 pl-11 pr-4 text-[14px] text-slate-800 placeholder:text-slate-400 outline-none shadow-xs transition-colors focus:border-slate-800 focus:ring-1 focus:ring-slate-800";
-const INPUT =
-  "w-full rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-[14px] text-slate-800 placeholder:text-slate-400 outline-none shadow-xs transition-colors focus:border-slate-800 focus:ring-1 focus:ring-slate-800";
-const BUTTON_PRIMARY =
-  "w-full rounded-full bg-emerald-600 py-3 text-[14px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-60 shadow-xs flex items-center justify-center gap-2";
 const CARD =
-  "w-full max-w-[420px] rounded-2xl bg-white p-7 sm:p-9 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_12px_32px_-4px_rgba(0,0,0,0.06)] border border-slate-200/80 relative z-20";
+  "w-full max-w-[420px] rounded-3xl bg-neutral-50 p-7 sm:p-9 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.5)] border border-white/10 relative z-20";
+const FIELD =
+  "w-full rounded-2xl border border-neutral-200 bg-neutral-100 py-3.5 pl-12 pr-4 text-[15px] text-neutral-900 placeholder:text-neutral-500 outline-none transition-colors focus:border-neutral-900 focus:bg-white";
+const BUTTON_PRIMARY =
+  "w-full rounded-2xl bg-neutral-900 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-black active:scale-[0.99] disabled:opacity-60";
+const ICON = "pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-500";
+
+/** Input dengan ikon di kiri (dan tombol lihat/sembunyikan password bila `secret`). */
+function Field({
+  icon: Icon,
+  secret = false,
+  className = "",
+  ...props
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  secret?: boolean;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className={`relative ${className}`}>
+      <Icon className={ICON} />
+      <input
+        {...props}
+        type={secret ? (show ? "text" : "password") : props.type}
+        className={`${FIELD} ${secret ? "pr-12" : ""}`}
+      />
+      {secret && (
+        <button
+          type="button"
+          onClick={() => setShow((v) => !v)}
+          aria-label={show ? "Hide password" : "Show password"}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-900"
+        >
+          {show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Header({ title, subtitle }: { title: string; subtitle: React.ReactNode }) {
+  return (
+    <div className="mb-6 text-center">
+      <h2 className="text-2xl font-bold tracking-tight text-neutral-950">{title}</h2>
+      <p className="mt-2 text-[15px] text-neutral-500">{subtitle}</p>
+    </div>
+  );
+}
 
 export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
   const {
@@ -35,6 +66,14 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
     setPassword,
     confirmPassword,
     setConfirmPassword,
+    fullName,
+    setFullName,
+    phone,
+    setPhone,
+    rememberMe,
+    setRememberMe,
+    agreeTerms,
+    setAgreeTerms,
     otp,
     setOtp,
     busy,
@@ -43,45 +82,37 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
     pendingEmail,
     verifyFor,
   } = form;
-  const [showPassword, setShowPassword] = useState(false);
-
-  const title =
-    mode === "in"
-      ? "MASUK"
-      : mode === "up"
-        ? "BUAT AKUN"
-        : mode === "forgot"
-          ? "LUPA PASSWORD"
-          : "VERIFIKASI EMAIL";
-  const actionText =
-    mode === "in"
-      ? "Masuk"
-      : mode === "up"
-        ? "Daftar"
-        : mode === "forgot"
-          ? "Kirim kode"
-          : "Verifikasi";
-  const TitleIcon =
-    mode === "in" ? LogIn : mode === "up" ? UserPlus : mode === "forgot" ? KeyRound : ShieldCheck;
 
   const enterOn = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") void submit();
   };
 
+  const guestLink = (
+    <Link
+      to="/"
+      onClick={() => {
+        setGuestMode();
+        markWelcomeIntroPending();
+      }}
+      className="text-xs text-neutral-400 underline underline-offset-4 transition-colors hover:text-neutral-700"
+    >
+      Continue without an account
+    </Link>
+  );
+
+  // ── Verifikasi kode 6 digit (daftar / lupa password) ────────────────────────
   if (mode === "verify") {
     return (
       <div className={CARD}>
-
-        <div className="mb-1 flex items-center gap-3">
-          <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-            <TitleIcon className="size-4.5" />
-          </span>
-          <h2 className="text-base font-bold tracking-tight text-slate-900">{title}</h2>
-        </div>
-        <p className="text-slate-500 text-xs sm:text-sm mb-6 leading-relaxed">
-          Masukkan kode 6 digit yang dikirim ke{" "}
-          <span className="font-semibold text-slate-800">{pendingEmail}</span>.
-        </p>
+        <Header
+          title="Verify Email"
+          subtitle={
+            <>
+              Enter the 6-digit code sent to{" "}
+              <span className="font-semibold text-neutral-900">{pendingEmail}</span>
+            </>
+          }
+        />
 
         <input
           value={otp}
@@ -90,188 +121,229 @@ export function AuthForm({ form }: { form: ReturnType<typeof useAuthForm> }) {
           placeholder="123456"
           inputMode="numeric"
           autoComplete="one-time-code"
-          className={`${INPUT} mt-2 text-center font-mono text-xl tracking-[0.4em]`}
+          className={`${FIELD} pl-4 text-center font-mono text-xl tracking-[0.4em]`}
         />
 
         {verifyFor === "recovery" && (
-          <div className="space-y-3 mt-3">
-            <input
+          <div className="mt-3 space-y-3">
+            <Field
+              icon={Lock}
+              secret
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              placeholder="Password baru"
+              placeholder="New password"
               autoComplete="new-password"
-              className={INPUT}
             />
-            <input
+            <Field
+              icon={ShieldCheck}
+              secret
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               onKeyDown={enterOn}
-              type="password"
-              placeholder="Ulangi password baru"
+              placeholder="Confirm new password"
               autoComplete="new-password"
-              className={INPUT}
             />
-            <PasswordHint password={password} className="mt-2 px-1" />
+            <PasswordHint password={password} className="px-1" />
           </div>
         )}
 
         <button disabled={busy} onClick={() => void submit()} className={`${BUTTON_PRIMARY} mt-6`}>
-          <span>{busy ? "Memproses…" : actionText}</span>
-          {!busy && <ArrowRight className="size-4" />}
+          {busy ? "Processing…" : "Verify"}
         </button>
 
-        <div className="mt-6 flex flex-col items-center space-y-2 text-xs sm:text-sm text-slate-500">
+        <div className="mt-6 flex flex-col items-center gap-2 text-sm text-neutral-500">
           <button
             onClick={() => void resendOtp()}
             disabled={busy}
-            className="hover:text-slate-900 underline transition-colors disabled:opacity-60"
+            className="underline transition-colors hover:text-neutral-900 disabled:opacity-60"
           >
-            Kirim ulang kode
+            Resend code
           </button>
           <button
             onClick={() => setMode("in")}
-            className="hover:text-slate-900 underline transition-colors"
+            className="underline transition-colors hover:text-neutral-900"
           >
-            Batal
+            Cancel
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className={CARD}>
-
-      <div className="mb-2 flex items-center gap-3">
-        <span className="flex size-9 flex-none items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-          <TitleIcon className="size-4.5" />
-        </span>
-        <h2 className="text-base font-bold tracking-tight text-slate-900">{title}</h2>
-      </div>
-      <p className="text-slate-500 text-xs sm:text-sm mb-5 leading-relaxed">
-        {mode === "forgot"
-          ? "Masukkan email akun kamu. Kami kirim kode verifikasi untuk mengatur ulang password."
-          : "Selamat bergabung menjadi bagian dari NoteMe."}
-      </p>
-
-      {/* Input Email */}
-      <div className="relative mt-4">
-        <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-        <input
+  // ── Lupa password ───────────────────────────────────────────────────────────
+  if (mode === "forgot") {
+    return (
+      <div className={CARD}>
+        <Header
+          title="Forgot Password"
+          subtitle="Enter your account email and we'll send a code to reset your password."
+        />
+        <Field
+          icon={Mail}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={mode === "forgot" ? enterOn : undefined}
-          placeholder="E-mail"
+          onKeyDown={enterOn}
+          placeholder="Email Address"
           type="email"
           autoCapitalize="none"
           autoComplete="email"
-          className={INPUT_ICON}
         />
-      </div>
-
-      {/* Input Password */}
-      {mode !== "forgot" && (
-        <div className="relative mt-3">
-          <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={enterOn}
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            autoComplete={mode === "in" ? "current-password" : "new-password"}
-            className={`${INPUT_ICON} pr-11`}
-          />
+        <button disabled={busy} onClick={() => void submit()} className={`${BUTTON_PRIMARY} mt-5`}>
+          {busy ? "Processing…" : "Send Code"}
+        </button>
+        <p className="mt-6 text-center text-sm text-neutral-500">
+          Remember your password?{" "}
           <button
             type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            onClick={() => setMode("in")}
+            className="font-semibold text-neutral-950 hover:underline"
           >
-            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            Sign in
           </button>
-        </div>
-      )}
-
-      {/* Password Hint */}
-      {mode !== "in" && mode !== "forgot" && (
-        <PasswordHint password={password} className="mt-2.5 px-1" />
-      )}
-
-      {/* Notice info text */}
-      {mode === "up" && (
-        <p className="mt-2.5 px-1 text-xs text-slate-500 leading-normal">
-          Setelah mendaftar, kami kirim kode 6 digit ke email kamu untuk verifikasi sebelum bisa
-          masuk.
         </p>
-      )}
+      </div>
+    );
+  }
 
-      {/* Tombol aksi utama */}
-      <button disabled={busy} onClick={() => void submit()} className={`${BUTTON_PRIMARY} mt-6`}>
-        <span>{busy ? "Memproses…" : actionText}</span>
-        {!busy && <ArrowRight className="size-4" />}
-      </button>
+  // ── Login / Sign Up ─────────────────────────────────────────────────────────
+  const isSignUp = mode === "up";
 
-      {/* Tautan navigasi mode */}
-      <div className="mt-6 flex flex-col items-center space-y-2.5 text-xs sm:text-sm text-slate-500">
-        {mode === "in" && (
+  return (
+    <div className={CARD}>
+      <Header
+        title={isSignUp ? "Create Account" : "Welcome Back"}
+        subtitle={isSignUp ? "Create a new account" : "Sign in to your account"}
+      />
+
+      {/* Tab Login / Sign Up */}
+      <div className="mb-5 grid grid-cols-2 gap-1 rounded-2xl border border-neutral-200 bg-neutral-100 p-1.5">
+        {(
+          [
+            ["in", "Login"],
+            ["up", "Sign Up"],
+          ] as const
+        ).map(([value, label]) => (
           <button
-            onClick={() => setMode("forgot")}
-            className="hover:text-slate-900 transition-colors"
+            key={value}
+            type="button"
+            onClick={() => setMode(value)}
+            className={`rounded-xl py-2.5 text-[15px] font-medium transition-all ${
+              mode === value
+                ? "bg-white text-neutral-950 shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
+                : "text-neutral-500 hover:text-neutral-800"
+            }`}
           >
-            Lupa password?
+            {label}
           </button>
+        ))}
+      </div>
+
+      <div className="space-y-3.5">
+        {isSignUp && (
+          <Field
+            icon={User}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Full Name"
+            autoComplete="name"
+          />
         )}
 
-        <div className="flex items-center gap-1.5">
-          {mode === "in" ? (
-            <>
-              <span>Belum punya akun?</span>
-              <button
-                type="button"
-                onClick={() => setMode("up")}
-                className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Daftar
-              </button>
-            </>
-          ) : mode === "up" ? (
-            <>
-              <span>Sudah punya akun?</span>
-              <button
-                type="button"
-                onClick={() => setMode("in")}
-                className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Masuk
-              </button>
-            </>
-          ) : (
-            <>
-              <span>Ingat password?</span>
-              <button
-                type="button"
-                onClick={() => setMode("in")}
-                className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Kembali masuk
-              </button>
-            </>
-          )}
-        </div>
+        <Field
+          icon={Mail}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email Address"
+          type="email"
+          autoCapitalize="none"
+          autoComplete="email"
+        />
 
-        <Link
-          to="/"
-          onClick={() => {
-            setGuestMode();
-            markWelcomeIntroPending();
-          }}
-          className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-4 transition-colors pt-0.5"
-        >
-          Lanjut tanpa akun
-        </Link>
+        <Field
+          icon={Lock}
+          secret
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={isSignUp ? undefined : enterOn}
+          placeholder="Password"
+          autoComplete={isSignUp ? "new-password" : "current-password"}
+        />
+
+        {isSignUp && (
+          <>
+            {password.length > 0 && <PasswordHint password={password} className="px-1" />}
+            <Field
+              icon={ShieldCheck}
+              secret
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm Password"
+              autoComplete="new-password"
+            />
+            <Field
+              icon={Phone}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onKeyDown={enterOn}
+              placeholder="Phone Number (Optional)"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+            />
+          </>
+        )}
       </div>
+
+      {isSignUp ? (
+        <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-sm text-neutral-600">
+          <input
+            type="checkbox"
+            checked={agreeTerms}
+            onChange={(e) => setAgreeTerms(e.target.checked)}
+            className="size-4 shrink-0 cursor-pointer rounded accent-neutral-900"
+          />
+          <span>
+            I agree to the <span className="font-medium text-neutral-950">Terms of Service</span>{" "}
+            and <span className="font-medium text-neutral-950">Privacy Policy</span>
+          </span>
+        </label>
+      ) : (
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+          <label className="flex cursor-pointer items-center gap-2.5 text-neutral-600">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="size-4 shrink-0 cursor-pointer rounded accent-neutral-900"
+            />
+            Remember me
+          </label>
+          <button
+            type="button"
+            onClick={() => setMode("forgot")}
+            className="font-medium text-neutral-950 hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
+      )}
+
+      <button disabled={busy} onClick={() => void submit()} className={`${BUTTON_PRIMARY} mt-5`}>
+        {busy ? "Processing…" : isSignUp ? "Create Account" : "Sign In"}
+      </button>
+
+      <p className="mt-6 text-center text-sm text-neutral-500">
+        {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+        <button
+          type="button"
+          onClick={() => setMode(isSignUp ? "in" : "up")}
+          className="font-semibold text-neutral-950 hover:underline"
+        >
+          {isSignUp ? "Sign in" : "Sign up"}
+        </button>
+      </p>
+
+      <div className="mt-3 flex justify-center">{guestLink}</div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useSession } from "@/hooks/useSession";
 import { useAuthForm } from "./hooks/useAuthForm";
 import { AuthForm } from "./components/AuthForm";
 import KineticGrid from "@/components/ui/kinetic-grid";
+import SplitText from "@/components/ui/motion-split-text";
 
 /**
  * Halaman login NoteMe dengan background Kinetic Grid interaktif
@@ -26,11 +27,10 @@ function AuthScreen() {
         <div className="flex w-full max-w-7xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           {/* Sapaan (desktop) */}
           <div className="hidden max-w-2xl flex-1 flex-col pl-4 lg:flex">
-            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-[-0.03em] text-white leading-[1.12]">
-              Selamat Datang
-              <br />
-              di NoteMe!
-            </h1>
+            <SplitText
+              text={"Selamat Datang\ndi NoteMe!"}
+              className="text-4xl xl:text-5xl text-white"
+            />
             <p className="mt-3 text-[15px] font-normal text-white/50 leading-relaxed">
               Selamat bergabung menjadi bagian dari NoteMe.
             </p>
@@ -38,9 +38,10 @@ function AuthScreen() {
 
           {/* Sapaan (mobile) */}
           <div className="flex w-full max-w-sm flex-col items-center text-center lg:hidden">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Selamat Datang di NoteMe!
-            </h1>
+            <SplitText
+              text="Selamat Datang di NoteMe!"
+              className="text-2xl sm:text-3xl text-white"
+            />
             <p className="mt-1.5 text-xs sm:text-sm text-white/50">
               Selamat bergabung menjadi bagian dari NoteMe.
             </p>

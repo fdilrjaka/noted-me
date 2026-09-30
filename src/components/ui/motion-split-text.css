@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap");
+
+.split-text-h1 {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.split-word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
