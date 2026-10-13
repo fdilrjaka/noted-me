@@ -9,6 +9,25 @@ import { markWelcomeIntroPending } from "@/lib/noteme/welcomeIntro";
 import { setRememberMe } from "@/integrations/supabase/previewAuthStorage";
 import { newEmailError, normalizeEmail, passwordErrorMessage } from "@/lib/noteme/credentialPolicy";
 
+/** Error dari server/jaringan (bukan salah input): HTTP 5xx termasuk 530 Cloudflare, atau gagal fetch. */
+function serverUnreachableMessage(error: { status?: number; message?: string }): string | null {
+  const status = error.status ?? 0;
+  const msg = (error.message ?? "").toLowerCase();
+  if (
+    status >= 500 ||
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("retryable")
+  ) {
+    return (
+      "Server tidak bisa dihubungi (HTTP " +
+      (status || "?") +
+      "). Cek koneksi, atau project Supabase mungkin nonaktif/URL salah."
+    );
+  }
+  return null;
+}
+
 /**
  * State & handler untuk form login/daftar/lupa password/verifikasi kode (mode in/up/forgot/verify).
  *
@@ -86,6 +105,11 @@ export function useAuthForm() {
       setRememberMe(rememberMe);
       const { error } = await supabase.auth.signInWithPassword({ email: clean, password });
       if (error) {
+        const down = serverUnreachableMessage(error);
+        if (down) {
+          toast.error(down);
+          return;
+        }
         const msg = error.message.toLowerCase();
         if (msg.includes("not confirmed") || msg.includes("not verified")) {
           // Akun ada tapi belum verifikasi email — kirim ulang kode dan lanjutkan ke verifikasi.
