@@ -4,8 +4,6 @@ Aplikasi catatan kuliah **offline-first**: mata kuliah, halaman per pertemuan, e
 gambar, To Do, jadwal kuliah, tempat sampah, ekspor/impor, dan sinkronisasi antar perangkat lewat akun.
 Catatan tetap bisa dibuka dan diedit tanpa jaringan; akun hanya dibutuhkan untuk sinkronisasi.
 
-This project was originally scaffolded with [Lovable](https://lovable.dev) and has since been made
-standalone: it builds, runs, and deploys entirely outside Lovable.
 
 ## Arsitektur
 
