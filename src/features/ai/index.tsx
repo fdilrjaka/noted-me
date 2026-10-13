@@ -74,7 +74,7 @@ function Workspace({ userId }: { userId: string }) {
 
   return (
     <main
-      className="relative mx-auto flex h-dvh w-full max-w-3xl flex-col px-4 text-foreground md:pl-[5.5rem]"
+      className="relative flex h-dvh w-full flex-col text-foreground md:pl-[5.5rem]"
       onDragOver={(e) => {
         if (!hasFiles(e)) return;
         e.preventDefault();
@@ -93,7 +93,7 @@ function Workspace({ userId }: { userId: string }) {
     >
       <Sidebar />
 
-      <header className="flex items-center gap-1 pb-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <header className="mx-auto flex w-full max-w-3xl items-center gap-1 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <Link to="/explore" aria-label="Kembali" className={`${iconBtn} -ml-2 md:hidden`}>
           <ChevronLeft className="size-5" />
         </Link>
@@ -121,56 +121,60 @@ function Workspace({ userId }: { userId: string }) {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
-        {messages.length === 0 ? (
-          <div className="flex h-full flex-col justify-center pb-6">
-            <h2 className="text-2xl font-bold tracking-tight">Tanya apa saja soal catatanmu</h2>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Lampirkan PDF, DOCX, teks, gambar, atau halaman catatan, lalu minta ringkasan, soal
-              latihan, atau penjelasan.
-            </p>
-            <ul className="mt-5 flex flex-col items-start gap-2">
-              {SUGGESTIONS.map((s) => (
-                <li key={s}>
-                  <button
-                    type="button"
-                    onClick={() => setDraft(s)}
-                    className="press-sm glass-soft rounded-2xl px-4 py-2.5 text-left text-sm"
-                  >
-                    {s}
-                  </button>
-                </li>
+        <div className="mx-auto h-full w-full max-w-3xl px-4">
+          {messages.length === 0 ? (
+            <div className="flex h-full flex-col justify-center pb-6">
+              <h2 className="text-2xl font-bold tracking-tight">Tanya apa saja soal catatanmu</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                Lampirkan PDF, DOCX, teks, gambar, atau halaman catatan, lalu minta ringkasan, soal
+                latihan, atau penjelasan.
+              </p>
+              <ul className="mt-5 flex flex-col items-start gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <li key={s}>
+                    <button
+                      type="button"
+                      onClick={() => setDraft(s)}
+                      className="press-sm glass-soft rounded-2xl px-4 py-2.5 text-left text-sm"
+                    >
+                      {s}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="space-y-6 pb-2">
+              {messages.map((m, i) => (
+                <MessageBubble
+                  key={m.id}
+                  message={m}
+                  isLast={i === messages.length - 1 && !sending}
+                  chatTitle={active.title}
+                  onRetry={() => void chat.retry()}
+                />
               ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="space-y-6 pb-2">
-            {messages.map((m, i) => (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                isLast={i === messages.length - 1 && !sending}
-                chatTitle={active.title}
-                onRetry={() => void chat.retry()}
-              />
-            ))}
-            {sending && <WaitingRow />}
-          </div>
-        )}
-        <div ref={endRef} />
+              {sending && <WaitingRow />}
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
       </div>
 
-      <Composer
-        value={draft}
-        onChange={setDraft}
-        attachments={files.attachments}
-        pending={files.pending}
-        sending={sending}
-        onFiles={(list) => void files.addFiles(list)}
-        onRemoveAttachment={files.remove}
-        onOpenNotes={() => setNotesOpen(true)}
-        onSend={submit}
-        onCancel={chat.cancel}
-      />
+      <div className="mx-auto w-full max-w-3xl px-4">
+        <Composer
+          value={draft}
+          onChange={setDraft}
+          attachments={files.attachments}
+          pending={files.pending}
+          sending={sending}
+          onFiles={(list) => void files.addFiles(list)}
+          onRemoveAttachment={files.remove}
+          onOpenNotes={() => setNotesOpen(true)}
+          onSend={submit}
+          onCancel={chat.cancel}
+        />
+      </div>
 
       {dragging && (
         <div
