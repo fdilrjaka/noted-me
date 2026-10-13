@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, CheckSquare, NotebookText, Trash2 } from "lucide-react";
+import { CalendarDays, CheckSquare, NotebookText, Sparkles, Trash2 } from "lucide-react";
 import { BottomNav } from "@/components/noteme/BottomNav";
 
 export const Route = createFileRoute("/explore")({
@@ -27,6 +27,12 @@ const destinations = [
     title: "Jadwal",
     description: "Jadwal kuliah dan kegiatan harian kamu.",
     icon: CalendarDays,
+  },
+  {
+    to: "/ai" as const,
+    title: "AI Chat",
+    description: "Tanya AI soal catatanmu. Lampirkan file, gambar, atau halaman catatan.",
+    icon: Sparkles,
   },
 ];
 

@@ -1,0 +1,105 @@
+/* Tipografi jawaban AI (hasil renderMarkdown). Warna mengikuti token tema NoteMe. */
+.ai-prose {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.ai-prose > :first-child {
+  margin-top: 0;
+}
+.ai-prose > :last-child {
+  margin-bottom: 0;
+}
+.ai-prose p,
+.ai-prose ul,
+.ai-prose ol,
+.ai-prose pre,
+.ai-prose blockquote,
+.ai-prose .ai-table-wrap {
+  margin: 0.65em 0;
+}
+.ai-prose h1,
+.ai-prose h2,
+.ai-prose h3,
+.ai-prose h4,
+.ai-prose h5,
+.ai-prose h6 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.1em 0 0.4em;
+}
+.ai-prose h1 {
+  font-size: 1.25rem;
+}
+.ai-prose h2 {
+  font-size: 1.125rem;
+}
+.ai-prose h3,
+.ai-prose h4,
+.ai-prose h5,
+.ai-prose h6 {
+  font-size: 1rem;
+}
+.ai-prose ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.ai-prose ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.ai-prose li {
+  margin: 0.2em 0;
+}
+.ai-prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.4em;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.ai-prose pre {
+  overflow-x: auto;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  line-height: 1.5;
+}
+.ai-prose pre code {
+  padding: 0;
+  background: none;
+}
+.ai-prose blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 0.9em;
+  color: var(--muted-foreground);
+}
+.ai-prose a {
+  color: color-mix(in srgb, var(--primary) 65%, var(--foreground));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ai-prose hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  margin: 1em 0;
+}
+.ai-prose .ai-table-wrap {
+  overflow-x: auto;
+}
+.ai-prose table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 100%;
+  width: max-content;
+}
+.ai-prose th,
+.ai-prose td {
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+}
+.ai-prose th {
+  font-weight: 600;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}

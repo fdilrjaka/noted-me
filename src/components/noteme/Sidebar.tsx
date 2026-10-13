@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Sparkles,
   Trash2,
   User,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const mainItems: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/", label: "Notes", icon: NotebookText },
   { to: "/todo", label: "To Do List", icon: LayoutGrid },
   { to: "/schedule", label: "Jadwal", icon: CalendarDays },
+  { to: "/ai", label: "AI Chat", icon: Sparkles },
   { to: "/settings", label: "Pengaturan", icon: Settings },
 ];
 

@@ -8,6 +8,9 @@
     "paths": {
       "@/integrations/supabase/client": ["./fakes/supabase.ts"],
       "@/features/auth/recovery.functions": ["./fakes/recoveryFns.ts"],
+      "@/features/ai/chat.functions": ["./fakes/aiFns.ts"],
+      "@/hooks/useSession": ["./fakes/useSession.ts"],
+      "@/components/noteme/Sidebar": ["./fakes/Sidebar.tsx"],
       "sonner": ["./fakes/sonner.ts"],
       "@tanstack/react-router": ["./fakes/router.tsx"],
       "@/*": ["../src/*"]
