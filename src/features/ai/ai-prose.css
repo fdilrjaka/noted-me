@@ -103,3 +103,33 @@
   font-weight: 600;
   background: color-mix(in srgb, currentColor 6%, transparent);
 }
+
+/* Pratinjau dokumen di panel kanan: selalu putih seperti kertas, apa pun tema aplikasi. */
+.ai-paper {
+  color-scheme: light;
+  font-size: 0.9375rem;
+}
+.ai-paper h1 {
+  font-size: 1.6rem;
+}
+.ai-paper h2 {
+  font-size: 1.25rem;
+}
+.ai-paper blockquote {
+  color: #475569;
+  border-left-color: #94a3b8;
+}
+.ai-paper a {
+  color: #1d4ed8;
+}
+.ai-paper th,
+.ai-paper td {
+  border-color: #cbd5e1;
+}
+.ai-paper th {
+  background: #f1f5f9;
+}
+.ai-paper pre,
+.ai-paper code {
+  background: #f1f5f9;
+}

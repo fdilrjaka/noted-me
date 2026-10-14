@@ -3,6 +3,9 @@ import { AlertCircle, Copy, FileText, NotebookText, RotateCw, Sparkles } from "l
 import { toast } from "sonner";
 import { sanitizeStoredHtml } from "@/lib/noteme/sanitizeHtml";
 import { renderMarkdown } from "../lib/markdown";
+import { artifactKey } from "../lib/artifacts";
+import { extractFiles } from "../lib/fileSpec";
+import { FileCard } from "./FileCard";
 import type { AiAttachment, AiMessage } from "../types";
 import { SaveToNoteMenu } from "./SaveToNoteMenu";
 
@@ -35,6 +38,9 @@ type Props = {
   isLast: boolean;
   chatTitle: string;
   onRetry: () => void;
+  /** Kunci file yang sedang terbuka di panel kanan (untuk menandai kartunya). */
+  openKey?: string | null;
+  onOpenFile?: (key: string) => void;
 };
 
 export const MessageBubble = memo(function MessageBubble({
@@ -42,13 +48,20 @@ export const MessageBubble = memo(function MessageBubble({
   isLast,
   chatTitle,
   onRetry,
+  openKey = null,
+  onOpenFile,
 }: Props) {
-  const html = useMemo(
+  // Blok ```noteme-file dipisah dari teks: teksnya dirender, filenya jadi kartu unduh.
+  const parsed = useMemo(
     () =>
       message.role === "assistant" && !message.error
-        ? sanitizeStoredHtml(renderMarkdown(message.text))
-        : "",
+        ? extractFiles(message.text)
+        : { text: message.text, files: [], brokenCount: 0 },
     [message],
+  );
+  const html = useMemo(
+    () => (parsed.text ? sanitizeStoredHtml(renderMarkdown(parsed.text)) : ""),
+    [parsed],
   );
 
   if (message.role === "user") {
@@ -95,14 +108,35 @@ export const MessageBubble = memo(function MessageBubble({
         <Sparkles className="size-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="ai-prose" dangerouslySetInnerHTML={{ __html: html }} />
+        {html && <div className="ai-prose" dangerouslySetInnerHTML={{ __html: html }} />}
+        {parsed.files.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {parsed.files.map((f, i) => {
+              const key = artifactKey(message.id, i);
+              return (
+                <FileCard
+                  key={key}
+                  spec={f}
+                  active={openKey === key}
+                  onOpen={() => onOpenFile?.(key)}
+                />
+              );
+            })}
+          </div>
+        )}
+        {parsed.brokenCount > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            File tidak bisa dibuat karena jawabannya terpotong atau formatnya rusak. Klik Ulangi
+            atau minta AI mencoba lagi.
+          </p>
+        )}
         <div className="-ml-2 mt-1 flex flex-wrap items-center gap-0.5">
           <button
             type="button"
             className={actionBtn}
             onClick={() => {
               navigator.clipboard
-                .writeText(message.text)
+                .writeText(parsed.text || message.text)
                 .then(() => toast.success("Jawaban disalin"))
                 .catch(() => toast.error("Tidak bisa menyalin. Izinkan akses clipboard."));
             }}
@@ -110,7 +144,7 @@ export const MessageBubble = memo(function MessageBubble({
             <Copy className="size-3.5" aria-hidden="true" />
             Salin
           </button>
-          <SaveToNoteMenu markdown={message.text} fallbackTitle={chatTitle} />
+          {parsed.text && <SaveToNoteMenu markdown={parsed.text} fallbackTitle={chatTitle} />}
           {isLast && (
             <button type="button" onClick={onRetry} className={actionBtn}>
               <RotateCw className="size-3.5" aria-hidden="true" />

@@ -46,6 +46,67 @@ Setelah itu buka menu **AI Chat** di sidebar (atau kartu AI di Explore pada pons
 > Parameter token: kode mengirim `max_tokens`. Kalau gateway menolak dan meminta
 > `max_completion_tokens`, server otomatis mengulang sekali dengan parameter itu.
 
+## Membuat file (Word, PDF, Excel)
+
+Cukup minta di chat, misalnya "buatkan laporan praktikum dalam Word" atau "buat tabel nilai di Excel".
+Jawaban AI akan memuat kartu file dengan tombol **Unduh**.
+
+Cara kerja (tanpa function calling, jadi cocok dengan gateway apa pun):
+
+1. `FILE_PROMPT` di `chat.server.ts` mengajari model menulis satu blok ` ```noteme-file ` berisi JSON:
+   `{"format":"docx|pdf|xlsx","filename":"...","content":"<Markdown>"}`, atau untuk Excel
+   `"sheets":[{"name":"...","rows":[[...]]}]`.
+2. `lib/fileSpec.ts` mengambil blok itu dari jawaban, memvalidasi, dan menyembunyikannya dari teks.
+3. Saat tombol ditekan, browser membuat file: `buildDocx.ts` (`docx`), `buildPdf.ts` (`jspdf`, teks asli
+   bukan screenshot), `buildXlsx.ts` (`exceljs`, header tebal, freeze baris pertama, rumus didukung).
+   Library dimuat dinamis, jadi tidak membebani halaman lain.
+
+Batas: 4 file per jawaban, 120.000 karakter dokumen, 10 lembar, 5.000 baris x 60 kolom per lembar.
+`max_tokens` dinaikkan ke 6000 agar dokumen tidak terpotong.
+
+### Panel kanan (seperti artifact di Claude)
+
+Kartu file di jawaban membuka **panel kanan** (di HP: layar penuh). Panel terbuka otomatis saat AI
+selesai membuat file, dan bisa ditutup dengan tombol X atau `Esc`.
+
+- **Pratinjau**: dokumen tampil seperti kertas; Excel tampil sebagai grid (huruf kolom, nomor baris,
+  tab lembar). Rumus tampil sebagai teks miring; Excel menghitungnya saat file dibuka.
+- **Edit**: ubah Markdown dokumen, nama file, atau sel Excel langsung di panel (angka tetap angka;
+  desimal koma diterima). Hasil edit ikut terunduh. Tombol **Kembalikan** memulihkan isi dari AI.
+- **PDF asli** (khusus PDF): menampilkan PDF yang benar-benar akan diunduh. Sebagian browser HP hanya
+  menampilkan halaman pertama; pakai "Buka di tab baru".
+- **Versi**: kalau AI membuat ulang file dengan nama yang sama, muncul pemilih "Versi 1 / 2 (terbaru)".
+- **Unduh** + menu format lain: Word, PDF, Markdown; untuk Excel juga CSV (lembar aktif) dan
+  Word/PDF (lembar jadi tabel).
+- **Salin** (Excel: salin lembar, bisa ditempel ke Excel), **Simpan ke catatan**, dan lebar panel bisa
+  digeser di desktop.
+
+Catatan: hasil edit hanya hidup selama halaman terbuka (tidak ikut riwayat chat); yang tersimpan di
+riwayat tetap versi dari AI. Kode: `components/ArtifactPanel.tsx`, `SheetGrid.tsx`, `lib/artifacts.ts`,
+`lib/exportFile.ts`.
+
+Keterbatasan: PDF memakai font bawaan, jadi hanya huruf Latin yang tampil (emoji dibuang, aksara lain
+jadi `?`); Word/Excel tidak punya batasan itu. Jawaban yang terpotong tidak menghasilkan file dan UI
+menyarankan "Ulangi". Model yang kurang patuh format bisa sesekali gagal; coba ulangi.
+
+## Skill lewat mention (`@template`)
+
+Tulis `@template` di pesan untuk mengaktifkan aturan UI anti-template (pembuka: "SKILL @template
+AKTIF"). Cocok untuk meminta menulis atau mereview kode tampilan: komponen, halaman, modal, sidebar.
+
+- Server menambahkan teks skill ke prompt sistem **hanya** kalau ada mention. Tanpa mention, prompt
+  sama seperti biasa dan kuota tidak terpakai untuk skill (teksnya sekitar 13.000 karakter).
+- Mention dibaca dari pesan **pengguna** saja. `@template` di dalam isi lampiran atau di jawaban AI
+  tidak dihitung; `@templates`, `@template-v2`, dan `a@template.com` juga bukan panggilan.
+- Skill tetap aktif selama mention-nya masih ada di riwayat yang dikirim ke model (16 pesan
+  terakhir), jadi lanjutan seperti "ubah lagi tombolnya" tidak perlu menulis `@template` ulang.
+- Model tidak punya akses ke repo: ia bekerja dari kode atau screenshot yang kamu kirim.
+
+Kode: `lib/skillMention.ts` (pendeteksi, aman di klien), `skills.server.ts` (teks skill, hanya server),
+`buildSystemPrompt` di `chat.server.ts`, dipakai `chat.functions.ts`. Mengubah aturannya: edit
+`skills.server.ts`. Menambah skill lain: tambah id di `SKILL_MENTIONS` dan `PATTERNS`, teksnya di
+`skills.server.ts`, dan cabangnya di `buildSystemPrompt`. Tes: `tests/skills.test.mts`.
+
 ## Batas
 
 | Hal                           | Batas                                 |
@@ -71,7 +132,7 @@ gambar yang ikut, supaya payload tidak membengkak.
   Gambar tidak disimpan di riwayat, hanya nama file-nya.
 - **HEIC** hanya terbaca di browser yang bisa membukanya (Safari). Di Chrome, ubah ke JPG/PNG dulu.
 - **PDF hasil scan** (tanpa lapisan teks) tidak terbaca; kirim sebagai gambar.
-- **`.doc`, `.xls(x)`, `.ppt(x)`** belum didukung. Simpan sebagai PDF, DOCX, atau CSV.
+- **Membaca** `.doc`, `.xls(x)`, `.ppt(x)` belum didukung. Simpan sebagai PDF, DOCX, atau CSV.
 - Markdown di jawaban didukung versi ringkas (judul, daftar satu tingkat, tabel, kode, kutipan,
   tautan). Daftar bersarang diratakan.
 - Privasi: isi catatan dan file yang dilampirkan dikirim ke gateway pihak ketiga. Pastikan

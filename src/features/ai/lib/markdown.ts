@@ -75,9 +75,9 @@ function splitRow(line: string): string[] {
   return line
     .trim()
     .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((c) => c.trim());
+    .replace(/(?<!\\)\|$/, "")
+    .split(/(?<!\\)\|/)
+    .map((c) => c.replace(/\\\|/g, "|").trim());
 }
 
 export function renderMarkdown(md: string): string {

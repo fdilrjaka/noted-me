@@ -29,8 +29,8 @@ export const sendAiChat = createServerFn({ method: "POST" })
     if (!cfg) return { ok: false, reason: "not_configured", message: NOT_CONFIGURED };
 
     return server.callGateway(cfg, {
-      messages: server.toGatewayMessages(server.SYSTEM_PROMPT, data.messages),
-      maxTokens: 1500,
+      messages: server.toGatewayMessages(server.buildSystemPrompt(data.messages), data.messages),
+      maxTokens: 6000,
     });
   });
 
